@@ -18,3 +18,13 @@ with rasterio.open(img) as src:
 # parsing the XML metadata to determine coefficients
 xmldoc = minidom.parse(xml_file)
 nodes = xmldoc.getElementsByTagName("ps:bandSpecificMetadata")
+
+coeffs = {}
+for node in nodes:
+    band_num = node.getElementsByTagName("ps:bandNumber")[0].firstChild.data
+    if band_num in ['1', '2', '3', '4']:
+        i = int(band_num)
+        value = node.getElementsByTagName("ps:reflectanceCoefficient")[0].firstChild.data
+        coeffs[i] = float(value)
+
+print("Conversion coefficients:", coeffs)
