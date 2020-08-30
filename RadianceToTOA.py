@@ -14,7 +14,9 @@ xml_file = filepath + xml_filename
 
 # loading bands in radiance
 print("Opening", img_filename, "to read in band data:", end=" ")
-with rasterio.open(img) as src:
+with rasterio.open(img, driver="GTiff") as src:
+    kwargs = src.meta
+    kwargs.update(dtype=rasterio.uint16, count=4)
     print("DONE")
     print("\tReading BLUE:", end=" ")
     blue_band_radiance = src.read(1)   # band 1 - blue
@@ -76,4 +78,57 @@ print("\t\tMIN: {} MAX: {}".format(np.amin(green_band_reflectance), np.amax(gree
 print("\tRed band:")
 print("\t\tMIN: {} MAX: {}".format(np.amin(red_band_reflectance), np.amax(red_band_reflectance)))
 print("\tNIR band:")
-print("\t\tMIN:{} MAX: {}".format(np.amin(nir_band_reflectance), np.amax(nir_band_reflectance)))
+print("\t\tMIN: {} MAX: {}".format(np.amin(nir_band_reflectance), np.amax(nir_band_reflectance)))
+print()
+
+# writing the TOA reflectance image to disk
+scale = 100000
+filename = img_filename.split(sep=".")[0] + "_reflectance.tif"
+print("Saving TOA reflectance as", filename, ":", end=" ")
+scaled_blue = blue_band_reflectance * scale
+scaled_green = green_band_reflectance * scale
+scaled_red = red_band_reflectance * scale
+scaled_nir = nir_band_reflectance * scale
+with rasterio.open(filepath + filename, 'w', **kwargs) as dst:
+    dst.write_band(1, scaled_blue.astype(rasterio.uint16))
+    dst.write_band(2, scaled_green.astype(rasterio.uint16))
+    dst.write_band(3, scaled_red.astype(rasterio.uint16))
+    dst.write_band(4, scaled_nir.astype(rasterio.uint16))
+print("DONE")
+
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+
+class MidpointNormalize(colors.Normalize):
+    """
+    Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
+    e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
+    Credit: Joe Kington, http://chris35wills.github.io/matplotlib_diverging_colorbar/
+    """
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        # I'm ignoring masked values and all kinds of edge cases to make a
+        # simple example...
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
+
+for refl_band, color in zip([blue_band_reflectance, green_band_reflectance, red_band_reflectance, nir_band_reflectance],
+                ["Blue", "Green", "Red", "NIR"]):
+    min_val = np.nanmin(refl_band)
+    max_val = np.nanmax(refl_band)
+    mid = np.nanmean(refl_band)
+
+    fig = plt.figure(figsize=(20,10))
+    ax = fig.add_subplot(111)
+    cax = ax.imshow(refl_band, cmap='Greys', clim=(min_val, max_val),
+                norm=MidpointNormalize(midpoint=mid, vmin=min_val, vmax=max_val))
+
+    ax.axis('off')
+    ax.set_title(color + " Reflectance", fontsize=18, fontweight='bold')
+
+    cbar = fig.colorbar(cax, orientation='horizontal', shrink=0.65)
+
+    plt.show()
