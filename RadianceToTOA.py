@@ -13,8 +13,9 @@ img = filepath + img_filename
 xml_file = filepath + xml_filename
 
 # loading bands in radiance
-print("Opening", img_filename, "to read in band data:")
+print("Opening", img_filename, "to read in band data:", end=" ")
 with rasterio.open(img) as src:
+    print("DONE")
     print("\tReading BLUE:", end=" ")
     blue_band_radiance = src.read(1)   # band 1 - blue
     print("DONE")
@@ -30,16 +31,14 @@ with rasterio.open(img) as src:
     print("\tReading NIR:", end=" ")
     nir_band_radiance = src.read(4)    # band 4 - near-infrared
     print("DONE")
-print("DONE")
-
-print("\nBlue band:")
-print("\tMIN: {} MAX: {}".format(np.amin(blue_band_radiance), np.amax(blue_band_radiance)))
-print("Green band:")
-print("\tMIN: {} MAX: {}".format(np.amin(green_band_radiance), np.amax(green_band_radiance)))
-print("Red band:")
-print("\tMIN: {} MAX: {}".format(np.amin(red_band_radiance), np.amax(red_band_radiance)))
-print("NIR band:")
-print("\tMIN: {} MAX: {}".format(np.amin(nir_band_radiance), np.amax(nir_band_radiance)))
+print("\tBlue band:")
+print("\t\tMIN: {} MAX: {}".format(np.amin(blue_band_radiance), np.amax(blue_band_radiance)))
+print("\tGreen band:")
+print("\t\tMIN: {} MAX: {}".format(np.amin(green_band_radiance), np.amax(green_band_radiance)))
+print("\tRed band:")
+print("\t\tMIN: {} MAX: {}".format(np.amin(red_band_radiance), np.amax(red_band_radiance)))
+print("\tNIR band:")
+print("\t\tMIN: {} MAX: {}".format(np.amin(nir_band_radiance), np.amax(nir_band_radiance)))
 print()
 
 # parsing the XML metadata to determine coefficients
@@ -54,13 +53,12 @@ for node in nodes:
         value = node.getElementsByTagName("ps:reflectanceCoefficient")[0].firstChild.data
         coeffs[i] = float(value)
 print("DONE")
-print()
 
-print("Reflectance coefficients:")
-print("\tBLUE: {}".format(coeffs[1]))
-print("\tGREEN: {}".format(coeffs[2]))
-print("\tRED: {}".format(coeffs[3]))
-print("\tNIR: {}".format(coeffs[4]))
+print("\tReflectance coefficients:")
+print("\t\tBLUE: {}".format(coeffs[1]))
+print("\t\tGREEN: {}".format(coeffs[2]))
+print("\t\tRED: {}".format(coeffs[3]))
+print("\t\tNIR: {}".format(coeffs[4]))
 print()
 
 # converting Digital Number (DN) to TOA reflectance
@@ -71,4 +69,11 @@ red_band_reflectance = red_band_radiance * coeffs[3]
 nir_band_reflectance = nir_band_radiance * coeffs[4]
 print("DONE")
 
-
+print("\tBlue band:")
+print("\t\tMIN: {} MAX: {}".format(np.amin(blue_band_reflectance), np.amax(blue_band_reflectance)))
+print("\tGreen band:")
+print("\t\tMIN: {} MAX: {}".format(np.amin(green_band_reflectance), np.amax(green_band_reflectance)))
+print("\tRed band:")
+print("\t\tMIN: {} MAX: {}".format(np.amin(red_band_reflectance), np.amax(red_band_reflectance)))
+print("\tNIR band:")
+print("\t\tMIN:{} MAX: {}".format(np.amin(nir_band_reflectance), np.amax(nir_band_reflectance)))
