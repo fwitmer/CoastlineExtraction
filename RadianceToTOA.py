@@ -5,7 +5,7 @@ warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarni
 import numpy as np
 from xml.dom import minidom
 
-def DN_to_TOA(rasterfile, xmlfile):
+def DN_to_TOA(rasterfile, xmlfile, plot = False, verbose = False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
     xml_filepath = os.path.dirname(xmlfile) + "/"
@@ -22,29 +22,30 @@ def DN_to_TOA(rasterfile, xmlfile):
         kwargs = src.meta
         kwargs.update(dtype=rasterio.uint16, count=4)
         print("DONE")
-        print("\tReading BLUE:", end=" ")
+        if verbose: print("\tReading BLUE:", end=" ")
         blue_band_radiance = src.read(1)   # band 1 - blue
-        print("DONE")
+        if verbose: print("DONE")
 
-        print("\tReading GREEN:", end=" ")
+        if verbose: print("\tReading GREEN:", end=" ")
         green_band_radiance = src.read(2)  # band 2 - green
-        print("DONE")
+        if verbose: print("DONE")
 
-        print("\tReading RED:", end=" ")
+        if verbose: print("\tReading RED:", end=" ")
         red_band_radiance = src.read(3)    # band 3 - red
-        print("DONE")
+        if verbose: print("DONE")
 
-        print("\tReading NIR:", end=" ")
+        if verbose: print("\tReading NIR:", end=" ")
         nir_band_radiance = src.read(4)    # band 4 - near-infrared
-        print("DONE")
-    print("\tBlue band:")
-    print("\t\tMIN: {} MAX: {}".format(np.amin(blue_band_radiance), np.amax(blue_band_radiance)))
-    print("\tGreen band:")
-    print("\t\tMIN: {} MAX: {}".format(np.amin(green_band_radiance), np.amax(green_band_radiance)))
-    print("\tRed band:")
-    print("\t\tMIN: {} MAX: {}".format(np.amin(red_band_radiance), np.amax(red_band_radiance)))
-    print("\tNIR band:")
-    print("\t\tMIN: {} MAX: {}".format(np.amin(nir_band_radiance), np.amax(nir_band_radiance)))
+        if verbose: print("DONE")
+    if verbose:
+        print("\tBlue band:")
+        print("\t\tMIN: {} MAX: {}".format(np.amin(blue_band_radiance), np.amax(blue_band_radiance)))
+        print("\tGreen band:")
+        print("\t\tMIN: {} MAX: {}".format(np.amin(green_band_radiance), np.amax(green_band_radiance)))
+        print("\tRed band:")
+        print("\t\tMIN: {} MAX: {}".format(np.amin(red_band_radiance), np.amax(red_band_radiance)))
+        print("\tNIR band:")
+        print("\t\tMIN: {} MAX: {}".format(np.amin(nir_band_radiance), np.amax(nir_band_radiance)))
     print()
 
     # parsing the XML metadata to determine coefficients
@@ -60,11 +61,12 @@ def DN_to_TOA(rasterfile, xmlfile):
             coeffs[i] = float(value)
     print("DONE")
 
-    print("\tReflectance coefficients:")
-    print("\t\tBLUE: {}".format(coeffs[1]))
-    print("\t\tGREEN: {}".format(coeffs[2]))
-    print("\t\tRED: {}".format(coeffs[3]))
-    print("\t\tNIR: {}".format(coeffs[4]))
+    if verbose:
+        print("\tReflectance coefficients:")
+        print("\t\tBLUE: {}".format(coeffs[1]))
+        print("\t\tGREEN: {}".format(coeffs[2]))
+        print("\t\tRED: {}".format(coeffs[3]))
+        print("\t\tNIR: {}".format(coeffs[4]))
     print()
 
     # converting Digital Number (DN) to TOA reflectance
@@ -75,14 +77,15 @@ def DN_to_TOA(rasterfile, xmlfile):
     nir_band_reflectance = nir_band_radiance * coeffs[4]
     print("DONE")
 
-    print("\tBlue band:")
-    print("\t\tMIN: {} MAX: {}".format(np.amin(blue_band_reflectance), np.amax(blue_band_reflectance)))
-    print("\tGreen band:")
-    print("\t\tMIN: {} MAX: {}".format(np.amin(green_band_reflectance), np.amax(green_band_reflectance)))
-    print("\tRed band:")
-    print("\t\tMIN: {} MAX: {}".format(np.amin(red_band_reflectance), np.amax(red_band_reflectance)))
-    print("\tNIR band:")
-    print("\t\tMIN: {} MAX: {}".format(np.amin(nir_band_reflectance), np.amax(nir_band_reflectance)))
+    if verbose:
+        print("\tBlue band:")
+        print("\t\tMIN: {} MAX: {}".format(np.amin(blue_band_reflectance), np.amax(blue_band_reflectance)))
+        print("\tGreen band:")
+        print("\t\tMIN: {} MAX: {}".format(np.amin(green_band_reflectance), np.amax(green_band_reflectance)))
+        print("\tRed band:")
+        print("\t\tMIN: {} MAX: {}".format(np.amin(red_band_reflectance), np.amax(red_band_reflectance)))
+        print("\tNIR band:")
+        print("\t\tMIN: {} MAX: {}".format(np.amin(nir_band_reflectance), np.amax(nir_band_reflectance)))
     print()
 
     # writing the TOA reflectance image to disk
@@ -99,46 +102,52 @@ def DN_to_TOA(rasterfile, xmlfile):
         dst.write_band(3, scaled_red.astype(rasterio.uint16))
         dst.write_band(4, scaled_nir.astype(rasterio.uint16))
     print("DONE")
+    print()
 
-    import matplotlib.pyplot as plt
-    import matplotlib.colors as colors
+    if plot:
+        import matplotlib.pyplot as plt
+        import matplotlib.colors as colors
 
-    class MidpointNormalize(colors.Normalize):
-        """
-        Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
-        e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
-        Credit: Joe Kington, http://chris35wills.github.io/matplotlib_diverging_colorbar/
-        """
-        def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
-            self.midpoint = midpoint
-            colors.Normalize.__init__(self, vmin, vmax, clip)
+        class MidpointNormalize(colors.Normalize):
+            """
+            Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
+            e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
+            Credit: Joe Kington, http://chris35wills.github.io/matplotlib_diverging_colorbar/
+            """
+            def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+                self.midpoint = midpoint
+                colors.Normalize.__init__(self, vmin, vmax, clip)
 
-        def __call__(self, value, clip=None):
-            # I'm ignoring masked values and all kinds of edge cases to make a
-            # simple example...
-            x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
-            return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
+            def __call__(self, value, clip=None):
+                # I'm ignoring masked values and all kinds of edge cases to make a
+                # simple example...
+                x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+                return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
 
-    for refl_band, color in zip([blue_band_reflectance, green_band_reflectance, red_band_reflectance, nir_band_reflectance],
-                    ["Blue", "Green", "Red", "NIR"]):
-        min_val = np.nanmin(refl_band)
-        max_val = np.nanmax(refl_band)
-        mid = np.nanmean(refl_band)
+        for refl_band, color in zip([blue_band_reflectance, green_band_reflectance, red_band_reflectance, nir_band_reflectance],
+                        ["Blue", "Green", "Red", "NIR"]):
+            print("Generating", color, "band plot:", end=" ")
+            min_val = np.nanmin(refl_band)
+            max_val = np.nanmax(refl_band)
+            mid = np.nanmean(refl_band)
 
-        fig = plt.figure(figsize=(20,10))
-        ax = fig.add_subplot(111)
-        cax = ax.imshow(refl_band, cmap='Greys', clim=(min_val, max_val),
-                    norm=MidpointNormalize(midpoint=mid, vmin=min_val, vmax=max_val))
+            fig = plt.figure(figsize=(20,10))
+            ax = fig.add_subplot(111)
+            cax = ax.imshow(refl_band, cmap='Greys', clim=(min_val, max_val),
+                        norm=MidpointNormalize(midpoint=mid, vmin=min_val, vmax=max_val))
 
-        ax.axis('off')
-        ax.set_title(color + " Reflectance", fontsize=18, fontweight='bold')
+            ax.axis('off')
+            ax.set_title(color + " Reflectance", fontsize=18, fontweight='bold')
 
-        cbar = fig.colorbar(cax, orientation='horizontal', shrink=0.65)
+            cbar = fig.colorbar(cax, orientation='horizontal', shrink=0.65)
 
-        plt.show()
+            plt.show()
+            print("DONE")
+        print()
 
 raster = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
 
 xml = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
 
 DN_to_TOA(raster, xml)
+DN_to_TOA(raster, xml, plot=True, verbose=True)
