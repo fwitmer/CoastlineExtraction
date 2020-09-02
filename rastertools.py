@@ -20,7 +20,7 @@ def DN_to_TOA(rasterfile, xmlfile, plot = False, verbose = False):
     print("Opening", raster_filename, "to read in band data:", end=" ")
     with rasterio.open(img, driver="GTiff") as src:
         kwargs = src.meta
-        kwargs.update(dtype=rasterio.uint16, count=4)
+        kwargs.update(dtype=rasterio.float64, count=4)
         print("DONE")
         if verbose: print("\tReading BLUE:", end=" ")
         blue_band_radiance = src.read(1)   # band 1 - blue
@@ -97,10 +97,10 @@ def DN_to_TOA(rasterfile, xmlfile, plot = False, verbose = False):
     scaled_red = red_band_reflectance * scale
     scaled_nir = nir_band_reflectance * scale
     with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
-        dst.write_band(1, scaled_blue.astype(rasterio.uint16))
-        dst.write_band(2, scaled_green.astype(rasterio.uint16))
-        dst.write_band(3, scaled_red.astype(rasterio.uint16))
-        dst.write_band(4, scaled_nir.astype(rasterio.uint16))
+        dst.write_band(1, blue_band_reflectance.astype(rasterio.float64))
+        dst.write_band(2, green_band_reflectance.astype(rasterio.float64))
+        dst.write_band(3, red_band_reflectance.astype(rasterio.float64))
+        dst.write_band(4, nir_band_reflectance.astype(rasterio.float64))
     print("DONE")
     print()
 
@@ -145,9 +145,81 @@ def DN_to_TOA(rasterfile, xmlfile, plot = False, verbose = False):
             print("DONE")
         print()
 
+def calculate_ndwi(rasterfile):
+    raster_filepath = os.path.dirname(rasterfile) + "/"
+    raster_filename = os.path.basename(rasterfile)
+
+    img = raster_filepath + raster_filename
+
+    print("Opening", raster_filename, "to read in band data:", end=" ")
+    with rasterio.open(img, driver="GTiff") as src:
+        kwargs = src.meta
+        kwargs.update(dtype=rasterio.float64, count=1)
+
+        green_band = src.read(2)  # band 2 - green
+        nir_band = src.read(4)    # band 4 - NIR
+        print("DONE")
+
+    print("Calculating NDWI:", end=" ")
+    ndwi = np.where(
+        (green_band + nir_band) == 0.,
+        0,
+        (green_band - nir_band) / (green_band + nir_band))
+    print("DONE")
+
+    out_filename = raster_filename.split(sep=".")[0] + "_NDWI.tif"
+    print("Saving TOA reflectance as", out_filename, ":", end=" ")
+    with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
+        dst.write_band(1, ndwi.astype(float))
+        print("DONE")
+
+    import matplotlib.pyplot as plt
+    import matplotlib.colors as colors
+
+    class MidpointNormalize(colors.Normalize):
+        """
+        Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
+        e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
+        Credit: Joe Kington, http://chris35wills.github.io/matplotlib_diverging_colorbar/
+        """
+
+        def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+            self.midpoint = midpoint
+            colors.Normalize.__init__(self, vmin, vmax, clip)
+
+        def __call__(self, value, clip=None):
+            # I'm ignoring masked values and all kinds of edge cases to make a
+            # simple example...
+            x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+            return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
+
+    for refl_band, color in zip(
+            [ndwi], ["NDWI"]):
+        print("Generating", color, "band plot:", end=" ")
+        min_val = np.nanmin(refl_band)
+        max_val = np.nanmax(refl_band)
+        mid = np.nanmean(refl_band)
+
+        fig = plt.figure(figsize=(20, 10))
+        ax = fig.add_subplot(111)
+        cax = ax.imshow(refl_band, cmap='Greys', clim=(min_val, max_val),
+                        norm=MidpointNormalize(midpoint=mid, vmin=min_val, vmax=max_val))
+
+        ax.axis('off')
+        ax.set_title(color + " Reflectance", fontsize=18, fontweight='bold')
+
+        cbar = fig.colorbar(cax, orientation='horizontal', shrink=0.65)
+
+        plt.show()
+        print("DONE")
+    print()
+
+
 raster = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
 
 xml = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
 
 DN_to_TOA(raster, xml)
-DN_to_TOA(raster, xml, plot=True, verbose=True)
+# DN_to_TOA(raster, xml, plot=True, verbose=True)
+ref_raster = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_TOAreflectance.tif"
+calculate_ndwi(ref_raster)
