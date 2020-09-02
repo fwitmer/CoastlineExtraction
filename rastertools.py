@@ -161,12 +161,12 @@ def calculate_ndwi(rasterfile):
         print("DONE")
 
     print("Calculating NDWI:", end=" ")
+    np.seterr(divide='ignore', invalid='ignore')
     ndwi = np.where(
         (green_band + nir_band) == 0.,
         0,
         (green_band - nir_band) / (green_band + nir_band))
     print("DONE")
-
     out_filename = raster_filename.split(sep=".")[0] + "_NDWI.tif"
     print("Saving TOA reflectance as", out_filename, ":", end=" ")
     with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
