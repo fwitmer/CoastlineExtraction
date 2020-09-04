@@ -195,7 +195,7 @@ def calculate_ndwi(rasterfile):
 
     for refl_band, color in zip(
             [ndwi], ["NDWI"]):
-        print("Generating", color, "band plot:", end=" ")
+        print("Generating", color, "plot:", end=" ")
         min_val = np.nanmin(refl_band)
         max_val = np.nanmax(refl_band)
         mid = np.nanmean(refl_band)
@@ -206,7 +206,7 @@ def calculate_ndwi(rasterfile):
                         norm=MidpointNormalize(midpoint=mid, vmin=min_val, vmax=max_val))
 
         ax.axis('off')
-        ax.set_title(color + " Reflectance", fontsize=18, fontweight='bold')
+        ax.set_title(color + " (Normalized Difference Water Index)", fontsize=18, fontweight='bold')
 
         cbar = fig.colorbar(cax, orientation='horizontal', shrink=0.65)
 
@@ -215,11 +215,11 @@ def calculate_ndwi(rasterfile):
     print()
 
 
-raster = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
+raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
 
-xml = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
+xml = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
 
 DN_to_TOA(raster, xml)
 # DN_to_TOA(raster, xml, plot=True, verbose=True)
-ref_raster = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_TOAreflectance.tif"
+ref_raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_TOAreflectance.tif"
 calculate_ndwi(ref_raster)
