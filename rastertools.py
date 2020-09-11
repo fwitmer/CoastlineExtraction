@@ -167,10 +167,34 @@ def calculate_ndwi(rasterfile, plot=False):
     return raster_filepath + out_filename
 
 def ndwi_classify(rasterfile, plot=False):
+    threshold = 0.3
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
     img = raster_filepath + raster_filename
+    print("Opening", raster_filename, "for NDWI water classification:", end=" ")
+    with rasterio.open(img, driver="GTiff") as src:
+        kwargs = src.meta
+        kwargs.update(dtype=rasterio.int8, count=1)
+
+        ndwi = src.read(1)
+        print("DONE\n")
+    # TODO: update this with dynamically calculated thresholds
+    print("Classifying water based on NDWI threshold of:", threshold, end=" ")
+    classified_raster = np.where(ndwi >= threshold,  # if pixel value >= threshold, new raster value is 1 else 0
+                                 1,
+                                 0)
+    print("DONE\n")
+    out_filename = raster_filename.split(sep=".")[0] + "_classified.tif"
+    print("Saving classified raster as", out_filename, ":", end=" ")
+    with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
+        dst.write_band(1, classified_raster.astype(rasterio.int8))
+    print("DONE\n")
+
+    if plot:
+        bands = [classified_raster]
+        labels = ["Water Classification Map"]
+        plot_raster(bands, labels)
 
 def plot_raster(bands, labels):
 
@@ -195,6 +219,10 @@ raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908
 
 xml = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
 
-radiance_to_toa(raster, xml, plot=True)
-ref_raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_TOAreflectance.tif"
-calculate_ndwi(ref_raster, plot=True)
+ref_raster = radiance_to_toa(raster, xml, plot=True)
+
+ndwi_raster = calculate_ndwi(ref_raster, plot=True)
+
+ndwi_classify(ndwi_raster, plot=True)
+
+# "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_TOAreflectance.tif"
