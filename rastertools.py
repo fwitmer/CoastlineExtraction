@@ -1,6 +1,7 @@
 import warnings
 import os
 import rasterio
+from rasterio.plot import show_hist
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
@@ -110,13 +111,9 @@ def radiance_to_toa(rasterfile, xmlfile, plot=False, verbose=False):
     print()
 
     # writing the TOA reflectance image to disk
-    scale = 100000
     out_filename = raster_filename.split(sep=".")[0] + "_TOAreflectance.tif"
     print("Saving TOA reflectance as", out_filename, ":", end=" ")
-    scaled_blue = blue_band_reflectance * scale
-    scaled_green = green_band_reflectance * scale
-    scaled_red = red_band_reflectance * scale
-    scaled_nir = nir_band_reflectance * scale
+
     with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
         dst.write_band(1, blue_band_reflectance.astype(rasterio.float64))
         dst.write_band(2, green_band_reflectance.astype(rasterio.float64))
@@ -131,6 +128,7 @@ def radiance_to_toa(rasterfile, xmlfile, plot=False, verbose=False):
         plot_raster(bands, labels)
 
     return raster_filepath + out_filename
+
 
 def calculate_ndwi(rasterfile, plot=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
@@ -164,7 +162,10 @@ def calculate_ndwi(rasterfile, plot=False):
         bands = [ndwi]
         labels = ["NDWI (Normalized Difference Water Index"]
         plot_raster(bands, labels)
+
+        show_hist(ndwi, bins=50, stacked=False, alpha=0.3, histtype='stepfilled', title="NDWI Values")
     return raster_filepath + out_filename
+
 
 def ndwi_classify(rasterfile, plot=False):
     threshold = 0.2
