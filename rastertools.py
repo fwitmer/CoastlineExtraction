@@ -167,7 +167,7 @@ def calculate_ndwi(rasterfile, plot=False):
     return raster_filepath + out_filename
 
 def ndwi_classify(rasterfile, plot=False):
-    threshold = 0.3
+    threshold = 0.2
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
@@ -196,6 +196,8 @@ def ndwi_classify(rasterfile, plot=False):
         labels = ["Water Classification Map"]
         plot_raster(bands, labels)
 
+    return raster_filepath + out_filename
+
 def plot_raster(bands, labels):
 
     for band, label in zip(bands, labels):
@@ -205,7 +207,7 @@ def plot_raster(bands, labels):
         mid = np.nanmean(band)
         fig = plt.figure(figsize=(20, 10))
         ax = fig.add_subplot(111)
-        cax = ax.imshow(band, cmap='Greys', clim=(min_val, max_val),
+        cax = ax.imshow(band, cmap='Greys_r', clim=(min_val, max_val),
                         norm=MidpointNormalize(midpoint=mid, vmin=min_val, vmax=max_val))
         ax.axis('off')
         ax.set_title(label, fontsize=18, fontweight='bold')
@@ -215,6 +217,7 @@ def plot_raster(bands, labels):
         print("DONE")
     print()
 
+
 raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
 
 xml = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
@@ -223,6 +226,4 @@ ref_raster = radiance_to_toa(raster, xml, plot=True)
 
 ndwi_raster = calculate_ndwi(ref_raster, plot=True)
 
-ndwi_classify(ndwi_raster, plot=True)
-
-# "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_TOAreflectance.tif"
+classified_raster = ndwi_classify(ndwi_raster, plot=True)
