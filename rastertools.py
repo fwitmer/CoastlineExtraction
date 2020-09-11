@@ -1,11 +1,32 @@
 import warnings
 import os
 import rasterio
-warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 from xml.dom import minidom
+warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
-def DN_to_TOA(rasterfile, xmlfile, plot = False, verbose = False):
+
+class MidpointNormalize(colors.Normalize):
+    """
+    Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
+    e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
+    Credit: Joe Kington, http://chris35wills.github.io/matplotlib_diverging_colorbar/
+    """
+
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        # I'm ignoring masked values and all kinds of edge cases to make a
+        # simple example...
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
+
+
+def radiance_to_toa(rasterfile, xmlfile, plot=False, verbose=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
     xml_filepath = os.path.dirname(xmlfile) + "/"
@@ -105,47 +126,12 @@ def DN_to_TOA(rasterfile, xmlfile, plot = False, verbose = False):
     print()
 
     if plot:
-        import matplotlib.pyplot as plt
-        import matplotlib.colors as colors
+        labels = ["Blue Band Reflectance", "Green Band Reflectance", "Red Band Reflectance", "NIR Band Reflectance"]
+        bands = [blue_band_reflectance, green_band_reflectance, red_band_reflectance, nir_band_reflectance]
 
-        class MidpointNormalize(colors.Normalize):
-            """
-            Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
-            e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
-            Credit: Joe Kington, http://chris35wills.github.io/matplotlib_diverging_colorbar/
-            """
-            def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
-                self.midpoint = midpoint
-                colors.Normalize.__init__(self, vmin, vmax, clip)
+        plot_raster(bands, labels)
 
-            def __call__(self, value, clip=None):
-                # I'm ignoring masked values and all kinds of edge cases to make a
-                # simple example...
-                x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
-                return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
-
-        for refl_band, color in zip([blue_band_reflectance, green_band_reflectance, red_band_reflectance, nir_band_reflectance],
-                        ["Blue", "Green", "Red", "NIR"]):
-            print("Generating", color, "band plot:", end=" ")
-            min_val = np.nanmin(refl_band)
-            max_val = np.nanmax(refl_band)
-            mid = np.nanmean(refl_band)
-
-            fig = plt.figure(figsize=(20,10))
-            ax = fig.add_subplot(111)
-            cax = ax.imshow(refl_band, cmap='Greys', clim=(min_val, max_val),
-                        norm=MidpointNormalize(midpoint=mid, vmin=min_val, vmax=max_val))
-
-            ax.axis('off')
-            ax.set_title(color + " Reflectance", fontsize=18, fontweight='bold')
-
-            cbar = fig.colorbar(cax, orientation='horizontal', shrink=0.65)
-
-            plt.show()
-            print("DONE")
-        print()
-
-def calculate_ndwi(rasterfile):
+def calculate_ndwi(rasterfile, plot=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
@@ -158,7 +144,7 @@ def calculate_ndwi(rasterfile):
 
         green_band = src.read(2)  # band 2 - green
         nir_band = src.read(4)    # band 4 - NIR
-        print("DONE")
+        print("DONE\n")
 
     print("Calculating NDWI:", end=" ")
     np.seterr(divide='ignore', invalid='ignore')
@@ -166,60 +152,42 @@ def calculate_ndwi(rasterfile):
         (green_band + nir_band) == 0.,
         0,
         (green_band - nir_band) / (green_band + nir_band))
-    print("DONE")
+    print("DONE\n")
     out_filename = raster_filename.split(sep=".")[0] + "_NDWI.tif"
     print("Saving TOA reflectance as", out_filename, ":", end=" ")
     with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
         dst.write_band(1, ndwi.astype(float))
-        print("DONE")
+        print("DONE\n")
 
-    import matplotlib.pyplot as plt
-    import matplotlib.colors as colors
+    if plot:
+        bands = [ndwi]
+        labels = ["NDWI (Normalized Difference Water Index"]
+        plot_raster(bands, labels)
 
-    class MidpointNormalize(colors.Normalize):
-        """
-        Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
-        e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
-        Credit: Joe Kington, http://chris35wills.github.io/matplotlib_diverging_colorbar/
-        """
 
-        def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
-            self.midpoint = midpoint
-            colors.Normalize.__init__(self, vmin, vmax, clip)
+def plot_raster(bands, labels):
 
-        def __call__(self, value, clip=None):
-            # I'm ignoring masked values and all kinds of edge cases to make a
-            # simple example...
-            x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
-            return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
-
-    for refl_band, color in zip(
-            [ndwi], ["NDWI"]):
-        print("Generating", color, "plot:", end=" ")
-        min_val = np.nanmin(refl_band)
-        max_val = np.nanmax(refl_band)
-        mid = np.nanmean(refl_band)
-
+    for band, label in zip(bands, labels):
+        print("Generating", label, "plot:", end=" ")
+        min_val = np.nanmin(band)
+        max_val = np.nanmax(band)
+        mid = np.nanmean(band)
         fig = plt.figure(figsize=(20, 10))
         ax = fig.add_subplot(111)
-        cax = ax.imshow(refl_band, cmap='Greys', clim=(min_val, max_val),
+        cax = ax.imshow(band, cmap='Greys', clim=(min_val, max_val),
                         norm=MidpointNormalize(midpoint=mid, vmin=min_val, vmax=max_val))
-
         ax.axis('off')
-        ax.set_title(color + " (Normalized Difference Water Index)", fontsize=18, fontweight='bold')
-
+        ax.set_title(label, fontsize=18, fontweight='bold')
         cbar = fig.colorbar(cax, orientation='horizontal', shrink=0.65)
 
         plt.show()
         print("DONE")
     print()
 
-
 raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
 
 xml = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
 
-DN_to_TOA(raster, xml)
-# DN_to_TOA(raster, xml, plot=True, verbose=True)
+radiance_to_toa(raster, xml, plot=True)
 ref_raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_TOAreflectance.tif"
-calculate_ndwi(ref_raster)
+calculate_ndwi(ref_raster, plot=True)
