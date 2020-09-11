@@ -128,8 +128,9 @@ def radiance_to_toa(rasterfile, xmlfile, plot=False, verbose=False):
     if plot:
         labels = ["Blue Band Reflectance", "Green Band Reflectance", "Red Band Reflectance", "NIR Band Reflectance"]
         bands = [blue_band_reflectance, green_band_reflectance, red_band_reflectance, nir_band_reflectance]
-
         plot_raster(bands, labels)
+
+    return raster_filepath + out_filename
 
 def calculate_ndwi(rasterfile, plot=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
@@ -163,7 +164,13 @@ def calculate_ndwi(rasterfile, plot=False):
         bands = [ndwi]
         labels = ["NDWI (Normalized Difference Water Index"]
         plot_raster(bands, labels)
+    return raster_filepath + out_filename
 
+def ndwi_classify(rasterfile, plot=False):
+    raster_filepath = os.path.dirname(rasterfile) + "/"
+    raster_filename = os.path.basename(rasterfile)
+
+    img = raster_filepath + raster_filename
 
 def plot_raster(bands, labels):
 
