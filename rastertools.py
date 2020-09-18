@@ -163,7 +163,7 @@ def calculate_ndwi(rasterfile, plot=False):
         labels = ["NDWI (Normalized Difference Water Index"]
         plot_raster(bands, labels)
 
-        show_hist(ndwi, bins=50, stacked=False, alpha=0.3, histtype='stepfilled', title="NDWI Values")
+        show_hist(ndwi, bins=100, stacked=False, alpha=0.3, histtype='stepfilled', title="NDWI Values")
     return raster_filepath + out_filename
 
 
