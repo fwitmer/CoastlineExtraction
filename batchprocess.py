@@ -1,6 +1,6 @@
 import os
 import sys
-# import rastertools
+import rastertools
 
 rootdir = os.getcwd()
 # this script will handle batch processing of files including:
