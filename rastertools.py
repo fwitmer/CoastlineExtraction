@@ -219,12 +219,12 @@ def plot_raster(bands, labels):
     print()
 
 
-raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
+# raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
 
-xml = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
+# xml = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
 
-ref_raster = radiance_to_toa(raster, xml, plot=True)
+# ref_raster = radiance_to_toa(raster, xml, plot=True)
 
-ndwi_raster = calculate_ndwi(ref_raster, plot=True)
+# ndwi_raster = calculate_ndwi(ref_raster, plot=True)
 
-classified_raster = ndwi_classify(ndwi_raster, plot=True)
+# classified_raster = ndwi_classify(ndwi_raster, plot=True)
