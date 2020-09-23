@@ -1,5 +1,6 @@
 import os
 import sys
+import datetime
 import rastertools
 
 rootdir = os.getcwd()
@@ -16,4 +17,4 @@ for root, subdirs, files in os.walk(rootdir + "/data"):
 
 files_to_be_processed.sort()
 for f in files_to_be_processed:
-    print("Path:{} Filename:{}".format(f[0],f[1]))
+    filetime = datetime.datetime.strptime(f[1][:14],'%Y%m%d_%H%M%S')
