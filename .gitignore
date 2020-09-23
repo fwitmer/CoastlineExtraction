@@ -4,4 +4,5 @@
 **/*.pyc
 
 # specific directory/file ignores
-/Unortho Deering Images With RPCs 1-30/
+/data/
+**/*.code-workspace

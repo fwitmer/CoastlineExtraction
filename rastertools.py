@@ -1,11 +1,33 @@
 import warnings
 import os
 import rasterio
-warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
+from rasterio.plot import show_hist
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 from xml.dom import minidom
+warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
-def DN_to_TOA(rasterfile, xmlfile, plot = False, verbose = False):
+
+class MidpointNormalize(colors.Normalize):
+    """
+    Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
+    e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
+    Credit: Joe Kington, http://chris35wills.github.io/matplotlib_diverging_colorbar/
+    """
+
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        # I'm ignoring masked values and all kinds of edge cases to make a
+        # simple example...
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
+
+
+def radiance_to_toa(rasterfile, xmlfile, plot=False, verbose=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
     xml_filepath = os.path.dirname(xmlfile) + "/"
@@ -89,13 +111,9 @@ def DN_to_TOA(rasterfile, xmlfile, plot = False, verbose = False):
     print()
 
     # writing the TOA reflectance image to disk
-    scale = 100000
     out_filename = raster_filename.split(sep=".")[0] + "_TOAreflectance.tif"
     print("Saving TOA reflectance as", out_filename, ":", end=" ")
-    scaled_blue = blue_band_reflectance * scale
-    scaled_green = green_band_reflectance * scale
-    scaled_red = red_band_reflectance * scale
-    scaled_nir = nir_band_reflectance * scale
+
     with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
         dst.write_band(1, blue_band_reflectance.astype(rasterio.float64))
         dst.write_band(2, green_band_reflectance.astype(rasterio.float64))
@@ -105,47 +123,14 @@ def DN_to_TOA(rasterfile, xmlfile, plot = False, verbose = False):
     print()
 
     if plot:
-        import matplotlib.pyplot as plt
-        import matplotlib.colors as colors
+        labels = ["Blue Band Reflectance", "Green Band Reflectance", "Red Band Reflectance", "NIR Band Reflectance"]
+        bands = [blue_band_reflectance, green_band_reflectance, red_band_reflectance, nir_band_reflectance]
+        plot_raster(bands, labels)
 
-        class MidpointNormalize(colors.Normalize):
-            """
-            Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
-            e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
-            Credit: Joe Kington, http://chris35wills.github.io/matplotlib_diverging_colorbar/
-            """
-            def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
-                self.midpoint = midpoint
-                colors.Normalize.__init__(self, vmin, vmax, clip)
+    return raster_filepath + out_filename
 
-            def __call__(self, value, clip=None):
-                # I'm ignoring masked values and all kinds of edge cases to make a
-                # simple example...
-                x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
-                return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
 
-        for refl_band, color in zip([blue_band_reflectance, green_band_reflectance, red_band_reflectance, nir_band_reflectance],
-                        ["Blue", "Green", "Red", "NIR"]):
-            print("Generating", color, "band plot:", end=" ")
-            min_val = np.nanmin(refl_band)
-            max_val = np.nanmax(refl_band)
-            mid = np.nanmean(refl_band)
-
-            fig = plt.figure(figsize=(20,10))
-            ax = fig.add_subplot(111)
-            cax = ax.imshow(refl_band, cmap='Greys', clim=(min_val, max_val),
-                        norm=MidpointNormalize(midpoint=mid, vmin=min_val, vmax=max_val))
-
-            ax.axis('off')
-            ax.set_title(color + " Reflectance", fontsize=18, fontweight='bold')
-
-            cbar = fig.colorbar(cax, orientation='horizontal', shrink=0.65)
-
-            plt.show()
-            print("DONE")
-        print()
-
-def calculate_ndwi(rasterfile):
+def calculate_ndwi(rasterfile, plot=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
@@ -158,7 +143,7 @@ def calculate_ndwi(rasterfile):
 
         green_band = src.read(2)  # band 2 - green
         nir_band = src.read(4)    # band 4 - NIR
-        print("DONE")
+        print("DONE\n")
 
     print("Calculating NDWI:", end=" ")
     np.seterr(divide='ignore', invalid='ignore')
@@ -166,48 +151,67 @@ def calculate_ndwi(rasterfile):
         (green_band + nir_band) == 0.,
         0,
         (green_band - nir_band) / (green_band + nir_band))
-    print("DONE")
+    print("DONE\n")
     out_filename = raster_filename.split(sep=".")[0] + "_NDWI.tif"
     print("Saving TOA reflectance as", out_filename, ":", end=" ")
     with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
         dst.write_band(1, ndwi.astype(float))
-        print("DONE")
+        print("DONE\n")
 
-    import matplotlib.pyplot as plt
-    import matplotlib.colors as colors
+    if plot:
+        bands = [ndwi]
+        labels = ["NDWI (Normalized Difference Water Index"]
+        plot_raster(bands, labels)
 
-    class MidpointNormalize(colors.Normalize):
-        """
-        Normalise the colorbar so that diverging bars work there way either side from a prescribed midpoint value)
-        e.g. im=ax1.imshow(array, norm=MidpointNormalize(midpoint=0.,vmin=-100, vmax=100))
-        Credit: Joe Kington, http://chris35wills.github.io/matplotlib_diverging_colorbar/
-        """
+        show_hist(ndwi, bins=100, stacked=False, alpha=0.3, histtype='stepfilled', title="NDWI Values")
+    return raster_filepath + out_filename
 
-        def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
-            self.midpoint = midpoint
-            colors.Normalize.__init__(self, vmin, vmax, clip)
 
-        def __call__(self, value, clip=None):
-            # I'm ignoring masked values and all kinds of edge cases to make a
-            # simple example...
-            x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
-            return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
+def ndwi_classify(rasterfile, plot=False):
+    threshold = 0.2
+    raster_filepath = os.path.dirname(rasterfile) + "/"
+    raster_filename = os.path.basename(rasterfile)
 
-    for refl_band, color in zip(
-            [ndwi], ["NDWI"]):
-        print("Generating", color, "band plot:", end=" ")
-        min_val = np.nanmin(refl_band)
-        max_val = np.nanmax(refl_band)
-        mid = np.nanmean(refl_band)
+    img = raster_filepath + raster_filename
+    print("Opening", raster_filename, "for NDWI water classification:", end=" ")
+    with rasterio.open(img, driver="GTiff") as src:
+        kwargs = src.meta
+        kwargs.update(dtype=rasterio.int8, count=1)
 
+        ndwi = src.read(1)
+        print("DONE\n")
+    # TODO: update this with dynamically calculated thresholds
+    print("Classifying water based on NDWI threshold of:", threshold, end=" ")
+    classified_raster = np.where(ndwi >= threshold,  # if pixel value >= threshold, new raster value is 1 else 0
+                                 1,
+                                 0)
+    print("DONE\n")
+    out_filename = raster_filename.split(sep=".")[0] + "_classified.tif"
+    print("Saving classified raster as", out_filename, ":", end=" ")
+    with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
+        dst.write_band(1, classified_raster.astype(rasterio.int8))
+    print("DONE\n")
+
+    if plot:
+        bands = [classified_raster]
+        labels = ["Water Classification Map"]
+        plot_raster(bands, labels)
+
+    return raster_filepath + out_filename
+
+def plot_raster(bands, labels):
+
+    for band, label in zip(bands, labels):
+        print("Generating", label, "plot:", end=" ")
+        min_val = np.nanmin(band)
+        max_val = np.nanmax(band)
+        mid = np.nanmean(band)
         fig = plt.figure(figsize=(20, 10))
         ax = fig.add_subplot(111)
-        cax = ax.imshow(refl_band, cmap='Greys', clim=(min_val, max_val),
+        cax = ax.imshow(band, cmap='Greys_r', clim=(min_val, max_val),
                         norm=MidpointNormalize(midpoint=mid, vmin=min_val, vmax=max_val))
-
         ax.axis('off')
-        ax.set_title(color + " Reflectance", fontsize=18, fontweight='bold')
-
+        ax.set_title(label, fontsize=18, fontweight='bold')
         cbar = fig.colorbar(cax, orientation='horizontal', shrink=0.65)
 
         plt.show()
@@ -215,11 +219,12 @@ def calculate_ndwi(rasterfile):
     print()
 
 
-raster = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
+raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
 
-xml = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
+xml = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
 
-DN_to_TOA(raster, xml)
-# DN_to_TOA(raster, xml, plot=True, verbose=True)
-ref_raster = "Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_TOAreflectance.tif"
-calculate_ndwi(ref_raster)
+ref_raster = radiance_to_toa(raster, xml, plot=True)
+
+ndwi_raster = calculate_ndwi(ref_raster, plot=True)
+
+classified_raster = ndwi_classify(ndwi_raster, plot=True)
