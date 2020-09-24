@@ -208,6 +208,7 @@ def ndwi_classify(rasterfile, outfile=None, plot=False):
 
     return raster_filepath + out_filename
 
+# TODO: Convert to handle output error on server with no display
 def plot_raster(bands, labels):
 
     for band, label in zip(bands, labels):
