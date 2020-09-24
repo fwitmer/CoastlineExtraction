@@ -111,7 +111,10 @@ def radiance_to_toa(rasterfile, xmlfile, outfile=None, plot=False, verbose=False
     print()
 
     # writing the TOA reflectance image to disk
-    out_filename = raster_filename.split(sep=".")[0] + "_TOAreflectance.tif"
+    if outfile:
+        out_filename = outfile
+    else:
+        out_filename = raster_filename.split(sep=".")[0] + "_TOAreflectance.tif"
     print("Saving TOA reflectance as", out_filename, ":", end=" ")
 
     with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
