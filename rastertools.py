@@ -27,7 +27,7 @@ class MidpointNormalize(colors.Normalize):
         return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
 
 
-def radiance_to_toa(rasterfile, xmlfile, plot=False, verbose=False):
+def radiance_to_toa(rasterfile, xmlfile, outfile=None, plot=False, verbose=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
     xml_filepath = os.path.dirname(xmlfile) + "/"
@@ -130,7 +130,7 @@ def radiance_to_toa(rasterfile, xmlfile, plot=False, verbose=False):
     return raster_filepath + out_filename
 
 
-def calculate_ndwi(rasterfile, plot=False):
+def calculate_ndwi(rasterfile, outfile=None, plot=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
@@ -167,7 +167,7 @@ def calculate_ndwi(rasterfile, plot=False):
     return raster_filepath + out_filename
 
 
-def ndwi_classify(rasterfile, plot=False):
+def ndwi_classify(rasterfile, outfile=None, plot=False):
     threshold = 0.2
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
@@ -186,7 +186,10 @@ def ndwi_classify(rasterfile, plot=False):
                                  1,
                                  0)
     print("DONE\n")
-    out_filename = raster_filename.split(sep=".")[0] + "_classified.tif"
+    if outfile:
+        out_filename = outfile
+    else:
+        out_filename = raster_filename.split(sep=".")[0] + "_classified.tif"
     print("Saving classified raster as", out_filename, ":", end=" ")
     with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
         dst.write_band(1, classified_raster.astype(rasterio.int8))
