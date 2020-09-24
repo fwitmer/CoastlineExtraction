@@ -158,9 +158,9 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
     if outfile:
         out_filename = outfile
     else:
-        out_filename = raster_filename.split(sep=".")[0] + "_NDWI.tif"
+        out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_NDWI.tif"
     print("Saving TOA reflectance as", out_filename, ":", end=" ")
-    with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
+    with rasterio.open(out_filename, 'w', **kwargs) as dst:
         dst.write_band(1, ndwi.astype(float))
         print("DONE\n")
 
@@ -187,7 +187,7 @@ def ndwi_classify(rasterfile, outfile=None, plot=False):
         ndwi = src.read(1)
         print("DONE\n")
     # TODO: update this with dynamically calculated thresholds
-    print("Classifying water based on NDWI threshold of:", threshold, end=" ")
+    print("Classifying water based on NDWI threshold of ({}):".format(threshold), end=" ")
     classified_raster = np.where(ndwi >= threshold,  # if pixel value >= threshold, new raster value is 1 else 0
                                  1,
                                  0)
@@ -195,9 +195,9 @@ def ndwi_classify(rasterfile, outfile=None, plot=False):
     if outfile:
         out_filename = outfile
     else:
-        out_filename = raster_filename.split(sep=".")[0] + "_classified.tif"
+        out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_classified.tif"
     print("Saving classified raster as", out_filename, ":", end=" ")
-    with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
+    with rasterio.open(out_filename, 'w', **kwargs) as dst:
         dst.write_band(1, classified_raster.astype(rasterio.int8))
     print("DONE\n")
 
