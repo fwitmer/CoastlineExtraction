@@ -231,31 +231,23 @@ def plot_raster(bands, labels):
 
 
 def get_otsu_threshold(path, reduce_noise = False, normalized = False):
-    image = cv2.imread(path, 0) # 0 is grayscale mode
+    with rasterio.open(path, driver="GTiff") as src:
+        kwargs = src.meta
+        kwargs.update(dtype=rasterio.uint8, count=1)
+        ndwi = src.read(1)
+    ndwi_8_bit = (ndwi * 127) + 128
+    out_filename = path.split(sep=".")[0] + "_8bit.tif"
+    with rasterio.open(out_filename, mode='w', **kwargs) as dst:
+        dst.write_band(1, ndwi_8_bit.astype(rasterio.uint8))
+
+    image = cv2.imread(out_filename, 0) # 0 is grayscale mode
     if reduce_noise:
         image = cv2.GaussianBlur(image, (5,5), 0)
 
-    num_bins = 256
-    hist, bin_edges = np.histogram(image, bins=num_bins)
+    otsu_threshold, image_result = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU,)
+    otsu_threshold_float = float((otsu_threshold - 128) / 127) # returning otsu threshold back to -1 to 1 range
 
-    if normalized:
-        hist = np.divide(hist.ravel(), hist.max())
-    
-    bin_mids = (bin_edges[:-1] + bin_edges[1:]) / 2
-
-    weight1 = np.cumsum(hist)
-    weight2 = np.cumsum(hist[::-1])[::-1]
-
-    mean1 = np.cumsum(hist * bin_mids) / weight1
-    mean2 = (np.cumsum((hist * bin_mids)[::-1]) / weight2[::-1])[::-1]
-
-    inter_class_variance = weight1[:-1] * weight2[1:] * (mean1[:-1] - mean2[1:]) ** 2
-
-    index_of_max = np.argmax(inter_class_variance)
-
-    threshold = bin_mids[:-1][index_of_max]
-
-    print("Otsu's algorithm implementation thresholding result:", threshold)
+    return otsu_threshold
 
 
 
@@ -269,4 +261,4 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
 
 # classified_raster = ndwi_classify(ndwi_raster, plot=True)
 
-# get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
+get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
