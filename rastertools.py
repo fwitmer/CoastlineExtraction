@@ -247,7 +247,7 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
     otsu_threshold, image_result = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU,)
     otsu_threshold_float = float((otsu_threshold - 128) / 127) # returning otsu threshold back to -1 to 1 range
 
-    return otsu_threshold
+    return otsu_threshold_float
 
 
 
