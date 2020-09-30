@@ -1,6 +1,7 @@
 import warnings
 import os
 import rasterio
+import cv2
 from rasterio.plot import show_hist
 import numpy as np
 import matplotlib.pyplot as plt
@@ -142,7 +143,7 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
     print("Opening", raster_filename, "to read in band data:", end=" ")
     with rasterio.open(img, driver="GTiff") as src:
         kwargs = src.meta
-        kwargs.update(dtype=rasterio.float64, count=1)
+        kwargs.update(dtype=rasterio.float32, count=1)
 
         green_band = src.read(2)  # band 2 - green
         nir_band = src.read(4)    # band 4 - NIR
@@ -159,9 +160,9 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
         out_filename = outfile
     else:
         out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_NDWI.tif"
-    print("Saving TOA reflectance as", out_filename, ":", end=" ")
+    print("Saving calculated NDWI image as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
-        dst.write_band(1, ndwi.astype(float))
+        dst.write_band(1, ndwi.astype(rasterio.float32))
         print("DONE\n")
 
     if plot:
@@ -229,6 +230,35 @@ def plot_raster(bands, labels):
     print()
 
 
+def get_otsu_threshold(path, reduce_noise = False, normalized = False):
+    image = cv2.imread(path, 0) # 0 is grayscale mode
+    if reduce_noise:
+        image = cv2.GaussianBlur(image, (5,5), 0)
+
+    num_bins = 256
+    hist, bin_edges = np.histogram(image, bins=num_bins)
+
+    if normalized:
+        hist = np.divide(hist.ravel(), hist.max())
+    
+    bin_mids = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+    weight1 = np.cumsum(hist)
+    weight2 = np.cumsum(hist[::-1])[::-1]
+
+    mean1 = np.cumsum(hist * bin_mids) / weight1
+    mean2 = (np.cumsum((hist * bin_mids)[::-1]) / weight2[::-1])[::-1]
+
+    inter_class_variance = weight1[:-1] * weight2[1:] * (mean1[:-1] - mean2[1:]) ** 2
+
+    index_of_max = np.argmax(inter_class_variance)
+
+    threshold = bin_mids[:-1][index_of_max]
+
+    print("Otsu's algorithm implementation thresholding result:", threshold)
+
+
+
 # raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
 
 # xml = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
@@ -238,3 +268,5 @@ def plot_raster(bands, labels):
 # ndwi_raster = calculate_ndwi(ref_raster, plot=True)
 
 # classified_raster = ndwi_classify(ndwi_raster, plot=True)
+
+# get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
