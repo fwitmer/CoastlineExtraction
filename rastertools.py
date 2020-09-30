@@ -1,6 +1,7 @@
 import warnings
 import os
 import rasterio
+import cv2
 from rasterio.plot import show_hist
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,7 +28,7 @@ class MidpointNormalize(colors.Normalize):
         return np.ma.masked_array(np.interp(value, x, y), np.isnan(value))
 
 
-def radiance_to_toa(rasterfile, xmlfile, plot=False, verbose=False):
+def radiance_to_toa(rasterfile, xmlfile, outfile=None, plot=False, verbose=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
     xml_filepath = os.path.dirname(xmlfile) + "/"
@@ -111,7 +112,10 @@ def radiance_to_toa(rasterfile, xmlfile, plot=False, verbose=False):
     print()
 
     # writing the TOA reflectance image to disk
-    out_filename = raster_filename.split(sep=".")[0] + "_TOAreflectance.tif"
+    if outfile:
+        out_filename = outfile
+    else:
+        out_filename = raster_filename.split(sep=".")[0] + "_TOAreflectance.tif"
     print("Saving TOA reflectance as", out_filename, ":", end=" ")
 
     with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
@@ -130,7 +134,7 @@ def radiance_to_toa(rasterfile, xmlfile, plot=False, verbose=False):
     return raster_filepath + out_filename
 
 
-def calculate_ndwi(rasterfile, plot=False):
+def calculate_ndwi(rasterfile, outfile=None, plot=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
@@ -139,7 +143,7 @@ def calculate_ndwi(rasterfile, plot=False):
     print("Opening", raster_filename, "to read in band data:", end=" ")
     with rasterio.open(img, driver="GTiff") as src:
         kwargs = src.meta
-        kwargs.update(dtype=rasterio.float64, count=1)
+        kwargs.update(dtype=rasterio.float32, count=1)
 
         green_band = src.read(2)  # band 2 - green
         nir_band = src.read(4)    # band 4 - NIR
@@ -152,10 +156,13 @@ def calculate_ndwi(rasterfile, plot=False):
         0,
         (green_band - nir_band) / (green_band + nir_band))
     print("DONE\n")
-    out_filename = raster_filename.split(sep=".")[0] + "_NDWI.tif"
-    print("Saving TOA reflectance as", out_filename, ":", end=" ")
-    with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
-        dst.write_band(1, ndwi.astype(float))
+    if outfile:
+        out_filename = outfile
+    else:
+        out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_NDWI.tif"
+    print("Saving calculated NDWI image as", out_filename, ":", end=" ")
+    with rasterio.open(out_filename, 'w', **kwargs) as dst:
+        dst.write_band(1, ndwi.astype(rasterio.float32))
         print("DONE\n")
 
     if plot:
@@ -167,8 +174,8 @@ def calculate_ndwi(rasterfile, plot=False):
     return raster_filepath + out_filename
 
 
-def ndwi_classify(rasterfile, plot=False):
-    threshold = 0.2
+def ndwi_classify(rasterfile, outfile=None, plot=False):
+    threshold = get_otsu_threshold(rasterfile)
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
@@ -181,14 +188,17 @@ def ndwi_classify(rasterfile, plot=False):
         ndwi = src.read(1)
         print("DONE\n")
     # TODO: update this with dynamically calculated thresholds
-    print("Classifying water based on NDWI threshold of:", threshold, end=" ")
+    print("Classifying water based on NDWI threshold of ({}):".format(threshold), end=" ")
     classified_raster = np.where(ndwi >= threshold,  # if pixel value >= threshold, new raster value is 1 else 0
                                  1,
                                  0)
     print("DONE\n")
-    out_filename = raster_filename.split(sep=".")[0] + "_classified.tif"
+    if outfile:
+        out_filename = outfile
+    else:
+        out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_classified.tif"
     print("Saving classified raster as", out_filename, ":", end=" ")
-    with rasterio.open(raster_filepath + out_filename, 'w', **kwargs) as dst:
+    with rasterio.open(out_filename, 'w', **kwargs) as dst:
         dst.write_band(1, classified_raster.astype(rasterio.int8))
     print("DONE\n")
 
@@ -199,6 +209,7 @@ def ndwi_classify(rasterfile, plot=False):
 
     return raster_filepath + out_filename
 
+# TODO: Convert to handle output error on server with no display
 def plot_raster(bands, labels):
 
     for band, label in zip(bands, labels):
@@ -219,12 +230,35 @@ def plot_raster(bands, labels):
     print()
 
 
-raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
+def get_otsu_threshold(path, reduce_noise = False, normalized = False):
+    with rasterio.open(path, driver="GTiff") as src:
+        kwargs = src.meta
+        kwargs.update(dtype=rasterio.uint8, count=1)
+        ndwi = src.read(1)
+    ndwi_8_bit = (ndwi * 127) + 128
+    out_filename = path.split(sep=".")[0] + "_8bit.tif"
+    with rasterio.open(out_filename, mode='w', **kwargs) as dst:
+        dst.write_band(1, ndwi_8_bit.astype(rasterio.uint8))
 
-xml = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
+    image = cv2.imread(out_filename, 0) # 0 is grayscale mode
+    if reduce_noise:
+        image = cv2.GaussianBlur(image, (5,5), 0)
 
-ref_raster = radiance_to_toa(raster, xml, plot=True)
+    otsu_threshold, image_result = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU,)
+    otsu_threshold_float = float((otsu_threshold - 128) / 127) # returning otsu threshold back to -1 to 1 range
 
-ndwi_raster = calculate_ndwi(ref_raster, plot=True)
+    return otsu_threshold_float
 
-classified_raster = ndwi_classify(ndwi_raster, plot=True)
+
+
+# raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
+
+# xml = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS_metadata.xml"
+
+# ref_raster = radiance_to_toa(raster, xml, plot=True)
+
+# ndwi_raster = calculate_ndwi(ref_raster, plot=True)
+
+# classified_raster = ndwi_classify(ndwi_raster, plot=True)
+
+# get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
