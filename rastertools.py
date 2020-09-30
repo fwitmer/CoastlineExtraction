@@ -175,7 +175,7 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
 
 
 def ndwi_classify(rasterfile, outfile=None, plot=False):
-    threshold = 0.2
+    threshold = get_otsu_threshold(rasterfile)
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
