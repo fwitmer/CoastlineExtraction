@@ -30,6 +30,8 @@ if files_to_be_processed:
 
     files_to_be_processed.sort()
     for f in files_to_be_processed:
+        if f[0].find("8bit") != -1:
+            continue
         file_time = datetime.datetime.strptime(f[1][:15],'%Y%m%d_%H%M%S')
         file_year = str(file_time.year) # forcing into a string for use in pathing later
         file_month = file_time.strftime("%B") # string version of month
