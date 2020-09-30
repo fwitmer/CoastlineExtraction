@@ -261,4 +261,4 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
 
 # classified_raster = ndwi_classify(ndwi_raster, plot=True)
 
-get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
+# get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
