@@ -3,6 +3,8 @@ import rasterio
 import os
 import numpy as np
 
+
+
 '''
 Create a new padded tiff with num_blank_bands added layers of zeros.
 
