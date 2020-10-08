@@ -236,7 +236,7 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
         kwargs = src.meta
         kwargs.update(dtype=rasterio.uint8, count=1)
         ndwi = src.read(1)
-    ndwi_8_bit = (ndwi * 127) + 127)
+    ndwi_8_bit = (ndwi * 127) + 127
     out_filename = path.split(sep=".")[0] + "_8bit.tif"
     with rasterio.open(out_filename, mode='w', **kwargs) as dst:
         dst.write_band(1, ndwi_8_bit.astype(rasterio.uint8))
