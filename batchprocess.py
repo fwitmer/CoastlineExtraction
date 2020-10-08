@@ -27,7 +27,7 @@ for root, subdirs, files in os.walk(rootdir + "/data"):
 if files_to_be_processed:
     if not os.path.isdir("data/output"):
         os.mkdir("data/output")
-
+    
     files_to_be_processed.sort()
     for f in files_to_be_processed:
         if f[0].find("8bit") != -1:
