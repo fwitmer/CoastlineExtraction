@@ -81,3 +81,16 @@ if files_to_be_processed:
                 out_fp = "data/output/{year}/{month}/{year}{month}{day}_AnalyticMS_SR_merged.tif".format(year=year, month=month, day=day)
                 with rasterio.open(out_fp, "w", **out_meta) as dst:
                     dst.write(mosaic)
+
+# process the merged files
+for root, subdirs, files in os.walk(rootdir + "/data/output"):
+    if files:
+        for f in files:
+            if f.find("NDWI") != -1:
+                continue
+            pathname = root + "/"
+            outfile_base = f.split(sep=".")[0]
+            ndwi_outfile = pathname + outfile_base + "_NDWI.tif"
+            ndwi_class_outfile = pathname + outfile_base + "_NDWI_classified.tif"
+            ndwi = rt.calculate_ndwi(pathname + f, ndwi_outfile, plot=False)
+            ndwi_class = rt.ndwi_classify(ndwi_outfile, ndwi_class_outfile, plot=False)
