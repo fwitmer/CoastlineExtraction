@@ -4,6 +4,7 @@ import rasterio
 import cv2
 from rasterio.plot import show_hist
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from xml.dom import minidom
@@ -235,7 +236,7 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
         kwargs = src.meta
         kwargs.update(dtype=rasterio.uint8, count=1)
         ndwi = src.read(1)
-    ndwi_8_bit = (ndwi * 127) + 128
+    ndwi_8_bit = (ndwi * 127) + 127)
     out_filename = path.split(sep=".")[0] + "_8bit.tif"
     with rasterio.open(out_filename, mode='w', **kwargs) as dst:
         dst.write_band(1, ndwi_8_bit.astype(rasterio.uint8))
@@ -245,7 +246,7 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
         image = cv2.GaussianBlur(image, (5,5), 0)
 
     otsu_threshold, image_result = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU,)
-    otsu_threshold_float = float((otsu_threshold - 128) / 127) # returning otsu threshold back to -1 to 1 range
+    otsu_threshold_float = float((otsu_threshold - 127) / 127) # returning otsu threshold back to -1 to 1 range
 
     return otsu_threshold_float
 
