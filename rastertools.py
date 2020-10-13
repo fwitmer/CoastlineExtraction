@@ -146,16 +146,13 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
         kwargs = src.meta
         kwargs.update(dtype=rasterio.float32, count=1)
 
-        green_band = src.read(2)  # band 2 - green
-        nir_band = src.read(4)    # band 4 - NIR
+        green_band = src.read(2).astype(rasterio.float64)  # band 2 - green
+        nir_band = src.read(4).astype(rasterio.float64)    # band 4 - NIR
         print("DONE\n")
 
     print("Calculating NDWI:", end=" ")
     np.seterr(divide='ignore', invalid='ignore')
-    ndwi = np.where(
-        (green_band + nir_band) == 0.,
-        0,
-        (green_band - nir_band) / (green_band + nir_band))
+    ndwi = (green_band - nir_band) / (green_band + nir_band)
     print("DONE\n")
     if outfile:
         out_filename = outfile
@@ -172,7 +169,7 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
         plot_raster(bands, labels)
 
         show_hist(ndwi, bins=100, stacked=False, alpha=0.3, histtype='stepfilled', title="NDWI Values")
-    return raster_filepath + out_filename
+    return out_filename
 
 
 def ndwi_classify(rasterfile, outfile=None, plot=False):
@@ -200,6 +197,7 @@ def ndwi_classify(rasterfile, outfile=None, plot=False):
         out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_classified.tif"
     print("Saving classified raster as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
+        dst.nodata = 9001
         dst.write_band(1, classified_raster.astype(rasterio.int8))
     print("DONE\n")
 
@@ -250,7 +248,9 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
 
     return otsu_threshold_float
 
-
+raster = "data/test/20160909_merged.tif"
+ndwi = calculate_ndwi(raster, plot=True)
+ndwi_class = ndwi_classify(ndwi, plot=True)
 
 # raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
 
