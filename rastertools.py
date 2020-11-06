@@ -8,6 +8,7 @@ import math
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from xml.dom import minidom
+from skimage.filters import threshold_yen
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
 
@@ -146,8 +147,8 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
         kwargs = src.meta
         kwargs.update(dtype=rasterio.float32, count=1)
 
-        green_band = src.read(2).astype(rasterio.float64)  # band 2 - green
-        nir_band = src.read(4).astype(rasterio.float64)    # band 4 - NIR
+        green_band = src.read(2).astype(rasterio.float32)  # band 2 - green
+        nir_band = src.read(4).astype(rasterio.float32)    # band 4 - NIR
         print("DONE\n")
 
     print("Calculating NDWI:", end=" ")
@@ -160,20 +161,23 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
         out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_NDWI.tif"
     print("Saving calculated NDWI image as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
+        dst.nodata = 2
         dst.write_band(1, ndwi.astype(rasterio.float32))
         print("DONE\n")
 
     if plot:
         bands = [ndwi]
-        labels = ["NDWI (Normalized Difference Water Index"]
+        labels = ["NDWI (Normalized Difference Water Index)"]
         plot_raster(bands, labels)
 
         show_hist(ndwi, bins=100, stacked=False, alpha=0.3, histtype='stepfilled', title="NDWI Values")
     return out_filename
 
 
-def ndwi_classify(rasterfile, outfile=None, plot=False):
-    threshold = get_otsu_threshold(rasterfile, normalized=True)
+def ndwi_classify(rasterfile, outfile=None, threshold=0.2, plot=False):
+    # threshold = get_otsu_threshold(rasterfile)
+    # threshold = get_skimage_otsu(rasterfile)
+    threshold = threshold
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
@@ -181,7 +185,7 @@ def ndwi_classify(rasterfile, outfile=None, plot=False):
     print("Opening", raster_filename, "for NDWI water classification:", end=" ")
     with rasterio.open(img, driver="GTiff") as src:
         kwargs = src.meta
-        kwargs.update(dtype=rasterio.int8, count=1)
+        kwargs.update(dtype=rasterio.int16, count=1)
 
         ndwi = src.read(1)
         print("DONE\n")
@@ -198,7 +202,7 @@ def ndwi_classify(rasterfile, outfile=None, plot=False):
     print("Saving classified raster as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
         dst.nodata = 9001
-        dst.write_band(1, classified_raster.astype(rasterio.int8))
+        dst.write_band(1, classified_raster.astype(rasterio.int16))
     print("DONE\n")
 
     if plot:
@@ -234,7 +238,8 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
         kwargs = src.meta
         kwargs.update(dtype=rasterio.uint8, count=1)
         ndwi = src.read(1)
-    ndwi_8_bit = (ndwi * 127) + 127
+    ndwi_8_bit = np.floor((ndwi + 1) * 128)
+    ndwi_8_bit = np.where(ndwi_8_bit > 255, 255, ndwi_8_bit)
     out_filename = path.split(sep=".")[0] + "_8bit.tif"
     with rasterio.open(out_filename, mode='w', **kwargs) as dst:
         dst.write_band(1, ndwi_8_bit.astype(rasterio.uint8))
@@ -244,13 +249,23 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
         image = cv2.GaussianBlur(image, (5,5), 0)
 
     otsu_threshold, image_result = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU,)
-    otsu_threshold_float = float((otsu_threshold - 127) / 127) # returning otsu threshold back to -1 to 1 range
+    otsu_threshold_float = float((otsu_threshold / 128.0) - 1) # returning otsu threshold back to -1 to 1 range
 
     return otsu_threshold_float
 
-raster = "data/test/20160909_merged.tif"
-ndwi = calculate_ndwi(raster, plot=True)
-ndwi_class = ndwi_classify(ndwi, plot=True)
+def get_yen_threshold(path):
+    with rasterio.open(path, driver="GTiff") as src:
+        image = src.read(1)
+    threshold = threshold_yen(image)
+    return (threshold - 127) / 128
+
+# raster = "data/test/20160909_merged.tif"
+# ndwi = calculate_ndwi(raster, plot=True)
+# ndwi_class = ndwi_classify(ndwi, plot=True)
+
+# raster = "data/9-5-2016_Ortho/9-5-2016_Ortho_4Band.tif"
+# ndwi = calculate_ndwi(raster, plot=True)
+# ndwi_class = ndwi_classify(ndwi, plot=True)
 
 # raster = "data/Unortho Deering Images With RPCs 1-30/files/PSScene4Band/20160908_212941_0e0f/basic_analytic/20160908_212941_0e0f_1B_AnalyticMS.tif"
 
