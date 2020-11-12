@@ -257,6 +257,40 @@ def get_yen_threshold(path):
     threshold = threshold_yen(image)
     return (threshold - 127) / 128
 
+# Function to Geo-Reference target_image based on base_image (It is recommended
+# To use the HiRes September 2016 Image as base_image
+def georeference(base_image, target_image, outfile=None):
+
+    # Get image paths
+    base_filepath = os.path.dirname(base_image) + '/'
+    base_filename = os.path.basename(base_image)
+
+    target_filepath = os.path.dirname(target_image) + '/'
+    target_filename = os.path.basename(target_image)
+
+    im_reference = base_filepath + base_filename
+    im_target = target_filepath + target_filename
+
+    # Specify correct output filepath
+    if outfile:
+        path_out = outfile
+    else:
+        path_out = target_filename.split(sep=".")[0] + "_GeoRegistered.tif"
+
+    # Coregister imagery
+    # wp and ws Set as bounding box around Deering Airstrip
+    CR = COREG(im_reference, im_target, wp=(600578.602641986, 7328849.357436092), ws=(965, 1089.7365), path_out=path_out)
+
+    # Calculate spatial shifts
+    CR.calculate_spatial_shifts()
+
+    # Correct shifts
+    CR.correct_shifts()
+
+    print('Saving Georegistered image as', path_out, ":", end=" ")
+
+    return target_filepath + path_out
+
 # raster = "data/test/20160909_merged.tif"
 # ndwi = calculate_ndwi(raster, plot=True)
 # ndwi_class = ndwi_classify(ndwi, plot=True)
