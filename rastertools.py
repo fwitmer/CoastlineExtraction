@@ -292,6 +292,7 @@ def get_contours(img):
 
 
 
+
 # raster = "data/test/20161015_merged.tif"
 # ndwi = calculate_ndwi(raster, plot=True)
 # ndwi_class = ndwi_classify(ndwi, plot=True)
@@ -313,3 +314,6 @@ def get_contours(img):
 # get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
 # get_edges("data/test/20161015_merged_NDWI_8bit.tif")
 # get_contours("data/test/20161015_merged_NDWI_classified.tif")
+#
+# get_edges("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_8bit.tif")
+# get_contours("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_classified.tif")
