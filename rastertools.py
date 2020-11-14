@@ -183,7 +183,7 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
     print("Opening", raster_filename, "for NDWI water classification:", end=" ")
     with rasterio.open(img, driver="GTiff") as src:
         kwargs = src.meta
-        kwargs.update(dtype=rasterio.int16, count=1)
+        kwargs.update(dtype=rasterio.int8, count=1)
 
         ndwi = src.read(1)
         print("DONE\n")
@@ -199,8 +199,8 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
         out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_classified.tif"
     print("Saving classified raster as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
-        dst.nodata = 9001
-        dst.write_band(1, classified_raster.astype(rasterio.int16))
+        dst.nodata = 255
+        dst.write_band(1, classified_raster.astype(rasterio.int8))
     print("DONE\n")
 
     if plot:
@@ -251,13 +251,28 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
 
     return otsu_threshold_float
 
+
 def get_yen_threshold(path):
     with rasterio.open(path, driver="GTiff") as src:
         image = src.read(1)
     threshold = threshold_yen(image)
     return (threshold - 127) / 128
 
-# raster = "data/test/20160909_merged.tif"
+
+def get_edges(img):
+    src = cv2.imread(img, 0)
+    plt.imshow(src, cmap='gray')
+    plt.show()
+
+    src_blur = cv2.GaussianBlur(src, (9,9), 0)
+    canny = cv2.Canny(src_blur, 0, 1, L2gradient=True)
+    kern = np.ones((3,3))
+    canny = cv2.dilate(canny, kern)
+    plt.imshow(canny)
+    plt.show()
+
+
+# raster = "data/test/20161015_merged.tif"
 # ndwi = calculate_ndwi(raster, plot=True)
 # ndwi_class = ndwi_classify(ndwi, plot=True)
 
@@ -276,3 +291,5 @@ def get_yen_threshold(path):
 # classified_raster = ndwi_classify(ndwi_raster, plot=True)
 
 # get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
+# get_edges("data/test/20161015_merged_NDWI_classified.tif")
+# get_contours("data/test/20161015_merged_NDWI_classified.tif")
