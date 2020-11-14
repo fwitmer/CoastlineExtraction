@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from xml.dom import minidom
 from skimage.filters import threshold_yen
+from scipy.interpolate import make_interp_spline, BSpline, splprep, splev
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
 
@@ -183,7 +184,7 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
     print("Opening", raster_filename, "for NDWI water classification:", end=" ")
     with rasterio.open(img, driver="GTiff") as src:
         kwargs = src.meta
-        kwargs.update(dtype=rasterio.int16, count=1)
+        kwargs.update(dtype=rasterio.int8, count=1)
 
         ndwi = src.read(1)
         print("DONE\n")
@@ -199,8 +200,8 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
         out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_classified.tif"
     print("Saving classified raster as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
-        dst.nodata = 9001
-        dst.write_band(1, classified_raster.astype(rasterio.int16))
+        dst.nodata = 255
+        dst.write_band(1, classified_raster.astype(rasterio.int8))
     print("DONE\n")
 
     if plot:
@@ -251,47 +252,48 @@ def get_otsu_threshold(path, reduce_noise = False, normalized = False):
 
     return otsu_threshold_float
 
+
 def get_yen_threshold(path):
     with rasterio.open(path, driver="GTiff") as src:
         image = src.read(1)
     threshold = threshold_yen(image)
     return (threshold - 127) / 128
 
-# Function to Geo-Reference target_image based on base_image (It is recommended
-# To use the HiRes September 2016 Image as base_image
-def georeference(base_image, target_image, outfile=None):
 
-    # Get image paths
-    base_filepath = os.path.dirname(base_image) + '/'
-    base_filename = os.path.basename(base_image)
+def get_edges(img):
+    src = cv2.imread(img, 0)
+    plt.imshow(src, cmap='gray')
+    plt.show()
 
-    target_filepath = os.path.dirname(target_image) + '/'
-    target_filename = os.path.basename(target_image)
+    src_blur = cv2.GaussianBlur(src, (15,15), 0)
+    canny = cv2.Canny(src_blur, 30, 80, L2gradient=None)
+    plt.imshow(canny)
+    plt.show()
 
-    im_reference = base_filepath + base_filename
-    im_target = target_filepath + target_filename
+    contours, hierarchy = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_L1)
+    drawing = np.zeros((src.shape[0], src.shape[1]), dtype=np.uint8)
+    cv2.drawContours(drawing, contours, -1, 1, 3)
+    plt.imshow(drawing, cmap='gray')
+    plt.show()
 
-    # Specify correct output filepath
-    if outfile:
-        path_out = outfile
-    else:
-        path_out = target_filename.split(sep=".")[0] + "_GeoRegistered.tif"
 
-    # Coregister imagery
-    # wp and ws Set as bounding box around Deering Airstrip
-    CR = COREG(im_reference, im_target, wp=(600578.602641986, 7328849.357436092), ws=(965, 1089.7365), path_out=path_out)
+def get_contours(img):
+    src = cv2.imread(img, 0)
+    plt.imshow(src, cmap='gray')
+    plt.show()
+    src_blur = cv2.GaussianBlur(src, (17,17), 0)
+    contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
+    drawing = np.zeros((src.shape[0], src.shape[1]), dtype=np.uint8)
+    cv2.drawContours(drawing, contours, -1, 1, 3)
+    plt.imshow(drawing, cmap='gray')
+    plt.show()
 
-    # Calculate spatial shifts
-    CR.calculate_spatial_shifts()
 
-    # Correct shifts
-    CR.correct_shifts()
 
-    print('Saving Georegistered image as', path_out, ":", end=" ")
 
-    return target_filepath + path_out
 
-# raster = "data/test/20160909_merged.tif"
+
+# raster = "data/test/20161015_merged.tif"
 # ndwi = calculate_ndwi(raster, plot=True)
 # ndwi_class = ndwi_classify(ndwi, plot=True)
 
@@ -310,3 +312,8 @@ def georeference(base_image, target_image, outfile=None):
 # classified_raster = ndwi_classify(ndwi_raster, plot=True)
 
 # get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
+# get_edges("data/test/20161015_merged_NDWI_8bit.tif")
+# get_contours("data/test/20161015_merged_NDWI_classified.tif")
+#
+# get_edges("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_8bit.tif")
+# get_contours("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_classified.tif")
