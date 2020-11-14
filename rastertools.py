@@ -264,11 +264,21 @@ def get_edges(img):
     plt.imshow(src, cmap='gray')
     plt.show()
 
-    src_blur = cv2.GaussianBlur(src, (9,9), 0)
-    canny = cv2.Canny(src_blur, 0, 1, L2gradient=True)
-    kern = np.ones((3,3))
-    canny = cv2.dilate(canny, kern)
+    src_blur = cv2.GaussianBlur(src, (5,5), 0)
+    canny = cv2.Canny(src_blur, 100, 150, L2gradient=None)
     plt.imshow(canny)
+    plt.show()
+
+
+def get_contours(img):
+    src = cv2.imread(img, 0)
+    plt.imshow(src, cmap='gray')
+    plt.show()
+    src_blur = cv2.GaussianBlur(src, (13,13), 0)
+    contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    drawing = np.zeros((src.shape[0], src.shape[1]), dtype=np.uint8)
+    cv2.drawContours(drawing, contours, -1, 1, 3)
+    plt.imshow(drawing, cmap='gray')
     plt.show()
 
 
@@ -291,5 +301,5 @@ def get_edges(img):
 # classified_raster = ndwi_classify(ndwi_raster, plot=True)
 
 # get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
-# get_edges("data/test/20161015_merged_NDWI_classified.tif")
+# get_edges("data/test/20161015_merged_NDWI_8bit.tif")
 # get_contours("data/test/20161015_merged_NDWI_classified.tif")
