@@ -282,7 +282,7 @@ def get_contours(img):
     plt.imshow(src, cmap='gray')
     plt.show()
     src_blur = cv2.GaussianBlur(src, (17,17), 0)
-    contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
     drawing = np.zeros((src.shape[0], src.shape[1]), dtype=np.uint8)
     cv2.drawContours(drawing, contours, -1, 1, 3)
     plt.imshow(drawing, cmap='gray')
@@ -311,5 +311,5 @@ def get_contours(img):
 # classified_raster = ndwi_classify(ndwi_raster, plot=True)
 
 # get_otsu_threshold("/home/kjcarroll/git/CoastlineExtraction/data/output/2016/October/20161014_213436_AnalyticMS_SR_NDWI.tif")
-get_edges("data/test/20161015_merged_NDWI_8bit.tif")
-get_contours("data/test/20161015_merged_NDWI_classified.tif")
+# get_edges("data/test/20161015_merged_NDWI_8bit.tif")
+# get_contours("data/test/20161015_merged_NDWI_classified.tif")
