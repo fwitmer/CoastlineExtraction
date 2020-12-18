@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from xml.dom import minidom
 from skimage.filters import threshold_yen
+from arosics import COREG
 from scipy.interpolate import make_interp_spline, BSpline, splprep, splev
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
