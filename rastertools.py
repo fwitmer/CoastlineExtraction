@@ -289,6 +289,26 @@ def get_contours(img):
     plt.show()
 
 
+def get_k_means(img):
+    src = cv2.imread(img)
+    plt.imshow(src)
+    plt.show()
+    # converting to 2D array of pixel values per
+    # https://www.geeksforgeeks.org/image-segmentation-using-k-means-clustering/
+    pix_vals = src.reshape((-1, 3))
+    pix_vals = np.float32(pix_vals)
+
+    retval, labels, centers = cv2.kmeans(pix_vals, 3, None,
+                                         criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 500, 1.0),
+                                         attempts=30,
+                                         flags=cv2.KMEANS_RANDOM_CENTERS)
+    centers = np.uint8(centers)
+    segmented_data = centers[labels.flatten()]
+    segmented_image = segmented_data.reshape((src.shape))
+    plt.imshow(segmented_image)
+    plt.show()
+    return segmented_image
+
 # Function to Geo-Reference target_image based on base_image (It is recommended
 # To use the HiRes September 2016 Image as base_image
 def georeference(base_image, target_image, outfile=None):
@@ -349,3 +369,5 @@ def georeference(base_image, target_image, outfile=None):
 #
 # get_edges("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_8bit.tif")
 # get_contours("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_classified.tif")
+
+# get_k_means("data/test/20161015_merged_NDWI_8bit.tif")
