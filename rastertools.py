@@ -3,6 +3,7 @@ import os
 import rasterio
 import cv2
 from rasterio.plot import show_hist
+from rasterio.fill import fillnodata
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -10,6 +11,7 @@ import matplotlib.colors as colors
 from xml.dom import minidom
 from skimage.filters import threshold_yen
 from arosics import COREG
+import time
 from scipy.interpolate import make_interp_spline, BSpline, splprep, splev
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
@@ -163,7 +165,7 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
         out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_NDWI.tif"
     print("Saving calculated NDWI image as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
-        dst.nodata = 2
+        dst.nodata = 0
         dst.write_band(1, ndwi.astype(rasterio.float32))
         print("DONE\n")
 
@@ -185,10 +187,27 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
     print("Opening", raster_filename, "for NDWI water classification:", end=" ")
     with rasterio.open(img, driver="GTiff") as src:
         kwargs = src.meta
-        kwargs.update(dtype=rasterio.int8, count=1)
+        kwargs.update(dtype=rasterio.uint8, count=1)
 
         ndwi = src.read(1)
         print("DONE\n")
+    k_means = get_k_means(ndwi)
+    for (x, y, window) in sliding_window(k_means, 100, (200, 200)):
+        water_ratio = float((window == 0).sum()) / (window.shape[0] * window.shape[1])
+        if water_ratio > 0.9:
+            continue
+        plt.imshow(window, cmap='gray')
+        plt.show()
+        cropped_ndwi = ndwi[y:y + window.shape[1], x:x + window.shape[0]]
+        plt.imshow(cropped_ndwi, cmap='gray')
+        plt.show()
+        blurred_ndwi_window = cv2.GaussianBlur(cropped_ndwi, (5,5), 0)
+        otsu_threshold, image_result = cv2.threshold(blurred_ndwi_window, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
+        classified_window = np.where(blurred_ndwi_window >= otsu_threshold,
+                                     1,
+                                     0)
+        plt.imshow(classified_window, cmap='gray')
+        plt.show()
     # TODO: update this with dynamically calculated thresholds
     print("Classifying water based on NDWI threshold of ({}):".format(threshold), end=" ")
     classified_raster = np.where(ndwi >= threshold,  # if pixel value >= threshold, new raster value is 1 else 0
@@ -202,7 +221,7 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
     print("Saving classified raster as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
         dst.nodata = 255
-        dst.write_band(1, classified_raster.astype(rasterio.int8))
+        dst.write_band(1, classified_raster.astype(rasterio.uint8))
     print("DONE\n")
 
     if plot:
@@ -291,24 +310,36 @@ def get_contours(img):
 
 
 def get_k_means(img):
-    src = cv2.imread(img)
-    plt.imshow(src)
-    plt.show()
-    # converting to 2D array of pixel values per
-    # https://www.geeksforgeeks.org/image-segmentation-using-k-means-clustering/
-    pix_vals = src.reshape((-1, 3))
-    pix_vals = np.float32(pix_vals)
+    try:
+        src = cv2.imread(img, cv2.IMREAD_ANYDEPTH)
+        plt.imshow(src, cmap='gray')
+        plt.show()
+        # converting to 2D array of pixel values per
+        # https://www.geeksforgeeks.org/image-segmentation-using-k-means-clustering/
+        pix_vals = src.reshape((-1, 1))
+        pix_vals = np.float32(pix_vals)
+        image_shape = src.shape
+    except:
+        pix_vals = img.reshape((-1, 1))
+        pix_vals = np.float32(pix_vals)
+        image_shape = img.shape
 
     retval, labels, centers = cv2.kmeans(pix_vals, 3, None,
                                          criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 500, 1.0),
                                          attempts=30,
                                          flags=cv2.KMEANS_RANDOM_CENTERS)
-    centers = np.uint8(centers)
-    segmented_data = centers[labels.flatten()]
-    segmented_image = segmented_data.reshape((src.shape))
-    plt.imshow(segmented_image)
+    reshaped_labels = labels.reshape(image_shape)
+    plt.imshow(reshaped_labels, cmap='gray')
     plt.show()
-    return segmented_image
+
+    return reshaped_labels.astype(np.uint8)
+
+
+def sliding_window(image, step, window_size):
+    for y in range(0, image.shape[0], step):
+        for x in range(0, image.shape[1], step):
+            yield(x, y, image[y:y + window_size[1], x:x + window_size[0]])
+
 
 # Function to Geo-Reference target_image based on base_image (It is recommended
 # To use the HiRes September 2016 Image as base_image
@@ -345,7 +376,6 @@ def georeference(base_image, target_image, outfile=None):
     return target_filepath + path_out
 
 
-
 # raster = "data/test/20161015_merged.tif"
 # ndwi = calculate_ndwi(raster, plot=True)
 # ndwi_class = ndwi_classify(ndwi, plot=True)
@@ -372,3 +402,25 @@ def georeference(base_image, target_image, outfile=None):
 # get_contours("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_classified.tif")
 
 # get_k_means("data/test/20161015_merged_NDWI_8bit.tif")
+# calculate_ndwi("data/test/20161015_merged.tif")
+
+# with rasterio.open("data/test/20161015_merged.tif") as src:
+#     masks = src.read_masks()
+# mask = (masks[0] & masks[1] & masks[2])
+# plt.imshow(mask, cmap='gray')
+# plt.show()
+# with rasterio.open("data/test/20161015_merged_NDWI.tif") as src:
+#     kwargs = src.meta
+#     kwargs.update(dtype=rasterio.float32, count=1)
+#     ndwi = src.read(1)
+#     filled = fillnodata(ndwi, mask, max_search_distance=1000)
+# plt.imshow(filled, cmap='gray')
+# plt.show()
+#
+# with rasterio.open("data/test/20161015_merged_NDWI_filled.tif", 'w', **kwargs) as dst:
+#     dst.nodata = 0
+#     dst.write_band(1, filled.astype(rasterio.float32))
+
+
+
+# ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif")
