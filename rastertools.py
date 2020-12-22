@@ -200,9 +200,6 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
     print("K-Means Shape:", k_means.shape)
     for (x, y, window) in sliding_window(k_means, 100, (200, 200)):
         water_ratio = float((window == 2).sum()) / (window.shape[0] * window.shape[1])
-        print("(x, y): ({}, {})".format(x, y))
-        print("Window shape: ({}, {})".format(window.shape[1], window.shape[0]))
-        print("NDWI shape: ({}, {})".format(ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]].shape[1],ndwi_classified[y:y+window.shape[1], x:x + window.shape[0]].shape[0]  ))
         if water_ratio > 0.95:
             if water_ratio >= 0.995:
                 ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
@@ -211,12 +208,10 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
             else:
                 ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
                     (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | np.zeros(window.shape).astype(np.bool))
-            print("All water, cleared.")
             continue
         if water_ratio < 0.05:
             ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
                 (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | np.zeros(window.shape).astype(np.bool))
-            print("All land, cleared.")
             continue
         # plt.imshow(window, cmap='gray')
         # plt.show()
@@ -246,7 +241,7 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
     print("Saving classified raster as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
         dst.nodata = 255
-        dst.write_band(1, classified_raster.astype(rasterio.uint8))
+        dst.write_band(1, ndwi_classified.astype(rasterio.uint8))
     print("DONE\n")
 
     if plot:
@@ -448,4 +443,4 @@ def georeference(base_image, target_image, outfile=None):
 
 
 
-ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif")
+# ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif")
