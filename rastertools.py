@@ -191,23 +191,48 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
 
         ndwi = src.read(1)
         print("DONE\n")
-    k_means = get_k_means(ndwi)
+    ndwi_blur = cv2.GaussianBlur(ndwi, (17, 17), 0)
+    k_means = get_k_means(ndwi_blur)
+    plt.imshow(ndwi_blur, cmap='gray')
+    plt.show()
+    ndwi_classified = np.zeros(ndwi.shape).astype(np.bool)
+    print("NDWI Classified Shape:", ndwi_classified.shape)
+    print("K-Means Shape:", k_means.shape)
     for (x, y, window) in sliding_window(k_means, 100, (200, 200)):
-        water_ratio = float((window == 0).sum()) / (window.shape[0] * window.shape[1])
-        if water_ratio > 0.9:
+        water_ratio = float((window == 2).sum()) / (window.shape[0] * window.shape[1])
+        print("(x, y): ({}, {})".format(x, y))
+        print("Window shape: ({}, {})".format(window.shape[1], window.shape[0]))
+        print("NDWI shape: ({}, {})".format(ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]].shape[1],ndwi_classified[y:y+window.shape[1], x:x + window.shape[0]].shape[0]  ))
+        if water_ratio > 0.95:
+            if water_ratio >= 0.995:
+                ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
+                    (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | np.ones(window.shape).astype(
+                        np.bool))
+            else:
+                ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
+                    (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | np.zeros(window.shape).astype(np.bool))
+            print("All water, cleared.")
             continue
-        plt.imshow(window, cmap='gray')
-        plt.show()
-        cropped_ndwi = ndwi[y:y + window.shape[1], x:x + window.shape[0]]
-        plt.imshow(cropped_ndwi, cmap='gray')
-        plt.show()
-        blurred_ndwi_window = cv2.GaussianBlur(cropped_ndwi, (5,5), 0)
-        otsu_threshold, image_result = cv2.threshold(blurred_ndwi_window, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
-        classified_window = np.where(blurred_ndwi_window >= otsu_threshold,
+        if water_ratio < 0.05:
+            ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
+                (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | np.zeros(window.shape).astype(np.bool))
+            print("All land, cleared.")
+            continue
+        # plt.imshow(window, cmap='gray')
+        # plt.show()
+        cropped_ndwi = ndwi_blur[y:y + window.shape[0], x:x + window.shape[1]]
+        # plt.imshow(cropped_ndwi, cmap='gray')
+        # plt.show()
+        otsu_threshold, image_result = cv2.threshold(cropped_ndwi, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
+        classified_window = np.where(cropped_ndwi >= otsu_threshold,
                                      1,
                                      0)
-        plt.imshow(classified_window, cmap='gray')
-        plt.show()
+        ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
+            (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | classified_window)
+        # plt.imshow(classified_window, cmap='gray')
+        # plt.show()
+    plt.imshow(ndwi_classified, cmap='gray')
+    plt.show()
     # TODO: update this with dynamically calculated thresholds
     print("Classifying water based on NDWI threshold of ({}):".format(threshold), end=" ")
     classified_raster = np.where(ndwi >= threshold,  # if pixel value >= threshold, new raster value is 1 else 0
@@ -338,7 +363,7 @@ def get_k_means(img):
 def sliding_window(image, step, window_size):
     for y in range(0, image.shape[0], step):
         for x in range(0, image.shape[1], step):
-            yield(x, y, image[y:y + window_size[1], x:x + window_size[0]])
+            yield(x, y, image[y:y + window_size[0], x:x + window_size[1]])
 
 
 # Function to Geo-Reference target_image based on base_image (It is recommended
@@ -423,4 +448,4 @@ def georeference(base_image, target_image, outfile=None):
 
 
 
-# ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif")
+ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif")
