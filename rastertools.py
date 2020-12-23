@@ -209,9 +209,6 @@ def ndwi_classify(rasterfile, outfile=None, plot=False):
                 ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
                     (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | np.ones(window.shape).astype(
                         np.bool))
-            else:
-                ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
-                    (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | np.zeros(window.shape).astype(np.bool))
             continue
         if water_ratio < 0.05:
             ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
@@ -311,11 +308,18 @@ def get_contours(img):
     plt.imshow(src, cmap='gray')
     plt.show()
     src_blur = cv2.GaussianBlur(src, (17,17), 0)
-    contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
+    contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
     drawing = np.zeros((src.shape[0], src.shape[1]), dtype=np.uint8)
     cv2.drawContours(drawing, contours, -1, 1, 3)
     plt.imshow(drawing, cmap='gray')
     plt.show()
+
+    with rasterio.open(img, driver="GTiff") as src:
+        kwargs = src.meta
+        kwargs.update(dtype=rasterio.uint8, count=1)
+    with rasterio.open("data/test/20161015_merged_NDWI_filled_coastline.tif", 'w', **kwargs) as dst:
+        dst.nodata = 255
+        dst.write_band(1, drawing.astype(rasterio.uint8))
 
 
 def get_k_means(img):
@@ -433,3 +437,4 @@ def georeference(base_image, target_image, outfile=None):
 
 
 # ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif", plot=True)
+# get_contours("data/test/20161015_merged_NDWI_filled_8bit_classified.tif")
