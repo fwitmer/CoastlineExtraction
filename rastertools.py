@@ -178,8 +178,7 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
     return out_filename
 
 
-def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
-    threshold = thresh
+def ndwi_classify(rasterfile, outfile=None, plot=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
@@ -193,8 +192,13 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
         print("DONE\n")
     ndwi_blur = cv2.GaussianBlur(ndwi, (17, 17), 0)
     k_means = get_k_means(ndwi_blur)
-    plt.imshow(ndwi_blur, cmap='gray')
-    plt.show()
+    print("K-means summary:")
+    print("\tClass 0: {}%".format(((k_means == 0).sum() / (k_means.shape[0] * k_means.shape[1])) * 100))
+    print("\tClass 1: {}%".format(((k_means == 1).sum() / (k_means.shape[0] * k_means.shape[1])) * 100))
+    print("\tClass 2: {}%".format(((k_means == 2).sum() / (k_means.shape[0] * k_means.shape[1])) * 100))
+    if plot:
+        plt.imshow(ndwi_blur, cmap='gray')
+        plt.show()
     ndwi_classified = np.zeros(ndwi.shape).astype(np.bool)
     print("NDWI Classified Shape:", ndwi_classified.shape)
     print("K-Means Shape:", k_means.shape)
@@ -213,26 +217,16 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
             ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
                 (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | np.zeros(window.shape).astype(np.bool))
             continue
-        # plt.imshow(window, cmap='gray')
-        # plt.show()
         cropped_ndwi = ndwi_blur[y:y + window.shape[0], x:x + window.shape[1]]
-        # plt.imshow(cropped_ndwi, cmap='gray')
-        # plt.show()
         otsu_threshold, image_result = cv2.threshold(cropped_ndwi, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
         classified_window = np.where(cropped_ndwi >= otsu_threshold,
                                      1,
                                      0)
         ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
             (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | classified_window)
-        # plt.imshow(classified_window, cmap='gray')
-        # plt.show()
-    plt.imshow(ndwi_classified, cmap='gray')
-    plt.show()
-    # TODO: update this with dynamically calculated thresholds
-    print("Classifying water based on NDWI threshold of ({}):".format(threshold), end=" ")
-    classified_raster = np.where(ndwi >= threshold,  # if pixel value >= threshold, new raster value is 1 else 0
-                                 1,
-                                 0)
+    if plot:
+        plt.imshow(ndwi_classified, cmap='gray')
+        plt.show()
     print("DONE\n")
     if outfile:
         out_filename = outfile
@@ -243,11 +237,6 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
         dst.nodata = 255
         dst.write_band(1, ndwi_classified.astype(rasterio.uint8))
     print("DONE\n")
-
-    if plot:
-        bands = [classified_raster]
-        labels = ["Water Classification Map"]
-        plot_raster(bands, labels)
 
     return raster_filepath + out_filename
 
@@ -443,4 +432,4 @@ def georeference(base_image, target_image, outfile=None):
 
 
 
-# ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif")
+# ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif", plot=True)
