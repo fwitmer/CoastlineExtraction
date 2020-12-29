@@ -314,7 +314,7 @@ def get_contours(img):
     src_blur = cv2.GaussianBlur(src, (17,17), 0)
     contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
     drawing = np.zeros((src.shape[0], src.shape[1]), dtype=np.uint8)
-    cv2.drawContours(drawing, contours, -1, 1, 3)
+    cv2.drawContours(drawing, contours, 2, 1, 3)
     plt.imshow(drawing, cmap='gray')
     plt.show()
 
@@ -464,4 +464,4 @@ def morph_transform(fname, kwidth, kheight, outname=None):
 
 
 # ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif", plot=True)
-# get_contours("data/test/20161015_merged_NDWI_filled_8bit_classified.tif")
+get_contours("data/test/20161015_merged_NDWI_filled_8bit_classified.tif")
