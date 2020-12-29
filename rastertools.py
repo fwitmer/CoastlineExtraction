@@ -225,6 +225,10 @@ def ndwi_classify(rasterfile, outfile=None, plot=False):
         plt.imshow(ndwi_classified, cmap='gray')
         plt.show()
     print("DONE\n")
+    transformed_classification = morph_transform(ndwi_classified.astype(np.uint8), 10, 10)
+    if plot:
+        plt.imshow(transformed_classification, cmap='gray')
+        plt.show()
     if outfile:
         out_filename = outfile
     else:
@@ -232,7 +236,7 @@ def ndwi_classify(rasterfile, outfile=None, plot=False):
     print("Saving classified raster as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
         dst.nodata = 255
-        dst.write_band(1, ndwi_classified.astype(rasterio.uint8))
+        dst.write_band(1, transformed_classification.astype(rasterio.uint8))
     print("DONE\n")
 
     return raster_filepath + out_filename
@@ -389,7 +393,7 @@ def georeference(base_image, target_image, outfile=None):
     return target_filepath + path_out
 
 
-def morph_transform(fname, kwidth, kheight, outname):
+def morph_transform(fname, kwidth, kheight, outname=None):
     '''
     Perform opening/closing as described in the Paravolidakis paper.
 
