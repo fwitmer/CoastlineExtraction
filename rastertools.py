@@ -389,6 +389,29 @@ def georeference(base_image, target_image, outfile=None):
     return target_filepath + path_out
 
 
+def morph_transform(fname, kwidth, kheight, outname):
+    '''
+    Perform opening/closing as described in the Paravolidakis paper.
+
+    IN:
+        fname: raster image to transform
+        kwidth: kernel width
+        kheight: kernel height
+        outname: name of file to write transformed image to
+    OUT:
+        No return value, results written to file
+    '''
+    try:
+        dat = cv2.imread(fname, cv2.IMREAD_ANYDEPTH)
+    except:
+        dat = fname
+    kernel = np.ones((kheight, kwidth), np.uint8)
+    opened = cv2.morphologyEx(dat, cv2.MORPH_OPEN, kernel)
+    opened_closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel)
+    if outname:
+        return cv2.imwrite(outname, opened_closed)
+    else:
+        return opened_closed
 # raster = "data/test/20161015_merged.tif"
 # ndwi = calculate_ndwi(raster, plot=True)
 # ndwi_class = ndwi_classify(ndwi, plot=True)
