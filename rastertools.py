@@ -464,4 +464,4 @@ def morph_transform(fname, kwidth, kheight, outname=None):
 
 
 # ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif", plot=True)
-get_contours("data/test/20161015_merged_NDWI_filled_8bit_classified.tif")
+# get_contours("data/test/20161015_merged_NDWI_filled_8bit_classified.tif")
