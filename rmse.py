@@ -1,10 +1,8 @@
 '''
 Calculates the RMSE between two sets of points that intersect with
 a common set of transects. Results are written to a csv file.
-
 Run with two shapefiles without specifying by date:
     python3 rmse.py --transects transect_shapefile -sf1 first_shapefile -sf2 second_shapefile -o results_file
-
 Run with two shapefiles but filter features by date in the first shapefile
     python3 rmse.py --transects transect_shapefile -sf1 first_shapefile -d1 date -ch1 date_header -sf2 second_shapefile -o results_file
     the date argument should follow the same formatting as found in the source shapefile
@@ -31,11 +29,9 @@ def find_distances(transects, fst, snd):
     '''
     Finds the distances between pairs of points from different coastlines that
     intesect a common transect.
-
     PARAMETERS:
         transects: a GeoDataFrame of multilines representing the coastal transects
         fst, snd: GeoDataFrames containing 1 or more shapely points
-
     RETURNS:
         a list of distances in meters between the corresonding points in the two
         sets of coordinates
@@ -49,21 +45,20 @@ def find_distances(transects, fst, snd):
     for i, transect in transects.iterrows():
         intersects[i] = {'fst':[], 'snd':[]}
 
-        for j, point in fst.iterrows():
-            dist = point.geometry.distance(transect.geometry)
+        for point in fst:
+            dist = point.distance(transect.geometry)
             if dist < epsilon:
                 intersects[i]['fst'].append(point)
 
-        for j, point in snd.iterrows():
-            dist = point.geometry.distance(transect.geometry)
+        for point in snd:
+            dist = point.distance(transect.geometry)
             if dist < epsilon:
                 intersects[i]['snd'].append(point)
 
     # for each pair of points corresponding to a transect, caluctulate the distance between the points
     for k in intersects.keys():
         if len(intersects[k]['fst']) == len(intersects[k]['snd']) == 1:
-            import pdb; pdb.set_trace()
-            dist = distance(intersects[k]['fst'][0].geometry.coords[0][::-1], intersects[k]['snd'][0].geometry.coords[0][::-1]).m
+            dist = distance(intersects[k]['fst'][0].coords[0][::-1], intersects[k]['snd'][0].coords[0][::-1]).m
             #dist = intersects[k]['fst'][0].geometry.distance(intersects[k]['snd'][0].geometry)
             distances.append(dist)
 
@@ -80,12 +75,23 @@ if __name__ == '__main__':
     parser.add_argument('-d2', help='Date to filter points by in sf2. Use same date format as source file.')
     parser.add_argument('--col-header2', help='String that is the column header for the date column in the dataframe made from sf2. Reqired if d2 is present.')
     parser.add_argument('-o', required=True, help='Name of file to write results to.')
+    parser.add_argument('--r', help='Call flag if river mouth transects should be excluded from RMSE calculation')
+    parser.add_argument('--sr', help='Call flag to split RSME calculation by region')
+    parser.add_argument('--g', action='store_true', help='Set true to save a graphic depicting transect intersection distances')
     args = parser.parse_args()
 
     transects = gpd.GeoDataFrame.from_file(args.transects)
     # following limits transects to the ones around the area we have been looking at
     transects = transects[transects['BaselineID'] == 117]
 
+    # If '--r' flag set, remove river mouth transects
+    if args.r:
+        removal_ids = [17336, 17335, 17334, 17333, 17332]
+        for removal_id in removal_ids:
+            transects = transects[transects['TransOrder'] != removal_id]
+
+
+    # Find intersection points
     gdf1 = gpd.GeoDataFrame.from_file(args.sf1)
     gdf1 = gdf1.unary_union.intersection(transects.unary_union)
 
@@ -110,13 +116,69 @@ if __name__ == '__main__':
 
     rmse = calc_rmse(distances)
 
+    # Additional split RMSE calc by region if '--sr' flag True
+    if args.sr:
+
+        # Western Coastline Region
+        region_1 = transects[transects['TransOrder'] >= 17443]
+
+        # Northern Cliff Region
+        region_2 = transects[transects['TransOrder'] < 17443 ]
+        region_2 = transects[transects['TransOrder'] >= 17394]
+
+        # Central Shoreline Region
+        region_3 = transects[transects['TransOrder'] < 17394]
+        region_3 = transects[transects['TransOrder'] >= 17370]
+
+        # Town Shoreline Region
+        region_4 = transects[transects['TransOrder'] < 17370]
+        region_4 = transects[transects['TransOrder'] >= 17337]
+
+        # East Shoreline and Cliff Region
+        region_5 = transects[transects['TransOrder'] < 17337]
+
+        coast1 = gpd.GeoDataFrame.from_file(args.sf1)
+        coast2 = gpd.GeoDataFrame.from_file(args.sf2)
+
+        regions = [region_1, region_2, region_3, region_4, region_5]
+
+        # Calculate intersections for each region
+        intersections_1 = []
+        intersections_2 = []
+        for i in regions:
+            intersections_1.append(coast1.unary_union.intersection(i.unary_union))
+            intersections_2.append(coast2.unary_union.intersection(i.unary_union))
+
+        for i in intersections_1:
+            # filter by date for dataframe from first shapefile
+            if args.d1:
+                i = i[i[args.col_header1] == args.d1]
+
+        for i in intersections_2:
+            # filter by date for dataframe from second shapefile
+            if args.d2:
+                i = i[i[args.col_header2] == args.d2]
+
+        # Find distances, calculate RMSE
+        RMSEs = []
+        for i in range (0, len(regions)):
+            distances = find_distances(regions[i], intersections_1[i], intersections_2[i])
+            RMSEs.append(calc_rmse(distances))
+
     result_file = args.o
-    result_file = result_file if result_file[:-4] == '.csv' else result_file + '.csv'
-    with open(result_file, 'w') as out:
-        out.write(f'source file 1,{args.sf1}\n')
+    result_file = result_file if result_file[:-4] == '.csv' else result_file + '\RMSE_Calculations.csv'
+    with open(result_file, 'w+') as out:
+        print('writing to file', result_file)
+        out.write(f'source file 1: {args.sf1}\n')
         if args.d1:
-            out.write(f'source file 1 date,{args.sh1}\n')
-        out.write(f'source file 2,{sf2}\n')
+            out.write(f'source file 1 date: {args.d1}\n')
+        out.write(f'source file 2: {args.sf2}\n')
         if args.d2:
-            out.write(f'source file 2 date,{args.sf2}\n')
-        out.write(f'RMSE (m),{rmse}\n')
+            out.write(f'source file 2 date: {args.d2}\n')
+        out.write(f'Complete Shoreline RMSE: {rmse}\n')
+        if args.sr:
+            out.write(f'RMSE for West Coastline Region: {RMSEs[0]}\n')
+            out.write(f'RMSE for Northern Cliff Region: {RMSEs[1]}\n')
+            out.write(f'RMSE for Central Shoreline Region: {RMSEs[2]}\n')
+            out.write(f'RMSE for Town Shoreline Region: {RMSEs[3]}\n')
+            out.write(f'RMSE for Eastern Shoreline/Cliff Region: {RMSEs[4]}\n')
