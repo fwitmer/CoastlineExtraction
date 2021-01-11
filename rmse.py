@@ -227,9 +227,9 @@ if __name__ == '__main__':
         a = a[:-4]
         b = os.path.basename(args.sf2)
         b = b[:-4]
-        result_file = result_file if result_file[:-4] == '.csv' else result_file + '\RMSE_Calculations_' + a + '_' + b + '.csv'
+        result_file = result_file if result_file[:-4] == '.txt' else result_file + '\RMSE_Calculations_' + a + '_' + b + '.txt'
     except:
-        result_file = result_file if result_file[:-4] == '.csv' else result_file + '\RMSE_Calculations.csv'
+        result_file = result_file if result_file[:-4] == '.txt' else result_file + '\RMSE_Calculations.txt'
     with open(result_file, 'w+') as out:
         print('Writing to file', result_file)
         out.write(f'source file 1: {args.sf1}\n')
@@ -238,10 +238,10 @@ if __name__ == '__main__':
         out.write(f'source file 2: {args.sf2}\n')
         if args.d2:
             out.write(f'source file 2 date: {args.d2}\n')
-        out.write(f'Complete Shoreline RMSE: {rmse}\n')
+        out.write(f'Complete Shoreline RMSE: {rmse} m\n')
         if args.sr:
-            out.write(f'RMSE for West Coastline Region: {RMSEs[0]}\n')
-            out.write(f'RMSE for Northern Cliff Region: {RMSEs[1]}\n')
-            out.write(f'RMSE for Central Shoreline Region: {RMSEs[2]}\n')
-            out.write(f'RMSE for Town Shoreline Region: {RMSEs[3]}\n')
-            out.write(f'RMSE for Eastern Shoreline/Cliff Region: {RMSEs[4]}\n')
+            out.write(f'RMSE for West Coastline Region: {RMSEs[0]} m\n')
+            out.write(f'RMSE for Northern Cliff Region: {RMSEs[1]} m\n')
+            out.write(f'RMSE for Central Shoreline Region: {RMSEs[2]} m\n')
+            out.write(f'RMSE for Town Shoreline Region: {RMSEs[3]} m\n')
+            out.write(f'RMSE for Eastern Shoreline/Cliff Region: {RMSEs[4]} m\n')
