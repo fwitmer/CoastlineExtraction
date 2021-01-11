@@ -12,6 +12,7 @@ from xml.dom import minidom
 from skimage.filters import threshold_yen
 from arosics import COREG
 import time
+from skimage.segmentation import morphological_chan_vese, morphological_geodesic_active_contour, active_contour
 from scipy.interpolate import make_interp_spline, BSpline, splprep, splev
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
@@ -307,21 +308,30 @@ def get_edges(img):
     plt.show()
 
 
-def get_contours(img):
+def get_contours(img, outfile=None, plot=False):
+    raster_filepath = os.path.dirname(img) + "/"
+    raster_filename = os.path.basename(img)
     src = cv2.imread(img, 0)
-    plt.imshow(src, cmap='gray')
-    plt.show()
+    if plot:
+        plt.imshow(src, cmap='gray')
+        plt.show()
     src_blur = cv2.GaussianBlur(src, (17,17), 0)
     contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
     drawing = np.zeros((src.shape[0], src.shape[1]), dtype=np.uint8)
-    cv2.drawContours(drawing, contours, 2, 1, 3)
-    plt.imshow(drawing, cmap='gray')
-    plt.show()
+    cv2.drawContours(drawing, contours, 2, 1, 1)
+    if plot:
+        plt.imshow(drawing, cmap='gray')
+        plt.show()
 
+    # preparing to write output coastline
+    if outfile:
+        out_filename = outfile
+    else:
+        out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_coastline.tif"
     with rasterio.open(img, driver="GTiff") as src:
         kwargs = src.meta
         kwargs.update(dtype=rasterio.uint8, count=1)
-    with rasterio.open("data/test/20161015_merged_NDWI_filled_coastline.tif", 'w', **kwargs) as dst:
+    with rasterio.open(out_filename, 'w', **kwargs) as dst:
         dst.nodata = 255
         dst.write_band(1, drawing.astype(rasterio.uint8))
 
@@ -416,6 +426,58 @@ def morph_transform(fname, kwidth, kheight, outname=None):
         return cv2.imwrite(outname, opened_closed)
     else:
         return opened_closed
+
+
+def fill_nodata(file_to_fill, mask_file = None, plot=False):
+    raster_filepath = os.path.dirname(file_to_fill) + "/"
+    raster_filename = os.path.basename(file_to_fill)
+    if mask_file:
+        with rasterio.open(mask_file) as src:
+            masks = src.read_masks()
+        mask = (masks[0] & masks[1] & masks[2] & masks[3])
+    else:
+        mask = None
+    if plot:
+        plt.imshow(mask, cmap='gray')
+        plt.show()
+    with rasterio.open(file_to_fill) as src:
+        kwargs = src.meta
+        kwargs.update(dtype=rasterio.float32, count=1)
+        ndwi = src.read(1)
+        filled = fillnodata(ndwi, mask, max_search_distance=1000)
+    if plot:
+        plt.imshow(filled, cmap='gray')
+        plt.show()
+
+    out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_filled.tif"
+
+    with rasterio.open(out_filename, 'w', **kwargs) as dst:
+        dst.nodata = 0
+        dst.write_band(1, filled.astype(rasterio.float32))
+
+def get_snake(file, init_file, plot=False):
+    gradient_image = cv2.imread(file, cv2.IMREAD_ANYDEPTH)
+    gradient_blur = cv2.GaussianBlur(gradient_image, (5,5), 0)
+    init_image = cv2.imread(init_file, 0)
+
+    # (row, col) = np.where(init_image == 1)
+    # init_rc = np.array([row, col]).T
+    # snake = active_contour(gradient_blur, init_rc, w_edge=2, w_line=-1, boundary_condition='fixed', coordinates='rc')
+    # print(snake.shape)
+
+    awce_contour = morphological_chan_vese(gradient_blur, 20, init_level_set=init_image, smoothing=1)
+    # gac_contour = morphological_geodesic_active_contour(gradient_blur, 20, init_level_set=init_image, smoothing=1)
+    plt.imshow(gradient_image, cmap='gray')
+    plt.show()
+    plt.imshow(init_image, cmap='gray')
+    plt.show()
+    plt.imshow(awce_contour, cmap='gray')
+    plt.show()
+    # plt.imshow(gac_contour, cmap='gray')
+    # plt.show()
+    # plt.plot(snake[:, 0], snake[:, 1], '-b')
+    # plt.show()
+
 # raster = "data/test/20161015_merged.tif"
 # ndwi = calculate_ndwi(raster, plot=True)
 # ndwi_class = ndwi_classify(ndwi, plot=True)
@@ -444,24 +506,16 @@ def morph_transform(fname, kwidth, kheight, outname=None):
 # get_k_means("data/test/20161015_merged_NDWI_8bit.tif")
 # calculate_ndwi("data/test/20161015_merged.tif")
 
-# with rasterio.open("data/test/20161015_merged.tif") as src:
-#     masks = src.read_masks()
-# mask = (masks[0] & masks[1] & masks[2])
-# plt.imshow(mask, cmap='gray')
-# plt.show()
-# with rasterio.open("data/test/20161015_merged_NDWI.tif") as src:
-#     kwargs = src.meta
-#     kwargs.update(dtype=rasterio.float32, count=1)
-#     ndwi = src.read(1)
-#     filled = fillnodata(ndwi, mask, max_search_distance=1000)
-# plt.imshow(filled, cmap='gray')
-# plt.show()
-#
-# with rasterio.open("data/test/20161015_merged_NDWI_filled.tif", 'w', **kwargs) as dst:
-#     dst.nodata = 0
-#     dst.write_band(1, filled.astype(rasterio.float32))
 
+# fill_nodata("data/test/20160909_merged_NDWI.tif", "data/test/20160909_merged.tif", plot=True)
+# get_otsu_threshold("data/test/20160909_merged_NDWI_filled.tif")
+# ndwi_classify("data/test/20160909_merged_NDWI_filled_8bit.tif", plot=True)
+# get_contours("data/test/20160909_merged_NDWI_filled_8bit_classified.tif", plot=True)
+# fill_nodata("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_filled.tif", "data/9-5-2016_Ortho/9-5-2016_Ortho_4Band.tif",
+#             plot=True)
 
-
-# ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif", plot=True)
+# ndwi_classify("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_8bit.tif", plot=True)
+# ndwi_classify("data/test/20160909_merged_NDWI_8bit.tif")
 # get_contours("data/test/20161015_merged_NDWI_filled_8bit_classified.tif")
+# get_snake("data/test/20161015_merged_NDWI_filled.tif", "data/test/20161015_merged_NDWI_filled_coastline.tif")
+# get_snake("data/test/20161015_merged_NDWI_filled.tif", "data/test/20161015_merged_NDWI_filled_8bit_classified.tif")
