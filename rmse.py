@@ -17,7 +17,8 @@ from shapely.ops import nearest_points
 from shapely.geometry import MultiPoint
 from geopy.distance import distance
 import argparse
-
+import matplotlib.pyplot as plt
+import os
 
 def calc_rmse(errs):
     errs = np.array(errs)
@@ -40,6 +41,18 @@ def find_distances(transects, fst, snd):
     distances = []
     intersects = {}
     epsilon = 2**-16
+
+    try:
+        a = os.path.basename(args.sf1)
+        a = a[:-4]
+        b = os.path.basename(args.sf2)
+        b = b[:-4]
+        plt.title("Transect Distances: " + " " + a + ", " + b)
+    except:
+        plt.title("Transect Distances")
+
+    plt.xlabel('Transect')
+    plt.ylabel('Distance (m)')
 
     # for each transect find intersecting points in each gdf
     for i, transect in transects.iterrows():
@@ -77,7 +90,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', required=True, help='Name of file to write results to.')
     parser.add_argument('--r', help='Call flag if river mouth transects should be excluded from RMSE calculation')
     parser.add_argument('--sr', help='Call flag to split RSME calculation by region')
-    parser.add_argument('--g', action='store_true', help='Set true to save a graphic depicting transect intersection distances')
+    parser.add_argument('--g', help='Set true to save a graphic depicting transect intersection distances')
     args = parser.parse_args()
 
     transects = gpd.GeoDataFrame.from_file(args.transects)
@@ -117,6 +130,7 @@ if __name__ == '__main__':
     rmse = calc_rmse(distances)
 
     # Additional split RMSE calc by region if '--sr' flag True
+    all_distances = []
     if args.sr:
 
         # Western Coastline Region
@@ -163,12 +177,61 @@ if __name__ == '__main__':
         RMSEs = []
         for i in range (0, len(regions)):
             distances = find_distances(regions[i], intersections_1[i], intersections_2[i])
+            all_distances.append(distances)
             RMSEs.append(calc_rmse(distances))
 
+    # If arg g called, generate graph
+    if args.g:
+        # Generate single graph if sr flag not set
+        if not args.sr:
+            xs = []
+            ct = 1
+            for distance in distances:
+                xs.append(ct)
+                ct = ct + 1
+            plt.plot(xs, distances)
+            result_file = args.o
+
+        # Generate area-separated graph if sr flag set
+        else:
+            area_index = ["Western Coastline Region", "Northern Cliff Region", "Central Shoreline Region", "Town Shoreline Region", "East Shoreline and Cliff Region"]
+            i = 0
+            ct = 1
+            for distances in all_distances:
+                xs = []
+                for distance in distances:
+                    xs.append(ct)
+                    ct = ct + 1
+                plt.plot(xs, distances, label=area_index[i])
+                plt.legend()
+                i = i + 1
+
+        # Save plot
+        result_file = args.o
+
+        try:
+            a = os.path.basename(args.sf1)
+            a = a[:-4]
+            b = os.path.basename(args.sf2)
+            b = b[:-4]
+            result_file = result_file if result_file[:-4] == '.png' else result_file + '\Transect_Plot_' + a + '_' + b + '.png'
+        except:
+            result_file = result_file if result_file[:-4] == '.png' else result_file + '\Transect_Plot.png'
+
+        print('Saving plot to', result_file)
+        plt.savefig(result_file)
+
     result_file = args.o
-    result_file = result_file if result_file[:-4] == '.csv' else result_file + '\RMSE_Calculations.csv'
+    try:
+        a = os.path.basename(args.sf1)
+        a = a[:-4]
+        b = os.path.basename(args.sf2)
+        b = b[:-4]
+        result_file = result_file if result_file[:-4] == '.csv' else result_file + '\RMSE_Calculations_' + a + '_' + b + '.csv'
+    except:
+        result_file = result_file if result_file[:-4] == '.csv' else result_file + '\RMSE_Calculations.csv'
     with open(result_file, 'w+') as out:
-        print('writing to file', result_file)
+        print('Writing to file', result_file)
         out.write(f'source file 1: {args.sf1}\n')
         if args.d1:
             out.write(f'source file 1 date: {args.d1}\n')
