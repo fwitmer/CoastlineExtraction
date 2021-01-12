@@ -17,8 +17,7 @@ from shapely.ops import nearest_points
 from shapely.geometry import MultiPoint
 from geopy.distance import distance
 import argparse
-import matplotlib.pyplot as plt
-import os
+
 
 def calc_rmse(errs):
     errs = np.array(errs)
@@ -42,18 +41,6 @@ def find_distances(transects, fst, snd):
     intersects = {}
     epsilon = 2**-16
 
-    try:
-        a = os.path.basename(args.sf1)
-        a = a[:-4]
-        b = os.path.basename(args.sf2)
-        b = b[:-4]
-        plt.title("Transect Distances: " + " " + a + ", " + b)
-    except:
-        plt.title("Transect Distances")
-
-    plt.xlabel('Transect')
-    plt.ylabel('Distance (m)')
-
     # for each transect find intersecting points in each gdf
     for i, transect in transects.iterrows():
         intersects[i] = {'fst':[], 'snd':[]}
@@ -71,10 +58,11 @@ def find_distances(transects, fst, snd):
     # for each pair of points corresponding to a transect, caluctulate the distance between the points
     for k in intersects.keys():
         if len(intersects[k]['fst']) == len(intersects[k]['snd']) == 1:
-            dist = distance(intersects[k]['fst'][0].coords[0][::-1], intersects[k]['snd'][0].coords[0][::-1]).m
-            #dist = intersects[k]['fst'][0].geometry.distance(intersects[k]['snd'][0].geometry)
+            #dist = distance(intersects[k]['fst'][0].coords[0][::-1], intersects[k]['snd'][0].coords[0][::-1]).m
+            # import pdb; pdb.set_trace()
+            # dist = intersects[k]['fst'][0].distance(intersects[k]['snd'][0].geometry)
+            dist = intersects[k]['fst'][0].distance(intersects[k]['snd'][0])
             distances.append(dist)
-
     return distances
 
 
@@ -90,7 +78,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', required=True, help='Name of file to write results to.')
     parser.add_argument('--r', help='Call flag if river mouth transects should be excluded from RMSE calculation')
     parser.add_argument('--sr', help='Call flag to split RSME calculation by region')
-    parser.add_argument('--g', help='Set true to save a graphic depicting transect intersection distances')
+    parser.add_argument('--g', action='store_true', help='Set true to save a graphic depicting transect intersection distances')
     args = parser.parse_args()
 
     transects = gpd.GeoDataFrame.from_file(args.transects)
@@ -103,12 +91,25 @@ if __name__ == '__main__':
         for removal_id in removal_ids:
             transects = transects[transects['TransOrder'] != removal_id]
 
+    gdf1 = gpd.GeoDataFrame.from_file(args.sf1)
+    gdf2 = gpd.GeoDataFrame.from_file(args.sf2)
+
+    # make crs consistent
+    utm_zone_3n = 'EPSG:32603'
+    transects = transects.to_crs(utm_zone_3n)
+    if gdf1.crs == {}:
+        gdf1.geometry.crs = utm_zone_3n
+    else:
+        gdf1 = gdf1.to_crs(utm_zone_3n)
+
+    if gdf2.crs == {}:
+        gdf2.geometry.crs = utm_zone_3n
+    else:
+        gdf2 = gdf2.to_crs(utm_zone_3n)
+
 
     # Find intersection points
-    gdf1 = gpd.GeoDataFrame.from_file(args.sf1)
     gdf1 = gdf1.unary_union.intersection(transects.unary_union)
-
-    gdf2 = gpd.GeoDataFrame.from_file(args.sf2)
     gdf2 = gdf2.unary_union.intersection(transects.unary_union)
 
     # filter by date for dataframe from first shapefile
@@ -130,7 +131,6 @@ if __name__ == '__main__':
     rmse = calc_rmse(distances)
 
     # Additional split RMSE calc by region if '--sr' flag True
-    all_distances = []
     if args.sr:
 
         # Western Coastline Region
@@ -177,71 +177,22 @@ if __name__ == '__main__':
         RMSEs = []
         for i in range (0, len(regions)):
             distances = find_distances(regions[i], intersections_1[i], intersections_2[i])
-            all_distances.append(distances)
             RMSEs.append(calc_rmse(distances))
 
-    # If arg g called, generate graph
-    if args.g:
-        # Generate single graph if sr flag not set
-        if not args.sr:
-            xs = []
-            ct = 1
-            for distance in distances:
-                xs.append(ct)
-                ct = ct + 1
-            plt.plot(xs, distances)
-            result_file = args.o
-
-        # Generate area-separated graph if sr flag set
-        else:
-            area_index = ["Western Coastline Region", "Northern Cliff Region", "Central Shoreline Region", "Town Shoreline Region", "East Shoreline and Cliff Region"]
-            i = 0
-            ct = 1
-            for distances in all_distances:
-                xs = []
-                for distance in distances:
-                    xs.append(ct)
-                    ct = ct + 1
-                plt.plot(xs, distances, label=area_index[i])
-                plt.legend()
-                i = i + 1
-
-        # Save plot
-        result_file = args.o
-
-        try:
-            a = os.path.basename(args.sf1)
-            a = a[:-4]
-            b = os.path.basename(args.sf2)
-            b = b[:-4]
-            result_file = result_file if result_file[:-4] == '.png' else result_file + '\Transect_Plot_' + a + '_' + b + '.png'
-        except:
-            result_file = result_file if result_file[:-4] == '.png' else result_file + '\Transect_Plot.png'
-
-        print('Saving plot to', result_file)
-        plt.savefig(result_file)
-
     result_file = args.o
-    try:
-        a = os.path.basename(args.sf1)
-        a = a[:-4]
-        b = os.path.basename(args.sf2)
-        b = b[:-4]
-        result_file = result_file if result_file[:-4] == '.txt' else result_file + '\RMSE_Calculations_' + a + '_' + b + '.txt'
-    except:
-        result_file = result_file if result_file[:-4] == '.txt' else result_file + '\RMSE_Calculations.txt'
+
     with open(result_file, 'w+') as out:
-        print('Writing to file', result_file)
+        print('writing to file', result_file)
         out.write(f'source file 1: {args.sf1}\n')
         if args.d1:
             out.write(f'source file 1 date: {args.d1}\n')
         out.write(f'source file 2: {args.sf2}\n')
         if args.d2:
             out.write(f'source file 2 date: {args.d2}\n')
-        out.write(f'Complete Shoreline RMSE: {rmse} m\n')
+        out.write(f'Complete Shoreline RMSE (m): {rmse}\n')
         if args.sr:
-            out.write(f'RMSE for West Coastline Region: {RMSEs[0]} m\n')
-            out.write(f'RMSE for Northern Cliff Region: {RMSEs[1]} m\n')
-            out.write(f'RMSE for Central Shoreline Region: {RMSEs[2]} m\n')
-            out.write(f'RMSE for Town Shoreline Region: {RMSEs[3]} m\n')
-            out.write(f'RMSE for Eastern Shoreline/Cliff Region: {RMSEs[4]} m\n')
+            out.write(f'RMSE for West Coastline Region (m): {RMSEs[0]}\n')
+            out.write(f'RMSE for Northern Cliff Region (m): {RMSEs[1]}\n')
+            out.write(f'RMSE for Central Shoreline Region (m): {RMSEs[2]}\n')
+            out.write(f'RMSE for Town Shoreline Region (m): {RMSEs[3]}\n')
+            out.write(f'RMSE for Eastern Shoreline/Cliff Region (m): {RMSEs[4]}\n')
