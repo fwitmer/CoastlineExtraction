@@ -10,9 +10,13 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from xml.dom import minidom
 from skimage.filters import threshold_yen
+from skimage import feature
 from arosics import COREG
 import time
-from skimage.segmentation import morphological_chan_vese, morphological_geodesic_active_contour, active_contour
+from skimage.segmentation import (morphological_chan_vese,
+                                  morphological_geodesic_active_contour,
+                                  active_contour,
+                                  checkerboard_level_set)
 from scipy.interpolate import make_interp_spline, BSpline, splprep, splev
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
@@ -152,14 +156,17 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
         kwargs = src.meta
         kwargs.update(dtype=rasterio.float32, count=1)
 
+        nir_num = src.count  # adjusting NIR band to 4 or 5 band images
+
         green_band = src.read(2).astype(rasterio.float32)  # band 2 - green
-        nir_band = src.read(4).astype(rasterio.float32)    # band 4 - NIR
+        nir_band = src.read(nir_num).astype(rasterio.float32)    # band 4 - NIR
         print("DONE\n")
 
     print("Calculating NDWI:", end=" ")
     np.seterr(divide='ignore', invalid='ignore')
     ndwi = (green_band - nir_band) / (green_band + nir_band)
     print("DONE\n")
+    ndwi = cv2.GaussianBlur(ndwi, (17, 17), 0)
     if outfile:
         out_filename = outfile
     else:
@@ -189,44 +196,96 @@ def ndwi_classify(rasterfile, outfile=None, plot=False):
         kwargs = src.meta
         kwargs.update(dtype=rasterio.uint8, count=1)
 
-        ndwi = src.read(1)
+        ndwi = src.read(1).astype(rasterio.uint8)
         print("DONE\n")
-    ndwi_blur = cv2.GaussianBlur(ndwi, (17, 17), 0)
-    k_means = get_k_means(ndwi_blur)
-    print("K-means summary:")
-    print("\tClass 0: {}%".format(((k_means == 0).sum() / (k_means.shape[0] * k_means.shape[1])) * 100))
-    print("\tClass 1: {}%".format(((k_means == 1).sum() / (k_means.shape[0] * k_means.shape[1])) * 100))
-    print("\tClass 2: {}%".format(((k_means == 2).sum() / (k_means.shape[0] * k_means.shape[1])) * 100))
     if plot:
-        plt.imshow(ndwi_blur, cmap='gray')
+        plt.imshow(ndwi, cmap='gray')
         plt.show()
+    k_means = get_k_means(ndwi, plot=plot)
+    area_of_uncertainty = 0
+    lowest_count = (k_means == 0).sum()
+    print("K-means Summary:")
+    for i in [0, 1, 2]:
+        ratio = float((k_means == i).sum() / (k_means.shape[0] * k_means.shape[1]))
+        if (k_means == i).sum() < lowest_count:
+            area_of_uncertainty = i
+            lowest_count = (k_means == i).sum()
+        print("\tClass {}: {}%".format(i, ratio * 100))
+    # k_out = raster_filepath + raster_filename.split(sep=".")[0] + "_KMeans.tif"
+    # with rasterio.open(k_out, 'w', **kwargs) as dst:
+    #     dst.nodata = 255
+    #     dst.write_band(1, k_means.astype(rasterio.uint8))
     ndwi_classified = np.zeros(ndwi.shape).astype(np.bool)
     print("NDWI Classified Shape:", ndwi_classified.shape)
     print("K-Means Shape:", k_means.shape)
-    for (x, y, window) in sliding_window(k_means, 100, (200, 200)):
-        water_ratio = float((window == 2).sum()) / (window.shape[0] * window.shape[1])
-        if water_ratio > 0.95:
-            if water_ratio >= 0.995:
-                ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
-                    (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | np.ones(window.shape).astype(
-                        np.bool))
-            continue
-        if water_ratio < 0.05:
-            ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
-                (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | np.zeros(window.shape).astype(np.bool))
-            continue
-        cropped_ndwi = ndwi_blur[y:y + window.shape[0], x:x + window.shape[1]]
-        otsu_threshold, image_result = cv2.threshold(cropped_ndwi, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
-        classified_window = np.where(cropped_ndwi >= otsu_threshold,
-                                     1,
-                                     0)
-        ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
-            (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | classified_window)
+    first_window = True
+    water_val = 0
+    for (x, y, window) in sliding_window(k_means, 50, (100, 100)):
+        if first_window:
+            first_window = False
+            largest_count = (window == 0).sum()
+            for num in [0,1,2]:
+                count = (window == num).sum()
+                if count > largest_count:
+                    largest_count = count
+                    water_val = num
+        water_ratio = (window == water_val).sum() / (window.shape[0] * window.shape[1])
+        if (window == area_of_uncertainty).sum() and (window == water_val).sum():
+            cropped_ndwi = ndwi[y:y + window.shape[0], x:x + window.shape[1]]
+            otsu_threshold, image_result = cv2.threshold(cropped_ndwi, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
+            classified_window = np.where(cropped_ndwi >= otsu_threshold,
+                                         1,
+                                         0)
+            ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
+                (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | classified_window)
+        elif water_ratio > 0.9:
+            ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
+                (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | np.ones(window.shape).astype(
+                    np.bool))
+
+        # if water_ratio == 0:
+        #     ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
+        #         (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | np.ones(window.shape).astype(
+        #             np.bool))
+        # if water_ratio > 0.9:
+        #     ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
+        #         (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | np.zeros(window.shape).astype(
+        #             np.bool))
+        # elif water_ratio < 0.005:
+        #     ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
+        #         (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | np.ones(window.shape).astype(
+        #             np.bool))
+        # else:
+        #     cropped_ndwi = ndwi[y:y + window.shape[0], x:x + window.shape[1]]
+        #     otsu_threshold, image_result = cv2.threshold(cropped_ndwi, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
+        #     classified_window = np.where(cropped_ndwi >= otsu_threshold,
+        #                                  0,
+        #                                  1)
+        #     ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
+        #         (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | classified_window)
+        # water_ratio = float((window == lowest_num).sum()) / (window.shape[0] * window.shape[1])
+        # if water_ratio > 0.95:
+        #     if water_ratio >= 0.995:
+        #         ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
+        #             (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | np.ones(window.shape).astype(
+        #                 np.bool))
+        #     continue
+        # if water_ratio < 0.05:
+        #     ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
+        #         (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | np.zeros(window.shape).astype(np.bool))
+        #     continue
+        # cropped_ndwi = ndwi[y:y + window.shape[0], x:x + window.shape[1]]
+        # otsu_threshold, image_result = cv2.threshold(cropped_ndwi, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
+        # classified_window = np.where(cropped_ndwi >= otsu_threshold,
+        #                              1,
+        #                              0)
+        # ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
+        #     (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | classified_window)
     if plot:
         plt.imshow(ndwi_classified, cmap='gray')
         plt.show()
     print("DONE\n")
-    transformed_classification = morph_transform(ndwi_classified.astype(np.uint8), 10, 10)
+    transformed_classification = morph_transform(ndwi_classified.astype(np.uint8), 15, 15)
     if plot:
         plt.imshow(transformed_classification, cmap='gray')
         plt.show()
@@ -311,14 +370,16 @@ def get_edges(img):
 def get_contours(img, outfile=None, plot=False):
     raster_filepath = os.path.dirname(img) + "/"
     raster_filename = os.path.basename(img)
-    src = cv2.imread(img, 0)
+    with rasterio.open(img, driver="GTiff") as src:
+        input = src.read(1).astype(rasterio.uint8)
+    # src = cv2.imread(img, 0)
     if plot:
-        plt.imshow(src, cmap='gray')
+        plt.imshow(input, cmap='gray')
         plt.show()
-    src_blur = cv2.GaussianBlur(src, (17,17), 0)
-    contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
-    drawing = np.zeros((src.shape[0], src.shape[1]), dtype=np.uint8)
-    cv2.drawContours(drawing, contours, 2, 1, 1)
+    # src_blur = cv2.GaussianBlur(src, (17,17), 0)
+    contours, hierarchy = cv2.findContours(input, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
+    drawing = np.zeros((input.shape[0], input.shape[1]), dtype=np.uint8)
+    cv2.drawContours(drawing, contours, -1, 1, 3)
     if plot:
         plt.imshow(drawing, cmap='gray')
         plt.show()
@@ -336,11 +397,12 @@ def get_contours(img, outfile=None, plot=False):
         dst.write_band(1, drawing.astype(rasterio.uint8))
 
 
-def get_k_means(img):
+def get_k_means(img, num_means=3, plot=False):
     try:
         src = cv2.imread(img, cv2.IMREAD_ANYDEPTH)
-        plt.imshow(src, cmap='gray')
-        plt.show()
+        if plot:
+            plt.imshow(src, cmap='gray')
+            plt.show()
         # converting to 2D array of pixel values per
         # https://www.geeksforgeeks.org/image-segmentation-using-k-means-clustering/
         pix_vals = src.reshape((-1, 1))
@@ -351,13 +413,14 @@ def get_k_means(img):
         pix_vals = np.float32(pix_vals)
         image_shape = img.shape
 
-    retval, labels, centers = cv2.kmeans(pix_vals, 3, None,
+    retval, labels, centers = cv2.kmeans(pix_vals, num_means, None,
                                          criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 500, 1.0),
                                          attempts=30,
                                          flags=cv2.KMEANS_RANDOM_CENTERS)
     reshaped_labels = labels.reshape(image_shape)
-    plt.imshow(reshaped_labels, cmap='gray')
-    plt.show()
+    if plot:
+        plt.imshow(reshaped_labels, cmap='gray')
+        plt.show()
 
     return reshaped_labels.astype(np.uint8)
 
@@ -427,24 +490,31 @@ def morph_transform(fname, kwidth, kheight, outname=None):
     else:
         return opened_closed
 
-
+# This function should only be passed files with values as unsigned integers
+# still looking into how to interpolate signed float values
 def fill_nodata(file_to_fill, mask_file = None, plot=False):
     raster_filepath = os.path.dirname(file_to_fill) + "/"
     raster_filename = os.path.basename(file_to_fill)
     if mask_file:
         with rasterio.open(mask_file) as src:
             masks = src.read_masks()
-        mask = (masks[0] & masks[1] & masks[2] & masks[3])
+            count = src.count
+            mask = masks[0] & masks[1]
+
     else:
         mask = None
     if plot:
         plt.imshow(mask, cmap='gray')
         plt.show()
     with rasterio.open(file_to_fill) as src:
+        nodata = src.nodata
         kwargs = src.meta
         kwargs.update(dtype=rasterio.float32, count=1)
         ndwi = src.read(1)
-        filled = fillnodata(ndwi, mask, max_search_distance=1000)
+        if plot:
+            plt.imshow(ndwi, cmap='gray')
+            plt.show()
+        filled = fillnodata(ndwi, (ndwi != nodata), max_search_distance=300)
     if plot:
         plt.imshow(filled, cmap='gray')
         plt.show()
@@ -455,28 +525,37 @@ def fill_nodata(file_to_fill, mask_file = None, plot=False):
         dst.nodata = 0
         dst.write_band(1, filled.astype(rasterio.float32))
 
-def get_snake(file, init_file, plot=False):
-    gradient_image = cv2.imread(file, cv2.IMREAD_ANYDEPTH)
-    gradient_blur = cv2.GaussianBlur(gradient_image, (5,5), 0)
-    init_image = cv2.imread(init_file, 0)
+def get_snake(file, plot=False):
+    def store_evolution_in(lst):
+        def _store(x):
+            lst.append(np.copy(x))
 
-    # (row, col) = np.where(init_image == 1)
-    # init_rc = np.array([row, col]).T
-    # snake = active_contour(gradient_blur, init_rc, w_edge=2, w_line=-1, boundary_condition='fixed', coordinates='rc')
-    # print(snake.shape)
+        return _store
+    evolution = []
+    callback = store_evolution_in(evolution)
+    raster_filepath = os.path.dirname(file) + "/"
+    raster_filename = os.path.basename(file)
+    with rasterio.open(file, driver='GTiff') as src:
+        kwargs = src.meta
+        kwargs.update(count=1, dtype=rasterio.uint8)
+        input = src.read(1).astype(rasterio.uint8)
+    if plot:
+        plt.imshow(input, cmap='gray')
+        plt.show()
+    init_lvl_set = checkerboard_level_set(input.shape)
+    lvl_set = morphological_chan_vese(input, 100, init_level_set=init_lvl_set,iter_callback=callback, smoothing=1)
+    if plot:
+        plt.imshow(lvl_set, cmap='gray')
+        plt.show()
+    noise_reduced = morph_transform(lvl_set.astype(rasterio.uint8), 9, 9)
+    if plot:
+        plt.imshow(noise_reduced)
+        plt.show()
+    out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_chan_vese.tif"
+    with rasterio.open(out_filename, 'w', **kwargs) as dst:
+        dst.write_band(1, noise_reduced.astype(rasterio.uint8))
+    return lvl_set
 
-    awce_contour = morphological_chan_vese(gradient_blur, 20, init_level_set=init_image, smoothing=1)
-    # gac_contour = morphological_geodesic_active_contour(gradient_blur, 20, init_level_set=init_image, smoothing=1)
-    plt.imshow(gradient_image, cmap='gray')
-    plt.show()
-    plt.imshow(init_image, cmap='gray')
-    plt.show()
-    plt.imshow(awce_contour, cmap='gray')
-    plt.show()
-    # plt.imshow(gac_contour, cmap='gray')
-    # plt.show()
-    # plt.plot(snake[:, 0], snake[:, 1], '-b')
-    # plt.show()
 
 # raster = "data/test/20161015_merged.tif"
 # ndwi = calculate_ndwi(raster, plot=True)
@@ -519,3 +598,85 @@ def get_snake(file, init_file, plot=False):
 # get_contours("data/test/20161015_merged_NDWI_filled_8bit_classified.tif")
 # get_snake("data/test/20161015_merged_NDWI_filled.tif", "data/test/20161015_merged_NDWI_filled_coastline.tif")
 # get_snake("data/test/20161015_merged_NDWI_filled.tif", "data/test/20161015_merged_NDWI_filled_8bit_classified.tif")
+
+# outfile = "data/test/OrthoTiles/20160904_NDWI.tif"
+# calculate_ndwi("data/test/OrthoTiles/369619_2016-09-04_RE2_3A_Analytic_SR_clip_Georegistered.tif", outfile=outfile)
+# get_otsu_threshold("data/test/OrthoTiles/20160904_NDWI.tif")
+# fill_nodata("data/test/OrthoTiles/20160904_NDWI_8bit.tif",
+#             "data/test/OrthoTiles/369619_2016-09-04_RE2_3A_Analytic_SR_clip.tif")
+# ndwi_classify("data/test/OrthoTiles/20160904_NDWI_8bit_filled.tif")
+# get_contours("data/test/OrthoTiles/20160904_NDWI_8bit_filled_classified.tif", plot=True)
+# get_edges("data/test/OrthoTiles/20160904_NDWI_8bit_filled_classified.tif")
+# get_snake("data/test/OrthoTIles/20160904_NDWI_filled.tif", "data/test/OrthoTiles/20160904_NDWI_filled_8bit_classified.tif")
+# fill_nodata("data/test/OrthoTiles/20160904_NDWI_8bit_KMeans.tif", "data/test/OrthoTiles/369619_2016-09-04_RE2_3A_Analytic_SR_clip.tif", plot=True)
+#
+# outfile = "data/test/OrthoTiles/20160906_NDWI.tif"
+# calculate_ndwi("data/test/OrthoTiles/369619_2016-09-06_RE5_3A_Analytic_SR_clip.tif", outfile=outfile)
+# get_otsu_threshold("data/test/OrthoTiles/20160906_NDWI.tif")
+# fill_nodata("data/test/OrthoTiles/20160906_NDWI_8bit.tif",
+#             "data/test/OrthoTiles/369619_2016-09-06_RE5_3A_Analytic_SR_clip.tif")
+# ndwi_classify("data/test/OrthoTiles/20160906_NDWI_8bit_filled.tif", plot=True)
+# get_contours("data/test/OrthoTiles/20160906_NDWI_8bit_filled_classified.tif", plot=True)
+# get_snake("data/test/OrthoTiles/20160906_NDWI_filled.tif", "data/test/OrthoTiles/20160906_NDWI_filled_8bit_classified.tif")
+
+# calculate_ndwi("data/test/20161015_merged.tif")
+# fill_nodata("data/test/20161015_merged_NDWI.tif", "data/test/20161015_merged_NDWI.tif")
+# get_otsu_threshold("data/test/20161015_merged_NDWI_filled.tif")
+# ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif", plot=True)
+# get_contours("data/test/20161015_merged_NDWI_filled_8bit_coastline.tif", plot=True)
+
+# with rasterio.open("data/test/OrthoTiles/20160906_NDWI_8bit.tif", driver='GTiff') as src:
+#     ndwi = src.read(1).astype(rasterio.uint8)
+#     nodata = src.nodata
+#
+#
+# with rasterio.open("data/test/OrthoTiles/369619_2016-09-06_RE5_3A_Analytic_SR_clip.tif", driver='GTiff') as src:
+#     masks = src.read_masks()
+#     mask = (masks[1] & masks[4])
+#     plt.imshow(mask, cmap='gray')
+#     plt.show()
+#     blue = src.read(1)
+#     print(blue.dtype)
+#     plt.imshow(blue, cmap='gray')
+#     plt.show()
+#     blue_filled = fillnodata(blue, mask, max_search_distance=300)
+#     plt.imshow(blue_filled, cmap='gray')
+#     plt.show()
+#     filled_ndwi = fillnodata(ndwi, (ndwi != nodata), max_search_distance=100)
+#     plt.imshow(filled_ndwi, cmap='gray')
+#     plt.show()
+
+# get_contours("data/test/DeepWaterMap/September_6_2016_REOrthoTile_Explorer_dwm.tif", plot=True)
+
+# def store_evolution_in(lst):
+#     def _store(x):
+#         lst.append(np.copy(x))
+#
+#     return _store
+#
+# with rasterio.open("data/test/DeepWaterMap/September_4_2016_REOrthoTile_Explorer_dwm.tif", driver='GTiff') as src:
+#     input = src.read(1).astype(rasterio.uint8)
+# plt.imshow(input, cmap='gray')
+# plt.show()
+# init_lvl_set = checkerboard_level_set(input.shape)
+# evolution = []
+# callback = store_evolution_in(evolution)
+# lvl_set = morphological_chan_vese(input, 100, init_level_set=init_lvl_set, smoothing=1, iter_callback=callback)
+# plt.imshow(lvl_set, cmap='gray')
+# plt.show()
+# open_closed = morph_transform(lvl_set.astype(np.uint8), 9, 9)
+# plt.imshow(open_closed, cmap='gray')
+# plt.show()
+
+get_snake("data/test/OrthoTiles/20160904_NDWI_8bit_filled.tif", plot=True)
+get_contours("data/test/OrthoTiles/20160904_NDWI_8bit_filled_chan_vese.tif", plot=True)
+
+get_snake("data/test/OrthoTiles/20160906_NDWI_8bit_filled.tif", plot=True)
+get_contours("data/test/OrthoTiles/20160906_NDWI_8bit_filled_chan_vese.tif", plot=True)
+
+
+# get_snake("data/test/DeepWaterMap/September_6_2016_REOrthoTile_Explorer_dwm.tif", plot=True)
+# get_contours("data/test/DeepWaterMap/September_6_2016_REOrthoTile_Explorer_dwm_chan_vese.tif", plot=True)
+#
+# get_snake("data/test/DeepWaterMap/September_4_2016_REOrthoTile_Explorer_dwm.tif", plot=True)
+# get_contours("data/test/DeepWaterMap/September_4_2016_REOrthoTile_Explorer_dwm_chan_vese.tif", plot=True)
