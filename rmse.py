@@ -297,6 +297,15 @@ if __name__ == '__main__':
         single_rmse(transects, c, metadata)
         plt.clf()
 
+    # Sort metadata by RMSE
+    n = len(metadata)
+    for i in range(n - 1):
+        for j in range(0, n - i - 1):
+            if metadata[j][2] < metadata[j + 1][2]:
+                temp = metadata[j]
+                metadata[j] = metadata[j+1]
+                metadata[j + 1] = temp
+
     # Create meta graph
     if args.mg:
 
@@ -307,20 +316,23 @@ if __name__ == '__main__':
         except:
             a = 'Baseline Coast'
 
-        title = 'RMSE Comparisons Relative To ' + a
-        plt.title(title)
-        plt.ylabel('RMSE (m)')
+        title = 'RMSE Comparisons Relative To 2016 USGS Coastline'
+        plt.title(title, {'size':'25'})
+        plt.ylabel('RMSE (m)', {'size':'20'})
 
-        area_index = ["Western Coastline Region", "Northern Cliff Region", "Central Shoreline Region",
-                      "Town Shoreline Region", "East Shoreline and Cliff Region"]
+        area_index = ["Western\nCostline\nRegion", "Northern\nCliff\nRegion", "Central\nShoreline\nRegion",
+                      "Town\nShoreline\nRegion", "East\nShoreline\\Cliff\nRegion"]
 
         # Plot points
-        print(metadata)
+        linestyles = ['-', '--', '-.', ':', (0, (5, 10)), (0, (5, 1)), (0, (3, 10, 1, 10, 1, 10))]
+        i=0
         for data in metadata:
-            srt = round(data[2], 2)
+            srt = round(data[2], 1)
             l = str(data[0]) + (' (Overall RMSE: ' + str(srt) + 'm)')
-            plt.plot(area_index, data[1], label=l)
-        plt.legend()
+            plt.plot(area_index, data[1], linestyle=linestyles[i], label=l, linewidth=3.0)
+            i = i + 1
+        plt.legend(prop={'size': 15})
+        plt.tick_params(labelsize=20)
 
         # Save plot
         result_file = args.o
