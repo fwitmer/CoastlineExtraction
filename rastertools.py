@@ -3,12 +3,15 @@ import os
 import rasterio
 import cv2
 from rasterio.plot import show_hist
+from rasterio.fill import fillnodata
 import numpy as np
 import math
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from xml.dom import minidom
 from skimage.filters import threshold_yen
+from arosics import COREG
+import time
 from scipy.interpolate import make_interp_spline, BSpline, splprep, splev
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
 
@@ -162,7 +165,7 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
         out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_NDWI.tif"
     print("Saving calculated NDWI image as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
-        dst.nodata = 2
+        dst.nodata = 0
         dst.write_band(1, ndwi.astype(rasterio.float32))
         print("DONE\n")
 
@@ -175,8 +178,7 @@ def calculate_ndwi(rasterfile, outfile=None, plot=False):
     return out_filename
 
 
-def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
-    threshold = thresh
+def ndwi_classify(rasterfile, outfile=None, plot=False):
     raster_filepath = os.path.dirname(rasterfile) + "/"
     raster_filename = os.path.basename(rasterfile)
 
@@ -184,16 +186,49 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
     print("Opening", raster_filename, "for NDWI water classification:", end=" ")
     with rasterio.open(img, driver="GTiff") as src:
         kwargs = src.meta
-        kwargs.update(dtype=rasterio.int8, count=1)
+        kwargs.update(dtype=rasterio.uint8, count=1)
 
         ndwi = src.read(1)
         print("DONE\n")
-    # TODO: update this with dynamically calculated thresholds
-    print("Classifying water based on NDWI threshold of ({}):".format(threshold), end=" ")
-    classified_raster = np.where(ndwi >= threshold,  # if pixel value >= threshold, new raster value is 1 else 0
-                                 1,
-                                 0)
+    ndwi_blur = cv2.GaussianBlur(ndwi, (17, 17), 0)
+    k_means = get_k_means(ndwi_blur)
+    print("K-means summary:")
+    print("\tClass 0: {}%".format(((k_means == 0).sum() / (k_means.shape[0] * k_means.shape[1])) * 100))
+    print("\tClass 1: {}%".format(((k_means == 1).sum() / (k_means.shape[0] * k_means.shape[1])) * 100))
+    print("\tClass 2: {}%".format(((k_means == 2).sum() / (k_means.shape[0] * k_means.shape[1])) * 100))
+    if plot:
+        plt.imshow(ndwi_blur, cmap='gray')
+        plt.show()
+    ndwi_classified = np.zeros(ndwi.shape).astype(np.bool)
+    print("NDWI Classified Shape:", ndwi_classified.shape)
+    print("K-Means Shape:", k_means.shape)
+    for (x, y, window) in sliding_window(k_means, 100, (200, 200)):
+        water_ratio = float((window == 2).sum()) / (window.shape[0] * window.shape[1])
+        if water_ratio > 0.95:
+            if water_ratio >= 0.995:
+                ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] = \
+                    (ndwi_classified[y:y + window.shape[0], x:x + window.shape[1]] | np.ones(window.shape).astype(
+                        np.bool))
+            continue
+        if water_ratio < 0.05:
+            ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
+                (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | np.zeros(window.shape).astype(np.bool))
+            continue
+        cropped_ndwi = ndwi_blur[y:y + window.shape[0], x:x + window.shape[1]]
+        otsu_threshold, image_result = cv2.threshold(cropped_ndwi, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
+        classified_window = np.where(cropped_ndwi >= otsu_threshold,
+                                     1,
+                                     0)
+        ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] = \
+            (ndwi_classified[y:y+window.shape[0], x:x + window.shape[1]] | classified_window)
+    if plot:
+        plt.imshow(ndwi_classified, cmap='gray')
+        plt.show()
     print("DONE\n")
+    transformed_classification = morph_transform(ndwi_classified.astype(np.uint8), 10, 10)
+    if plot:
+        plt.imshow(transformed_classification, cmap='gray')
+        plt.show()
     if outfile:
         out_filename = outfile
     else:
@@ -201,13 +236,8 @@ def ndwi_classify(rasterfile, outfile=None, thresh=0.2, plot=False):
     print("Saving classified raster as", out_filename, ":", end=" ")
     with rasterio.open(out_filename, 'w', **kwargs) as dst:
         dst.nodata = 255
-        dst.write_band(1, classified_raster.astype(rasterio.int8))
+        dst.write_band(1, transformed_classification.astype(rasterio.uint8))
     print("DONE\n")
-
-    if plot:
-        bands = [classified_raster]
-        labels = ["Water Classification Map"]
-        plot_raster(bands, labels)
 
     return raster_filepath + out_filename
 
@@ -282,17 +312,110 @@ def get_contours(img):
     plt.imshow(src, cmap='gray')
     plt.show()
     src_blur = cv2.GaussianBlur(src, (17,17), 0)
-    contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
+    contours, hierarchy = cv2.findContours(src_blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
     drawing = np.zeros((src.shape[0], src.shape[1]), dtype=np.uint8)
-    cv2.drawContours(drawing, contours, -1, 1, 3)
+    cv2.drawContours(drawing, contours, 2, 1, 3)
     plt.imshow(drawing, cmap='gray')
     plt.show()
 
+    with rasterio.open(img, driver="GTiff") as src:
+        kwargs = src.meta
+        kwargs.update(dtype=rasterio.uint8, count=1)
+    with rasterio.open("data/test/20161015_merged_NDWI_filled_coastline.tif", 'w', **kwargs) as dst:
+        dst.nodata = 255
+        dst.write_band(1, drawing.astype(rasterio.uint8))
 
 
+def get_k_means(img):
+    try:
+        src = cv2.imread(img, cv2.IMREAD_ANYDEPTH)
+        plt.imshow(src, cmap='gray')
+        plt.show()
+        # converting to 2D array of pixel values per
+        # https://www.geeksforgeeks.org/image-segmentation-using-k-means-clustering/
+        pix_vals = src.reshape((-1, 1))
+        pix_vals = np.float32(pix_vals)
+        image_shape = src.shape
+    except:
+        pix_vals = img.reshape((-1, 1))
+        pix_vals = np.float32(pix_vals)
+        image_shape = img.shape
+
+    retval, labels, centers = cv2.kmeans(pix_vals, 3, None,
+                                         criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 500, 1.0),
+                                         attempts=30,
+                                         flags=cv2.KMEANS_RANDOM_CENTERS)
+    reshaped_labels = labels.reshape(image_shape)
+    plt.imshow(reshaped_labels, cmap='gray')
+    plt.show()
+
+    return reshaped_labels.astype(np.uint8)
 
 
+def sliding_window(image, step, window_size):
+    for y in range(0, image.shape[0], step):
+        for x in range(0, image.shape[1], step):
+            yield(x, y, image[y:y + window_size[0], x:x + window_size[1]])
 
+
+# Function to Geo-Reference target_image based on base_image (It is recommended
+# To use the HiRes September 2016 Image as base_image
+def georeference(base_image, target_image, outfile=None):
+
+    # Get image paths
+    base_filepath = os.path.dirname(base_image) + '/'
+    base_filename = os.path.basename(base_image)
+
+    target_filepath = os.path.dirname(target_image) + '/'
+    target_filename = os.path.basename(target_image)
+
+    im_reference = base_filepath + base_filename
+    im_target = target_filepath + target_filename
+
+    # Specify correct output filepath
+    if outfile:
+        path_out = outfile
+    else:
+        path_out = target_filename.split(sep=".")[0] + "_GeoRegistered.tif"
+
+    # Coregister imagery
+    # wp and ws Set as bounding box around Deering Airstrip
+    CR = COREG(im_reference, im_target, wp=(600578.602641986, 7328849.357436092), ws=(965, 1089.7365), path_out=path_out)
+
+    # Calculate spatial shifts
+    CR.calculate_spatial_shifts()
+
+    # Correct shifts
+    CR.correct_shifts()
+
+    print('Saving Georegistered image as', path_out, ":", end=" ")
+
+    return target_filepath + path_out
+
+
+def morph_transform(fname, kwidth, kheight, outname=None):
+    '''
+    Perform opening/closing as described in the Paravolidakis paper.
+
+    IN:
+        fname: raster image to transform
+        kwidth: kernel width
+        kheight: kernel height
+        outname: name of file to write transformed image to
+    OUT:
+        No return value, results written to file
+    '''
+    try:
+        dat = cv2.imread(fname, cv2.IMREAD_ANYDEPTH)
+    except:
+        dat = fname
+    kernel = np.ones((kheight, kwidth), np.uint8)
+    opened = cv2.morphologyEx(dat, cv2.MORPH_OPEN, kernel)
+    opened_closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel)
+    if outname:
+        return cv2.imwrite(outname, opened_closed)
+    else:
+        return opened_closed
 # raster = "data/test/20161015_merged.tif"
 # ndwi = calculate_ndwi(raster, plot=True)
 # ndwi_class = ndwi_classify(ndwi, plot=True)
@@ -317,3 +440,28 @@ def get_contours(img):
 #
 # get_edges("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_8bit.tif")
 # get_contours("data/9-5-2016_Ortho/9-5-2016_Ortho_4Band_NDWI_classified.tif")
+
+# get_k_means("data/test/20161015_merged_NDWI_8bit.tif")
+# calculate_ndwi("data/test/20161015_merged.tif")
+
+# with rasterio.open("data/test/20161015_merged.tif") as src:
+#     masks = src.read_masks()
+# mask = (masks[0] & masks[1] & masks[2])
+# plt.imshow(mask, cmap='gray')
+# plt.show()
+# with rasterio.open("data/test/20161015_merged_NDWI.tif") as src:
+#     kwargs = src.meta
+#     kwargs.update(dtype=rasterio.float32, count=1)
+#     ndwi = src.read(1)
+#     filled = fillnodata(ndwi, mask, max_search_distance=1000)
+# plt.imshow(filled, cmap='gray')
+# plt.show()
+#
+# with rasterio.open("data/test/20161015_merged_NDWI_filled.tif", 'w', **kwargs) as dst:
+#     dst.nodata = 0
+#     dst.write_band(1, filled.astype(rasterio.float32))
+
+
+
+# ndwi_classify("data/test/20161015_merged_NDWI_filled_8bit.tif", plot=True)
+# get_contours("data/test/20161015_merged_NDWI_filled_8bit_classified.tif")
