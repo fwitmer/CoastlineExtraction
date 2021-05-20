@@ -39,6 +39,7 @@ def find_distances(transects, fst, snd, in_coast):
     intersects = {}
     epsilon = 2 ** -16
 
+    # Initial plot setup
     try:
         a = os.path.basename(args.sf1)
         a = a[:-4]
@@ -53,10 +54,14 @@ def find_distances(transects, fst, snd, in_coast):
 
     # for each transect find intersecting points in each gdf
     for i, transect in transects.iterrows():
+        # here fst, snd are points from each coastline intersecting a transect
         intersects[i] = {'fst': [], 'snd': []}
 
         for point in fst:
             dist = point.distance(transect.geometry)
+            # sometimes a given point in a coastline does not quite touch the
+            # transect, so an epsilon value is used to find an appropriate point
+            # that is very close to the transect
             if dist < epsilon:
                 intersects[i]['fst'].append(point)
 
