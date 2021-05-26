@@ -2,6 +2,7 @@
 /venv/
 **/.idea/
 **/*.pyc
+**/*.env
 
 # specific directory/file ignores
 /data/
