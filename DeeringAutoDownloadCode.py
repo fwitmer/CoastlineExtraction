@@ -6,7 +6,15 @@
 #
 ##############################
 
-   
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+api_keys = []
+api_keys.append(os.getenv("KRIS_API"))
+api_keys.append(os.getenv("JACK_API"))
+api_keys.append(os.getenv("FRANK_API"))
 
 # Retrieve API keys from local .env file
 # TODO: Change env_path, JACK_KEY and FRANK_KEY to the respective path and variable names on your system
@@ -931,25 +939,3 @@ elif final_state == "partial":
 else:
     print("\nOrder was not activated successfully.", "Final order status:", final_state)
     
-
-
-
-
-
-   
-
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
- 
