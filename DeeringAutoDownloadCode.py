@@ -21,14 +21,6 @@ api_keys.append(os.getenv("KRIS_API"))
 api_keys.append(os.getenv("JACK_API"))
 api_keys.append(os.getenv("FRANK_API"))
 
-# loop through download process with each API key until quota is met
-while api_keys:
-    current_key = api_keys.pop()
-    print(current_key)
-    
-exit()
-
-
 # Setup Planet Data API base URL
 URL = "https://api.planet.com/data/v1"
 
@@ -37,23 +29,24 @@ URL = "https://api.planet.com/data/v1"
 geojson_geometry = {
        "type":"Polygon","coordinates":[
          [
-           [-162.80862808227536,66.05894122802519],
-           [-162.67404556274414,66.05636369184131],
-           [-162.67919540405273,66.07085023305528],
-           [-162.7140426635742,66.07669822834144],
-           [-162.73550033569333,66.08216210323748],
-           [-162.74871826171872,66.09256457840145],
-           [-162.73558616638186,66.09760772349222],
-           [-162.73798942565915,66.10125903100771],
-           [-162.74631500244138,66.10338002568206],
-           [-162.76588439941403,66.09764250032609],
-           [-162.76399612426752,66.09576448313807],
-           [-162.79583930969235,66.08953821061128],
-           [-162.81051635742185,66.09166018442527],
-           [-162.80862808227536,66.05894122802519]
+           [-162.8235626220703, 66.05622435812153],
+           [-162.674560546875, 66.05622435812153],
+           [-162.674560546875, 66.10883816429516],
+           [-162.8235626220703, 66.10883816429516],
+           [-162.8235626220703, 66.05622435812153]
          ]
        ]
 }
+
+# loop through download process with each API key until quota is met
+while api_keys:
+    current_key = api_keys.pop()
+    print(current_key)
+    
+exit()
+
+
+
 
 
 # Import helper modules
