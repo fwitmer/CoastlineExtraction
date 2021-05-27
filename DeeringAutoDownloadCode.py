@@ -11,6 +11,7 @@ import os
 import json
 import requests
 import time
+from planet import api
 
 
 # loading the .env file to retrieve environment variables for API keys and appending to a list
