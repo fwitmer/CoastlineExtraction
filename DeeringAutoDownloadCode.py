@@ -1,14 +1,19 @@
 ##############################
 #
-#   Jack Carroll
-#   27 May 2020
+#   Jack Carroll & Kris Carroll
+#   Last updated: 27 May 2021
 #   Deering, AK Imagery Download Code
 #
 ##############################
 
 from dotenv import load_dotenv
 import os
+import json
+import requests
+import time
 
+
+# loading the .env file to retrieve environment variables for API keys and appending to a list
 load_dotenv()
 
 api_keys = []
@@ -16,20 +21,12 @@ api_keys.append(os.getenv("KRIS_API"))
 api_keys.append(os.getenv("JACK_API"))
 api_keys.append(os.getenv("FRANK_API"))
 
-# Retrieve API keys from local .env file
-# TODO: Change env_path, JACK_KEY and FRANK_KEY to the respective path and variable names on your system
-from dotenv import load_dotenv
-env_path = r'C:\Users\Flomi\.spyder-py3\API_Keys.env'
-load_dotenv(dotenv_path=env_path)
-
-# Provides two different Planet user's API keys that can be choosen as 
-# Planet_Key variable to access the Planet Labs API
-import os
-JACK_KEY = os.getenv("JACK_KEY")
-FRANK_KEY = os.getenv("FRANK_KEY")
-
-# Save desired API key to variable
-Planet_Key = JACK_KEY
+# loop through download process with each API key until quota is met
+while api_keys:
+    current_key = api_keys.pop()
+    print(current_key)
+    
+exit()
 
 
 # Setup Planet Data API base URL
