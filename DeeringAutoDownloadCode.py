@@ -22,21 +22,17 @@ api_keys.append(os.getenv("KRIS_API"))
 api_keys.append(os.getenv("JACK_API"))
 api_keys.append(os.getenv("FRANK_API"))
 
-# Setup Planet Data API base URL
-URL = "https://api.planet.com/data/v1"
-
 # Setup boundry region of Deering, AK (Could be imported; Included here for simplicity)
 # TODO:Change this to import the GeoJSON file
 geojson_geometry = {
-       "type":"Polygon","coordinates":[
-         [
+       "type":"Polygon",
+       "coordinates":[[
            [-162.8235626220703, 66.05622435812153],
            [-162.674560546875, 66.05622435812153],
            [-162.674560546875, 66.10883816429516],
            [-162.8235626220703, 66.10883816429516],
            [-162.8235626220703, 66.05622435812153]
-         ]
-       ]
+        ]]
 }
 
 # loop through download process with each API key until quota is met
