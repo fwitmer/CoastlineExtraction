@@ -42,6 +42,7 @@ aoi = {
 query = api.filters.and_filter(
     api.filters.geom_filter(aoi)
     api.filters.range_filter('cloud_cover', lte=0.1)
+    api.filters.date_range('acquired', gt=last_date)
 )
 item_types = ["PSScene4Band"]
 request = api.filters.build_search_request(query, item_types)
