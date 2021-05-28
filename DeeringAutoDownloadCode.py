@@ -6,7 +6,7 @@
 #
 ##############################
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 import os
 import json
 import requests
@@ -22,10 +22,13 @@ api_keys.append(os.getenv("KRIS_API"))
 api_keys.append(os.getenv("JACK_API"))
 api_keys.append(os.getenv("FRANK_API"))
 
+# get the last downloaded image date from .env
+last_date = os.getenv("LAST_DATE")
+
 # Setup boundry region of Deering, AK (Could be imported; Included here for simplicity)
 # TODO:Change this to import the GeoJSON file
-geojson_geometry = {
-       "type":"Polygon",
+aoi = {
+       "type": "Polygon",
        "coordinates":[[
            [-162.8235626220703, 66.05622435812153],
            [-162.674560546875, 66.05622435812153],
@@ -35,10 +38,22 @@ geojson_geometry = {
         ]]
 }
 
+# setting up the search request filters
+query = api.filters.and_filter(
+    api.filters.geom_filter(aoi)
+    api.filters.range_filter('cloud_cover', lte=0.1)
+)
+item_types = ["PSScene4Band"]
+request = api.filters.build_search_request(query, item_types)
+
 # loop through download process with each API key until quota is met
 while api_keys:
-    current_key = api_keys.pop()
-    print(current_key)
+    os.environ["PL_API_KEY"] = api_keys.pop()
+    client = api.ClientV1()
+    results = client.quick_search(request)
+    for item in results.items_iter(10):
+        print(item)
+    exit()
     
 exit()
 
