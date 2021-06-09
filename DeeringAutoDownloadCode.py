@@ -27,10 +27,8 @@ api_keys.append(os.getenv("FRANK_API"))
 # get the last downloaded image date from .env
 last_date_string = os.getenv("LAST_DATE")
 last_datetime = datetime.strptime(last_date_string, "%Y-%m")
-next_month = last_datetime + relativedelta(months=1)
-next_month_string = next_month.strftime("%Y-%m")
-print(next_month_string)
-
+next_datetime = last_datetime + relativedelta(months=1)
+next_month_string = next_datetime.strftime("%Y-%m")
 
 # Setup boundry region of Deering, AK (Could be imported; Included here for simplicity)
 # TODO:Change this to import the GeoJSON file
@@ -49,21 +47,25 @@ aoi = {
 query = api.filters.and_filter(
     api.filters.geom_filter(aoi),
     api.filters.range_filter('cloud_cover', lte=0.1),
-    api.filters.date_range('acquired', gt=last_date_string, lt=next_month_string),
+    api.filters.date_range('acquired', gt=last_datetime, lt=next_datetime),
+    api.filters.permission_filter('assets:download')
 )
 item_types = ["REOrthoTile", "PSOrthoTile"]
 request = api.filters.build_search_request(query, item_types)
-print(request)
 
 # loop through download process with each API key until quota is met
 while api_keys:
     os.environ["PL_API_KEY"] = api_keys.pop()
     client = api.ClientV1()
     results = client.quick_search(request)
-    print("Matched {} results.", results)
     for item in results.items_iter(1):
         print(item)
-    exit()
+    if results.size:
+        for item in results.items_iter(1):
+            print(item)
+    # no results, increment the date
+    else:
+        exit()
     
 exit()
 
