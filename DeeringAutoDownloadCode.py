@@ -12,6 +12,7 @@ import json
 import requests
 import time
 from planet import api
+from planet.api import downloader
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -30,8 +31,7 @@ last_datetime = datetime.strptime(last_date_string, "%Y-%m")
 next_datetime = last_datetime + relativedelta(months=1)
 next_month_string = next_datetime.strftime("%Y-%m")
 
-# Setup boundry region of Deering, AK (Could be imported; Included here for simplicity)
-# TODO:Change this to import the GeoJSON file
+# GeoJSON of target area
 aoi = {
        "type": "Polygon",
        "coordinates":[[
@@ -50,7 +50,7 @@ query = api.filters.and_filter(
     api.filters.date_range('acquired', gt=last_datetime, lt=next_datetime),
     api.filters.permission_filter('assets:download')
 )
-item_types = ["REOrthoTile", "PSOrthoTile"]
+item_types = ["PSOrthoTile"]
 request = api.filters.build_search_request(query, item_types)
 
 # loop through download process with each API key until quota is met
@@ -58,11 +58,22 @@ while api_keys:
     os.environ["PL_API_KEY"] = api_keys.pop()
     client = api.ClientV1()
     results = client.quick_search(request)
+
     for item in results.items_iter(1):
-        print(item)
-    if results.size:
-        for item in results.items_iter(1):
-            print(item)
+        print(json.dumps(item, indent=4))
+        # grabbing relevant time information for directory sorting and file naming
+        time_acquired = item["properties"]['acquired']
+        year_acquired = time_acquired[:4]
+        month_acquired = time_acquired[5:7]
+        day_acquired = time_acquired[8:10]
+        acquired_string = time_acquired[:10]
+        
+        # attempting to activate and download the analytic_sr asset
+        # print("Downloading: " + filename)
+        # dl = downloader.create(client)
+        # dl.activate(results.items_iter(1), ['analytic_sr'])
+        # dl.download(results.items_iter(1), ['analytic_sr'], os.getcwd())
+
     # no results, increment the date
     else:
         exit()
