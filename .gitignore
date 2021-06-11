@@ -7,3 +7,4 @@
 # specific directory/file ignores
 /data/
 **/*.code-workspace
+.DS_Store
