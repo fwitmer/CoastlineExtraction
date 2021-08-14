@@ -160,9 +160,6 @@ def finalize_data(downscaled_data):
 # Method that processes and saves data
 def process_data(data, data_name, dataframe, transects):
 
-    # Get first valid transect identifier
-    first_transect = transects.first_valid_index()
-
     for ds in data:
 
         # Find X/Y coordinate on SNAP data grid closest do Deering center
@@ -208,7 +205,7 @@ def process_data(data, data_name, dataframe, transects):
             for j in range(0, len(transects)):
 
                 # Create ID identifier for date/transect combo
-                temp_ID = str(final_date) + '_' + str(first_transect + j)
+                temp_ID = str(final_date) + '_' + str(transects.iloc[j]['TransOrder'])
 
                 # Date and transect combo already present in dataframe
                 if (dataframe['ID'] == temp_ID).any():
@@ -219,7 +216,7 @@ def process_data(data, data_name, dataframe, transects):
                 else:
                     # Add data
                     dataframe = dataframe.append(pd.DataFrame(
-                        {'date': [final_date], 'transect': [first_transect + j], 'ID': [temp_ID], data_name: [interpolated_points[j]]}))
+                        {'date': [final_date], 'transect': [transects.iloc[j]['TransOrder']], 'ID': [temp_ID], data_name: [interpolated_points[j]]}))
 
         print(dataframe)
         return dataframe
