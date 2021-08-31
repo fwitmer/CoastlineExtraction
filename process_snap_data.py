@@ -16,7 +16,7 @@ CRS_WKT='PROJCS["unnamed",GEOGCS["unnamed ellipse",DATUM["unknown",SPHEROID["unn
         '+lon_0=-152.0 +lat_0=90.0 +x_0=0 +y_0=0 +a=6370000 +b=6370000 +wktext"]] '
 
 # Center of region in lat/lon
-REGION_CENTER = (66.0756, 162.7172)
+REGION_CENTER = (66.0756, -162.7172)
 
 # Filepaths for SNAP data
 TSK_FILEPATH = 'tsk_hourly_wrf_NCAR-CCSM4_historical_2005.nc'
@@ -27,6 +27,7 @@ PSFC_FILEPATH = 'TEMP'
 TRANSECT_FILEPATH = 'WestChukchi_exposed_STepr_rates.shp'
 
 # Filepath for I/O csv data
+# TODO: Change these back to daily
 INPUT_FILEPATH = 'SNAP_daily_by_transect.csv'
 OUTPUT_FILEPATH = 'SNAP_daily_by_transect.csv'
 
@@ -47,7 +48,7 @@ def get_transect_points(filepath):
     # This takes a representative point from each transect to use in interpolation
     transect_points = []
     for i in transects['geometry']:
-        transect_points.append((i.representative_point().y, -i.representative_point().x))
+        transect_points.append((i.representative_point().y, i.representative_point().x))
 
     print('Transects read and extracted')
     return transect_points, transects
@@ -107,20 +108,21 @@ def get_closest_coords(ds):
 
 
 # Crop SNAP surface temperature data to Deering region
-# (7 x coordinates and 7 y coordinates to make the 49 points closest to Deering)
+# (3 x coordinates and 3 y coordinates to make the 9 points closest to Deering)
 def crop_snap(ds, data, closest_x, closest_y):
+
     # Storage var declaration
-    modified_data = np.empty((len(data), 7, 7))
+    modified_data = np.empty((len(data), 3, 3))
     ordered_coords = []
     i_ct = 0
 
-    for i in range(closest_x - 3, closest_x + 4):
+    for i in range(closest_y - 1, closest_y + 2):
         j_ct = 0
-        for j in range(closest_y - 3, closest_y + 4):
+        for j in range(closest_x - 1, closest_x + 2):
             for k in range(0, len(data)):
                 modified_data[k][i_ct][j_ct] = data[k][i][j]
             j_ct = j_ct + 1
-            ordered_coords.append((ds['xc'][i].data.item(), ds['yc'][j].data.item()))
+            ordered_coords.append((ds['xc'][j].data.item(), ds['yc'][i].data.item()))
         i_ct = i_ct + 1
 
     return modified_data, ordered_coords
@@ -128,6 +130,7 @@ def crop_snap(ds, data, closest_x, closest_y):
 
 # Method to downscale snap data from hourly to daily
 def downscale_data(modified_data):
+
     # Declare storage var
     downscaled_data = np.empty(((int(len(modified_data) / 24)), len(modified_data[0]), len(modified_data[0][0])))
 
@@ -197,7 +200,7 @@ def process_data(data, data_name, dataframe, transects):
             res_date = strt_date + timedelta(days=int(day_num))
             final_date = res_date.strftime("%m-%d-%Y")
 
-            interpolator = interpolate.LinearNDInterpolator(ordered_coords, finalized_data[i], fill_value=1)
+            interpolator = interpolate.LinearNDInterpolator(ordered_coords, finalized_data[i])
             interpolated_points = interpolator(transect_points)
 
             # Iterate through each transect
@@ -218,7 +221,6 @@ def process_data(data, data_name, dataframe, transects):
                     dataframe = dataframe.append(pd.DataFrame(
                         {'date': [final_date], 'transect': [transects.iloc[j]['TransOrder']], 'ID': [temp_ID], data_name: [interpolated_points[j]]}))
 
-        print(dataframe)
         return dataframe
 
 
@@ -226,7 +228,6 @@ def process_data(data, data_name, dataframe, transects):
 def calculate_wind_data(dataframe):
     dataframe['Wind Speed'] = ((dataframe['u10']**2) + (dataframe['v10']**2)).pow(1./2)
     dataframe['Wind Direction'] = np.arcsin(((0-dataframe['u10']) / dataframe['Wind Speed']).astype(np.float64))
-    print(dataframe)
     return dataframe
 
 
