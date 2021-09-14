@@ -13,8 +13,9 @@
 #   nodata_threshold - integer representing the maximum allowable number of NoData pixels
 # Outputs:
 #   filtered, clipped and cleaned ee.ImageCollection matching the input requirements
-
+######################################################
 import ee
+from geetools import batch
 ee.Initialize()
 
 def get_gsw_monthly(start_date, end_date, roi, nodata_threshold):
@@ -35,6 +36,11 @@ def get_gsw_monthly(start_date, end_date, roi, nodata_threshold):
     valid_images = clipped_images.map(count_nodata) \
                                  .filter(ee.Filter.lt('nodata_count', nodata_threshold))
     return valid_images
+
+# wrapper for the batch.Download.ImageCollection.toDrive function found here:
+# https://github.com/gee-community/gee_tools
+def export_images(image_collection, folder, region):
+    batch.Export.imagecollection.toDrive(image_collection, folder, scale=30, dataType='uint8', region=region, verbose=True)
 
 # Example code
 start_date = '2016-01-01'
