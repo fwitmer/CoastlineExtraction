@@ -43,8 +43,8 @@ def export_images(image_collection, folder, region):
     batch.Export.imagecollection.toDrive(image_collection, folder, scale=30, dataType='uint8', region=region, verbose=True)
 
 # Example code
-start_date = '2016-01-01'
-end_date = '2021-08-31'
+start_date = '2015-01-01'
+end_date = '2015-12-31'
 roi = ee.Geometry.Polygon([[[-162.8235626220703, 66.05622435812153],
                             [-162.674560546875, 66.05622435812153],
                             [-162.674560546875, 66.10883816429516],
@@ -58,3 +58,9 @@ dates = ee.List(results.aggregate_array('system:time_start')) \
           .getInfo()
 print(len(dates), "images returned at the following dates:")
 print(dates)
+
+# Exporting resulting images to Google Drive
+'''
+folder = 'GSW_Monthly_Labels'
+export_images(results, folder, roi)
+'''
