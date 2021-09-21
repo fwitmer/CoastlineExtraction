@@ -25,7 +25,7 @@ def add_labels(input_path, label_path):
                                            src_crs=label_src.crs, 
                                            dst_crs=input_src.crs,
                                            resampling=Resampling.bilinear)
-            print(reprojected_labels)
+            print(reprojected_labels[0].shape)
             with rio.open('merged_img.tif', 'w', **input_meta) as dst:
                 dst.write_band(1, input_src.read(1))
                 dst.write_band(2, input_src.read(2))
