@@ -42,12 +42,11 @@ def reproject_image(reference_image, target_image):
     filepath, filename = os.path.split(target_image)
     file_base, file_extension = os.path.splitext(filename)
     with rio.open(reference_image) as dst, \
-        rio.open(target_image) as src:
-        print("Source CRS:", src.crs)
-        print("Destination CRS:", dst.crs)
+         rio.open(target_image) as src:
 
         src_transform = src.transform
 
+        # getting the new transform for the reprojection
         dst_transform, width, height = calculate_default_transform(
             src.crs,
             dst.crs,
@@ -56,6 +55,7 @@ def reproject_image(reference_image, target_image):
             *src.bounds
         )
 
+        # updating destination metadata
         dst_meta = src.meta.copy()
         dst_meta.update(
             {
@@ -67,9 +67,11 @@ def reproject_image(reference_image, target_image):
             }
         )
 
+        # constructing output filename/path
         out_name = file_base + "_reproj" + file_extension
         out_path = os.path.join(filepath, out_name)
 
+        # writing repojected output
         with rio.open(out_path, 'w', **dst_meta) as output:
             reproject(
                 source=rio.band(src, 1),
