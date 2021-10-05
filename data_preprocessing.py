@@ -24,6 +24,8 @@ def make_tiles(image, tile_height=512, tile_width=512):
         meta['transform'] = transform
         meta['width'] = tile_width
         meta['height'] = tile_height
+        out_name = file_base + "_" + str(i) + file_extension
+        print(out_name)
 
         
 
