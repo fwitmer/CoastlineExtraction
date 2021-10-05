@@ -5,6 +5,7 @@ from rasterio.warp import calculate_default_transform, reproject
 
 import numpy as np
 
+import os
 
 def add_labels(input_path, label_path):
     with rio.open(label_path, 'r') as label_src:
@@ -38,6 +39,8 @@ def add_labels(input_path, label_path):
 
 # adapted from https://mmann1123.github.io/pyGIS/docs/e_raster_reproject.html
 def reproject_image(reference_image, target_image):
+    filepath, filename = os.path.split(target_image)
+    file_base, file_extension = os.path.splitext(filename)
     with rio.open(reference_image) as dst, \
         rio.open(target_image) as src:
         print("Source CRS:", src.crs)
@@ -64,7 +67,10 @@ def reproject_image(reference_image, target_image):
             }
         )
 
-        with rio.open("data/2016_08_reprojected.tif", 'w', **dst_meta) as output:
+        out_name = file_base + "_reproj" + file_extension
+        out_path = os.path.join(filepath, out_name)
+
+        with rio.open(out_path, 'w', **dst_meta) as output:
             reproject(
                 source=rio.band(src, 1),
                 destination=rio.band(output, 1),
