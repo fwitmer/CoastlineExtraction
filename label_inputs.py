@@ -33,5 +33,5 @@ def add_labels(input_path, label_path):
                 dst.write_band(4, input_src.read(4))
                 dst.write_band(5, reprojected_labels[0].astype(rio.uint16))
 
-
-add_labels("C:\\Users\\kjcar\\Desktop\\268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif", "C:\\Users\\kjcar\\Desktop\\2016_08.tif")
+# example usage
+# add_labels("C:\\Users\\kjcar\\Desktop\\268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif", "C:\\Users\\kjcar\\Desktop\\2016_08.tif")
