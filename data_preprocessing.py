@@ -19,13 +19,15 @@ def make_tiles(image, tile_height=512, tile_width=512):
             curr_window = windows.Window(col_off=col_off, row_off=row_off, width=tile_width, height=tile_height)
             curr_transform = windows.transform(curr_window, src.transform)
             tiles.append((curr_window, curr_transform))
-    for i in range(len(tiles)):
-        window, transform = tiles[i]
-        meta['transform'] = transform
-        meta['width'] = tile_width
-        meta['height'] = tile_height
-        out_name = file_base + "_" + str(i) + file_extension
-        print(out_name)
+        for i in range(len(tiles)):
+            window, transform = tiles[i]
+            meta['transform'] = transform
+            meta['width'] = tile_width
+            meta['height'] = tile_height
+            out_name = file_base + "_" + str(i) + file_extension
+            out_path = os.path.join(filepath, out_name)
+            with rio.open(out_path, 'w', **meta) as dst:
+                dst.write(src.read(window=window))
 
         
 
