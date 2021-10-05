@@ -35,7 +35,7 @@ def add_labels(input_path, label_path):
                 dst.write_band(5, reprojected_labels[0].astype(rio.uint16))
 
 # example usage
-# add_labels("C:\\Users\\kjcar\\Desktop\\268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif", "C:\\Users\\kjcar\\Desktop\\2016_08.tif")
+# add_labels("data/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif", "data/2016_08.tif")
 
 # adapted from https://mmann1123.github.io/pyGIS/docs/e_raster_reproject.html
 def reproject_image(reference_image, target_image):
@@ -83,7 +83,7 @@ def reproject_image(reference_image, target_image):
                 resampling=Resampling.bilinear
             )
     
-    
-reference_image = "data/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif"
-target_image = "data/2016_08.tif"
-reproject_image(reference_image, target_image)
+# example usage of reproject_image()
+# reference_image = "data/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif"
+# target_image = "data/2016_08.tif"
+# reproject_image(reference_image, target_image)
