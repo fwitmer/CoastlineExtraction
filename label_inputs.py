@@ -1,7 +1,7 @@
 import rasterio as rio
 from rasterio import merge
 from rasterio.enums import Resampling
-from rasterio.warp import reproject
+from rasterio.warp import calculate_default_transform, reproject
 
 import numpy as np
 
@@ -35,3 +35,47 @@ def add_labels(input_path, label_path):
 
 # example usage
 # add_labels("C:\\Users\\kjcar\\Desktop\\268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif", "C:\\Users\\kjcar\\Desktop\\2016_08.tif")
+
+# adapted from https://mmann1123.github.io/pyGIS/docs/e_raster_reproject.html
+def reproject_image(reference_image, target_image):
+    with rio.open(reference_image) as dst, \
+        rio.open(target_image) as src:
+        print("Source CRS:", src.crs)
+        print("Destination CRS:", dst.crs)
+
+        src_transform = src.transform
+
+        dst_transform, width, height = calculate_default_transform(
+            src.crs,
+            dst.crs,
+            src.width,
+            src.height,
+            *src.bounds
+        )
+
+        dst_meta = src.meta.copy()
+        dst_meta.update(
+            {
+                "crs": dst.crs,
+                "transform": dst_transform,
+                "width": width,
+                "height": height,
+                "nodata": 0
+            }
+        )
+
+        with rio.open("data/2016_08_reprojected.tif", 'w', **dst_meta) as output:
+            reproject(
+                source=rio.band(src, 1),
+                destination=rio.band(output, 1),
+                src_transform=src.transform,
+                src_crs = src.crs,
+                dst_transform = dst_transform,
+                dst_crs=dst.crs,
+                resampling=Resampling.bilinear
+            )
+    
+    
+reference_image = "data/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif"
+target_image = "data/2016_08.tif"
+reproject_image(reference_image, target_image)
