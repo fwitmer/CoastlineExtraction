@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 
 import os
 
+# adapted from https://gis.stackexchange.com/questions/285499/how-to-split-multiband-image-into-image-tiles-using-rasterio
 def make_tiles(image, tile_height=512, tile_width=512):
     with rio.open(image) as src:
         filepath, filename = os.path.split(image)
