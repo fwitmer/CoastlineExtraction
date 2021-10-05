@@ -9,12 +9,12 @@ import os
 
 def add_labels(input_path, label_path):
     with rio.open(label_path, 'r') as label_src:
-        print(label_src.shape)
-        print(label_src.meta)
+        # print(label_src.shape)
+        # print(label_src.meta)
         labels = label_src.read(1)
         with rio.open(input_path, 'r') as input_src:
-            print(input_src.shape)
-            print(input_src.meta)
+            # print(input_src.shape)
+            # print(input_src.meta)
             input_meta = input_src.meta
             input_meta.update(count = 5)
 
@@ -26,8 +26,8 @@ def add_labels(input_path, label_path):
                                            src_crs=label_src.crs, 
                                            dst_crs=input_src.crs,
                                            resampling=Resampling.bilinear)
-            print(reprojected_labels[0].shape)
-            with rio.open('merged_img.tif', 'w', **input_meta) as dst:
+            # print(reprojected_labels[0].shape)
+            with rio.open('data/merged_img.tif', 'w', **input_meta) as dst:
                 dst.write_band(1, input_src.read(1))
                 dst.write_band(2, input_src.read(2))
                 dst.write_band(3, input_src.read(3))
@@ -35,7 +35,7 @@ def add_labels(input_path, label_path):
                 dst.write_band(5, reprojected_labels[0].astype(rio.uint16))
 
 # example usage
-# add_labels("data/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif", "data/2016_08.tif")
+# add_labels("data/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif", "data/2016_08_reproj.tif")
 
 # adapted from https://mmann1123.github.io/pyGIS/docs/e_raster_reproject.html
 def reproject_image(reference_image, target_image):
