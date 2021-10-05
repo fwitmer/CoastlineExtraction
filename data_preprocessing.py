@@ -30,5 +30,5 @@ def make_tiles(image, tile_height=512, tile_width=512):
                 dst.write(src.read(window=window))
 
         
-
+# example usage
 make_tiles("data/merged_img.tif")
