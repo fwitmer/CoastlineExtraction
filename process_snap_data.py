@@ -1,3 +1,23 @@
+# Jack Carroll
+# 12/12/21
+# This code contains the pipeline used to process the Historical and Projected Dynamically Downscaled
+# Climate Data for the State of Alaska and surrounding regions at 20km spatial resolution and hourly temporal resolution
+# This dataset can be viewed and downloaded from SNAP data sponsored by UAF
+# The datasets used are tsk (surface skin temperature), U10 (10m wind u component), V10 (10m wind v component), seaice (concentration),
+# psfc (surface pressure), and t2 (2-m temperature).
+
+# Dataset URL: http://ckan.snap.uaf.edu/dataset/historical-and-projected-dynamically-downscaled-climate-data-for-the-state-of-alaska-and-surrou
+# Dataset Citation: Peter Bieniek, Alaska Climate Adaptation and Science Center, &quot;Michael Lindgren. Historical and
+# Projected Dynamically Downscaled Climate Data for the State of Alaska and surrounding
+# regions at 20km spatial resolution and hourly temporal resolution. Creative Commons Attribution 4.0 (2021).
+
+# The general process in this file is as follows: Transects are read in and converted to point representations. SNAP NC datasets are read in.
+# A pandas dataframe is created to store data based on transect file and the years of SNAP data that have been read in. One at a time, each
+# dataset that has been read in undergoes the following process: Dataset is transformed and cropped to the region of Deering, AK. 
+# Dataset is upscaled from hourly to daily. Dataset is interpolated at each transect line. These interpolated values are added to the dataframe.
+# Finally, once every dataset has been processed, any processed u10 and v10 components of the same year will be used to calculate
+# avg wind direction and avg wind speed, which are additionally added to the dataframe.
+
 import netCDF4 as nc
 from pyproj import Transformer
 import numpy as np
