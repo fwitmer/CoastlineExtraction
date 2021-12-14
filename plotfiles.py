@@ -26,6 +26,8 @@ def main(args):
     input_dir = args.input_dir
     files = glob.glob(input_dir + "/**/*.tif", recursive = True)
     for file in files:
+        if "udm" in file:
+            continue
         with rio.open(file, driver="GTiff") as src:
             blue = src.read(1)
             green = src.read(2)
