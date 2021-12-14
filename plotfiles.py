@@ -2,7 +2,6 @@ import os
 import sys
 import glob
 import rasterio as rio
-from rasterio.plot import show
 import argparse
 import numpy as np
 from matplotlib import pyplot as plt
