@@ -37,9 +37,13 @@ def main(args):
             ax.set_xlabel("Press (Y) to keep, (N) to remove")
             plt.imshow(img)
             plt.show()
-    
-    for file in files_to_remove:
-        os.remove(file)
+    answer = input("Are you sure you want to remove " + str(len(files_to_remove)) + " files? (Y/N): ")
+    if answer == 'y' or answer == 'Y':
+        for file in files_to_remove:
+            os.remove(file)
+        print(len(files_to_remove), " files successfully removed.")
+    else:
+        print("Files will not be removed.")
 
 
 
