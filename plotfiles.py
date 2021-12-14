@@ -34,6 +34,7 @@ def main(args):
             img = np.dstack((blue, green, red))
             fig, ax = plt.subplots()
             fig.canvas.mpl_connect('key_press_event', on_press)
+            ax.set_title(file)
             ax.set_xlabel("Press (Y) to keep, (N) to remove")
             plt.imshow(img)
             plt.show()
