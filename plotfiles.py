@@ -38,7 +38,9 @@ def main(args):
             ax.set_xlabel("Press (Y) to keep, (N) to remove")
             plt.imshow(img)
             plt.show()
-            
+    
+    for file in files_to_remove:
+        os.remove(file)
 
 
 
