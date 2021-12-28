@@ -249,6 +249,14 @@ def process_data(data, data_name, dataframe, transects, ordered_coords, y):
                 # Get date from day
                 day_num = str(i)
                 day_num.rjust(3 + len(day_num), '0')
+                    
+                # If working with seaice data, filter out land pixels
+                if data_name == 'seaice':
+                          fill_val = (finalized_data[i][0] + finalized_data[i][1] + finalized_data[i][2] + finalized_data[i][4] + finalized_data[i][5]) / 5
+                          finalized_data[i][3] = fill_val
+                          finalized_data[i][6] = fill_val
+                          finalized_data[i][7] = fill_val
+                          finalized_data[i][8] = fill_val
 
                 res_date = strt_date + timedelta(days=int(day_num))
                 final_date = res_date.strftime("%m-%d-%Y")
