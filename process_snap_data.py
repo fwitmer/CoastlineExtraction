@@ -251,6 +251,7 @@ def process_data(data, data_name, dataframe, transects, ordered_coords, y):
                 day_num.rjust(3 + len(day_num), '0')
                     
                 # If working with seaice data, filter out land pixels
+                # NOTE: This portion of the code works only for the specific region we have been observing. It would need to be changed for other regions.
                 if data_name == 'seaice':
                           fill_val = (finalized_data[i][0] + finalized_data[i][1] + finalized_data[i][2] + finalized_data[i][4] + finalized_data[i][5]) / 5
                           finalized_data[i][3] = fill_val
