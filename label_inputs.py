@@ -18,31 +18,28 @@ def create_dataset(data, crs, transform):
     return dataset
 
 def add_labels(input_path, label_path):
-    with rio.open(label_path, 'r') as label_src:
-        # print(label_src.shape)
-        # print(label_src.meta)
-        labels = label_src.read(1)
-        with rio.open(input_path, 'r') as input_src:
-            # print(input_src.shape)
-            # print(input_src.meta)
-            input_meta = input_src.meta
-            input_meta.update(count = 5)
+    with rio.open(label_path, 'r', driver='GTiff') as label, \
+         rio.open(input_path, 'r', driver='GTiff') as input:
+        label_array = label.read(1)
 
-            dst_raster = np.zeros((input_src.shape[0], input_src.shape[1]))
-            reprojected_labels = reproject(labels, 
-                                           dst_raster, 
-                                           src_transform=label_src.transform, 
-                                           dst_transform=input_src.transform, 
-                                           src_crs=label_src.crs, 
-                                           dst_crs=input_src.crs,
-                                           resampling=Resampling.bilinear)
-            # print(reprojected_labels[0].shape)
-            with rio.open('data/merged_img.tif', 'w', **input_meta) as dst:
-                dst.write_band(1, input_src.read(1))
-                dst.write_band(2, input_src.read(2))
-                dst.write_band(3, input_src.read(3))
-                dst.write_band(4, input_src.read(4))
-                dst.write_band(5, reprojected_labels[0].astype(rio.uint16))
+        input_meta = input.meta
+        input_meta.update(count = 5)
+
+        dst_raster = np.zeros((input.shape[0], input.shape[1]))
+        reprojected_labels = reproject(label_array, 
+                                        dst_raster, 
+                                        src_transform=label_src.transform, 
+                                        dst_transform=input.transform, 
+                                        src_crs=label_src.crs, 
+                                        dst_crs=input.crs,
+                                        resampling=Resampling.bilinear)
+        # print(reprojected_labels[0].shape)
+        with rio.open('data/merged_img.tif', 'w', **input_meta) as dst:
+            dst.write_band(1, input.read(1))
+            dst.write_band(2, input.read(2))
+            dst.write_band(3, input.read(3))
+            dst.write_band(4, input.read(4))
+            dst.write_band(5, reprojected_labels[0].astype(rio.uint16))
 
 # example usage
 # add_labels("data/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif", "data/2016_08_reproj.tif")
