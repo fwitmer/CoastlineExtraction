@@ -33,7 +33,7 @@ def add_labels(input_path, label_path, output_path):
         label_reproj, label_reproj_trans = reproject(source=rio.band(label, 1),
                                                      dst_crs = input.profile['crs'],
                                                      dst_resolution=input.res,
-                                                     resampling=rio.enums.Resampling.nearest)
+                                                     resampling=rio.enums.Resampling.cubic_spline)
         
         label_ds = create_dataset(label_reproj[0], input.profile['crs'], label_reproj_trans)
 
