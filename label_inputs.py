@@ -20,19 +20,17 @@ def create_dataset(data, crs, transform):
 def add_labels(input_path, label_path):
     with rio.open(label_path, 'r', driver='GTiff') as label, \
          rio.open(input_path, 'r', driver='GTiff') as input:
-        label_array = label.read(1)
 
+        # copying metadat and updating for the new band count
         input_meta = input.meta
-        input_meta.update(count = 5)
+        input_meta.update(count=5)
 
-        dst_raster = np.zeros((input.shape[0], input.shape[1]))
-        reprojected_labels = reproject(label_array, 
-                                        dst_raster, 
-                                        src_transform=label_src.transform, 
-                                        dst_transform=input.transform, 
-                                        src_crs=label_src.crs, 
-                                        dst_crs=input.crs,
-                                        resampling=Resampling.bilinear)
+        # reprojecting label layer to match the CRS and resolution of input
+        label_reproj, label_reproj_trans = reproject(source=rio.band(label, 1),
+                                                     dst_crs = input.profile['crs'],
+                                                     dst_resolution=input.res,
+                                                     resampling=rio.enums.Resampling.cubic_spline)
+
         # print(reprojected_labels[0].shape)
         with rio.open('data/merged_img.tif', 'w', **input_meta) as dst:
             dst.write_band(1, input.read(1))
