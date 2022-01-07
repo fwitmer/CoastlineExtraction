@@ -30,6 +30,8 @@ def add_labels(input_path, label_path):
                                                      dst_crs = input.profile['crs'],
                                                      dst_resolution=input.res,
                                                      resampling=rio.enums.Resampling.cubic_spline)
+        
+        label_ds = create_dataset(label_reproj[0], input.profile['crs'], label_reproj_trans)
 
         # print(reprojected_labels[0].shape)
         with rio.open('data/merged_img.tif', 'w', **input_meta) as dst:
