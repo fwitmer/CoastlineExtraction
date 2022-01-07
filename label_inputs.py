@@ -2,10 +2,20 @@ import rasterio as rio
 from rasterio import merge
 from rasterio.enums import Resampling
 from rasterio.warp import calculate_default_transform, reproject
+from rasterio.io import MemoryFile
 
 import numpy as np
 
 import os
+
+# adapted from https://medium.com/analytics-vidhya/python-for-geosciences-raster-merging-clipping-and-reprojection-with-rasterio-9f05f012b88a
+def create_dataset(data, crs, transform):
+    memfile = MemoryFile()
+    dataset = memfile.open(driver="GTiff", height=data.shape[0], width=data.shape[1], count=1,
+                           crs=crs, transform=transform, dtype=data.dtype, nodata=0)
+    dataset.write(data, 1)
+
+    return dataset
 
 def add_labels(input_path, label_path):
     with rio.open(label_path, 'r') as label_src:
