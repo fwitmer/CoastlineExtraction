@@ -21,7 +21,7 @@ def create_dataset(data, crs, transform):
 
 # takes a path for an input image and a path for a corresponding label image
 # upscales the label image to match the resolution of the input image and merges them into a 5-banded image
-def add_labels(input_path, label_path):
+def add_labels(input_path, label_path, output_path):
     with rio.open(label_path, 'r', driver='GTiff') as label, \
          rio.open(input_path, 'r', driver='GTiff') as input:
 
@@ -33,7 +33,7 @@ def add_labels(input_path, label_path):
         label_reproj, label_reproj_trans = reproject(source=rio.band(label, 1),
                                                      dst_crs = input.profile['crs'],
                                                      dst_resolution=input.res,
-                                                     resampling=rio.enums.Resampling.cubic_spline)
+                                                     resampling=rio.enums.Resampling.nearest)
         
         label_ds = create_dataset(label_reproj[0], input.profile['crs'], label_reproj_trans)
 
@@ -46,7 +46,7 @@ def add_labels(input_path, label_path):
         cropped_label_array = np.where(input.read(1) == 0, 0, cropped_label_array)
 
         # print(reprojected_labels[0].shape)
-        with rio.open('data/merged_img.tif', 'w', **input_meta) as dst:
+        with rio.open(output_path, 'w', **input_meta) as dst:
             dst.write_band(1, input.read(1))
             dst.write_band(2, input.read(2))
             dst.write_band(3, input.read(3))
