@@ -3,6 +3,8 @@ from rasterio import merge
 from rasterio.enums import Resampling
 from rasterio.warp import calculate_default_transform, reproject
 from rasterio.io import MemoryFile
+from rasterio.features import shapes
+from rasterio.mask import mask
 
 import numpy as np
 
@@ -32,6 +34,15 @@ def add_labels(input_path, label_path):
                                                      resampling=rio.enums.Resampling.cubic_spline)
         
         label_ds = create_dataset(label_reproj[0], input.profile['crs'], label_reproj_trans)
+
+        # cropping reprojected labels to input image's extent
+        extents, _ = next(shapes(np.zeros_like(input.read(1)), transform=input.profile['transform']))
+        cropped_label, crop_transf = mask(label_ds, [extents], crop=True)
+
+        # updating label layer to have no data where input image has no data
+        cropped_label_array = cropped_label[0][:input.shape[0], :input.shape[1]]
+        cropped_label_array = np.where(input.read(1) == 0, 0, cropped_label_array)
+        cropped_ds = create_dataset(cropped_label_array, input.profile['crs'], crop_transf)
 
         # print(reprojected_labels[0].shape)
         with rio.open('data/merged_img.tif', 'w', **input_meta) as dst:
