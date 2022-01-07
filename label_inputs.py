@@ -10,6 +10,8 @@ import numpy as np
 
 import os
 
+# creates a rasterio dataset in memory from a data array and corresponding CRS and transform
+# defaults to single-band datasets with nodata value of 0
 # adapted from https://medium.com/analytics-vidhya/python-for-geosciences-raster-merging-clipping-and-reprojection-with-rasterio-9f05f012b88a
 def create_dataset(data, crs, transform):
     memfile = MemoryFile()
@@ -52,3 +54,6 @@ def add_labels(input_path, label_path, output_path):
             dst.write_band(3, input.read(3))
             dst.write_band(4, input.read(4))
             dst.write_band(5, cropped_label_array.astype(rio.uint16))
+
+def parse_dates(filename):
+    pass
