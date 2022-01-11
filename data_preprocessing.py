@@ -26,7 +26,7 @@ def make_tiles(image, tile_height=512, tile_width=512):
             meta['width'] = tile_width
             meta['height'] = tile_height
             out_name = file_base + "_" + str(i) + file_extension
-            out_path = os.path.join(filepath, out_name)
+            out_path = os.path.join("data/tiles/", out_name)
             with rio.open(out_path, 'w', **meta) as dst:
                 dst.write(src.read(window=window))
 
