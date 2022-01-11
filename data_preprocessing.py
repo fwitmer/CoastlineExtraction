@@ -14,7 +14,7 @@ def make_tiles(image, tile_height=512, tile_width=512):
         file_base, file_extension = os.path.splitext(filename)
         meta = src.meta.copy()
         num_cols, num_rows = src.meta['width'], src.meta['height']
-        offsets = product(range(0, num_cols, tile_width), range(0, num_rows, tile_height))
+        offsets = product(range(0, num_cols, tile_height//2), range(0, num_rows, tile_width//2))
         tiles = []
         for col_off, row_off in offsets:
             curr_window = windows.Window(col_off=col_off, row_off=row_off, width=tile_width, height=tile_height)
