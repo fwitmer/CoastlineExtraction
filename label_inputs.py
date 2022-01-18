@@ -8,9 +8,10 @@ from rasterio.mask import mask
 
 import numpy as np
 
-import datetime
+import glob
+from datetime import datetime
+from datetime import timedelta
 import re
-
 import os
 
 # creates a rasterio dataset in memory from a data array and corresponding CRS and transform
@@ -61,5 +62,36 @@ def add_labels(input_path, label_path, output_path):
 # returns the date from a filename in YYYY-MM-DD string format
 def parse_date(filename):
     date = re.search("([0-9]{4}\-[0-9]{2}-[0-9]{2})", filename)
-    return date.group(0)
+    if date:
+        return date.group(0)
+    else:
+        date = re.search("([0-9]{4}\_[0-9]{2})", filename)
+        return date.group(0)
 
+def match_labels(input_path, label_path):
+    input_files = glob.glob(input_path + "*.tif")
+    label_files = glob.glob(label_path + "*.tif")
+
+    # preparing labels for comparison
+    label_dict = {}
+    label_dates = []
+    for label in label_files:
+        label_date = datetime.strptime(parse_date(label), "%Y_%m") + timedelta(days=14)
+        label_dates.append(label_date)
+        label_dict[label_date] = label
+    
+    # comparing each input file to the label files to find the closest match
+    for input in input_files:
+        input_date = datetime.strptime(parse_date(input), "%Y-%m-%d")
+        date_diffs = [abs(label_date - input_date) for label_date in label_dates]
+        closest_date = label_dates[date_diffs.index(min(date_diffs))]
+        print("Input file:", os.path.basename(input))
+        print("Matching label:", os.path.basename(label_dict[closest_date]))
+        out_name = input_date.strftime("%Y-%m-%d") + "_labeled.tif"
+        out_path = "data/labeled_inputs/" + out_name
+        print("Merging as", out_name, "...")
+        add_labels(input, label_dict[closest_date], out_path)
+        print("Done.")
+        print()
+
+match_labels("data/input/", "data/labels/")
