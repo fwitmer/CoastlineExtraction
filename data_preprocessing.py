@@ -5,10 +5,12 @@ from itertools import product
 
 from matplotlib import pyplot as plt
 
+import numpy as np
+
 import os
 
 # adapted from https://gis.stackexchange.com/questions/285499/how-to-split-multiband-image-into-image-tiles-using-rasterio
-def make_tiles(image, tile_height=512, tile_width=512):
+def make_tiles(image, tile_height=512, tile_width=512, skip_no_data=False):
     with rio.open(image) as src:
         filepath, filename = os.path.split(image)
         file_base, file_extension = os.path.splitext(filename)
@@ -25,6 +27,11 @@ def make_tiles(image, tile_height=512, tile_width=512):
             meta['transform'] = transform
             meta['width'] = tile_width
             meta['height'] = tile_height
+            window_data = src.read(window=window)
+            # optionally skip tiles with no data values
+            if skip_no_data:
+                if 0 in window_data[..., :-1]:
+                    continue
             out_name = file_base + "_" + str(i) + file_extension
             out_path = os.path.join("data/tiles/", out_name)
             with rio.open(out_path, 'w', **meta) as dst:
@@ -32,4 +39,5 @@ def make_tiles(image, tile_height=512, tile_width=512):
 
         
 # example usage
-make_tiles("data/merged_img.tif")
+make_tiles("data/labeled_inputs/2016_10_15_merged.tif")
+make_tiles("data/labeled_inputs/2017_07_merged.tif")
