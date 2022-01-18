@@ -6,11 +6,11 @@ from rasterio.io import MemoryFile
 from rasterio.features import shapes
 from rasterio.mask import mask
 
-import numpy as np
-
-import glob
 from datetime import datetime
 from datetime import timedelta
+
+import numpy as np
+import glob
 import re
 import os
 
