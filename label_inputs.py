@@ -82,13 +82,19 @@ def match_labels(input_path, label_path):
     
     # comparing each input file to the label files to find the closest match
     for input in input_files:
-        input_date = datetime.strptime(parse_date(input), "%Y-%m-%d")
-        date_diffs = [abs(label_date - input_date) for label_date in label_dates]
-        closest_date = label_dates[date_diffs.index(min(date_diffs))]
         print("Input file:", os.path.basename(input))
-        print("Matching label:", os.path.basename(label_dict[closest_date]))
+        input_date = datetime.strptime(parse_date(input), "%Y-%m-%d")
         out_name = input_date.strftime("%Y-%m-%d") + "_labeled.tif"
         out_path = "data/labeled_inputs/" + out_name
+        # checking if file already exists
+        if os.path.exists(out_path):
+            print("Labeled file already exists at:", out_path)
+            print()
+            continue
+        
+        date_diffs = [abs(label_date - input_date) for label_date in label_dates]
+        closest_date = label_dates[date_diffs.index(min(date_diffs))]
+        print("Matching label:", os.path.basename(label_dict[closest_date]))
         print("Merging as", out_name, "...")
         add_labels(input, label_dict[closest_date], out_path)
         print("Done.")
