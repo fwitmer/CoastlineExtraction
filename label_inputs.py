@@ -8,6 +8,9 @@ from rasterio.mask import mask
 
 import numpy as np
 
+import datetime
+import re
+
 import os
 
 # creates a rasterio dataset in memory from a data array and corresponding CRS and transform
@@ -55,5 +58,8 @@ def add_labels(input_path, label_path, output_path):
             dst.write_band(4, input.read(4))
             dst.write_band(5, cropped_label_array.astype(rio.uint16))
 
-def parse_dates(filename):
-    pass
+# returns the date from a filename in YYYY-MM-DD string format
+def parse_date(filename):
+    date = re.search("([0-9]{4}\-[0-9]{2}-[0-9]{2})", filename)
+    return date.group(0)
+
