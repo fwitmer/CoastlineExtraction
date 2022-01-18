@@ -95,9 +95,9 @@ def match_labels(input_path, label_path):
         date_diffs = [abs(label_date - input_date) for label_date in label_dates]
         closest_date = label_dates[date_diffs.index(min(date_diffs))]
         print("Matching label:", os.path.basename(label_dict[closest_date]))
-        print("Merging as", out_name, "...")
+        print("Merging as: {}...".format(out_name), end="")
         add_labels(input, label_dict[closest_date], out_path)
-        print("Done.")
+        print("DONE")
         print()
 
 match_labels("data/input/", "data/labels/")
