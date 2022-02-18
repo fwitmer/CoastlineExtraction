@@ -14,12 +14,13 @@ def make_tiles(image, tile_height=512, tile_width=512, skip_no_data=False):
         file_base, file_extension = os.path.splitext(filename)
         meta = src.meta.copy()
         num_cols, num_rows = src.meta['width'], src.meta['height']
+        overall_window = windows.Window(col_off=0, row_off=0, width=num_cols, height=num_rows)
         offsets = product(range(0, num_cols, tile_height//2), range(0, num_rows, tile_width//2))
         tiles = []
         for col_off, row_off in offsets:
             curr_window = windows.Window(col_off=col_off, row_off=row_off, width=tile_width, height=tile_height)
             curr_transform = windows.transform(curr_window, src.transform)
-            tiles.append((curr_window, curr_transform))
+            tiles.append((curr_window.intersection(overall_window), curr_transform))
         for i in range(len(tiles)):
             window, transform = tiles[i]
             meta['transform'] = transform
@@ -30,7 +31,7 @@ def make_tiles(image, tile_height=512, tile_width=512, skip_no_data=False):
             if skip_no_data:
                 if 0 in window_data[..., :-1]:
                     continue
-            out_name = file_base + "_" + str(i).zfill(2) + "-of-" + str(len(tiles)) + file_extension
+            out_name = file_base + "_" + str(i + 1).zfill(2) + "-of-" + str(len(tiles)) + file_extension
             out_path = os.path.join("data/tiles/", out_name)
             with rio.open(out_path, 'w', **meta) as dst:
                 dst.write(src.read(window=window))
@@ -63,12 +64,12 @@ def augment_tiles(tile_path):
         path_flip_270 = tile_path + file_base + "_rot270_flip" + file_extension
          
         with rio.open(file, driver="GTiff") as src:
-            band_1 = src.read(1)
-            band_2 = src.read(2)
-            band_3 = src.read(3)
-            band_4 = src.read(4)
-            band_5 = src.read(5)
-            bands = (band_1, band_2, band_3, band_4, band_5)
+            # band_1 = src.read(1)
+            # band_2 = src.read(2)
+            # band_3 = src.read(3)
+            # band_4 = src.read(4)
+            # band_5 = src.read(5)
+            bands = (src.read(1), src.read(2), src.read(3), src.read(4), src.read(5))
             meta = src.meta
             
             _augment_and_write(bands, path_90, meta, 1) # 90°
@@ -83,6 +84,11 @@ def augment_tiles(tile_path):
 
         
 # example usage
-# make_tiles("data/labeled_inputs/2016_10_15_merged.tif")
-# make_tiles("data/labeled_inputs/2017_07_merged.tif")
-augment_tiles("data/tiles/")
+if __name__ == '__main__':
+    files = glob.glob("data/labeled_inputs/*.tif")
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=6) as p:
+        p.map(make_tiles, files)
+
+# augment_tiles("data/tiles/")
