@@ -1,4 +1,7 @@
 import rasterio as rio
+from rasterio import mask
+from rasterio.plot import show
+from rasterio.mask import mask
 import shapely
 from shapely.geometry import Polygon, shape
 import geopandas as gpd
@@ -54,6 +57,8 @@ def get_ndwi_label(image_path, points_path, ksize = 100):
         src_CRS = src_raster.crs
         # getting pixel size for correct calculation of buffer
         pixel_size = abs(src_raster.transform[0])
+        figs, ax = plt.subplots(figsize=(12, 8))
+        show(ndwi, transform=src_raster.transform, ax=ax, cmap='gray')
 
         
 
@@ -62,14 +67,20 @@ def get_ndwi_label(image_path, points_path, ksize = 100):
     points_geom = points_shp.geometry
     points_geom = points_geom.set_crs(epsg=4326)
     points_geom = points_geom.to_crs(src_CRS)
-    figs, ax = plt.subplots(figsize=(18, 12))
+    
+    # processing each point found
     for multipoint in points_geom:
-        for point in multipoint:
+        for point in multipoint.geoms:
             buffer = point.buffer(ksize * pixel_size, cap_style=3)
             buffer_series = gpd.GeoSeries(buffer)
-            buffer_series.exterior.plot(ax=ax, color='red')
+            buffer_series.exterior.plot(ax=ax, color='red', linewidth=1)
+            # out_image, out_transform = mask(ndwi, buffer)
+            # if out_image.shape[0] < 100 or out_image.shape[1] < 100:
+            #     print("Masked image was too small.")
+            # else:
+            #     print("Masked image was correct size.")
             
-    points_geom.plot(ax=ax, color='blue')
+    points_geom.plot(ax=ax, color='blue', markersize=5)
     plt.show()
     pass
 
