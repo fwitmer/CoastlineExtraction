@@ -51,10 +51,13 @@ def get_ndwi_label(image_path, points_path, ksize = (500, 500)):
         meta = src_raster.meta
         # blank label layer
         label = np.zeros((src_raster.height, src_raster.width))
+        src_CRS = src_raster.crs
 
     # preparing points for creating label masks
     points_shp = gpd.read_file(points_path)
     points_geom = points_shp.geometry
+    points_geom = points_geom.set_crs(epsg=4326)
+    points_geom = points_geom.to_crs(src_CRS)
     for multipoint in points_geom:
         for point in multipoint:
             print(point)
