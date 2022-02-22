@@ -4,6 +4,7 @@ from shapely.geometry import Polygon, shape
 import geopandas as gpd
 import os
 from matplotlib import pyplot as plt
+import numpy as np
 
 def create_transect_points(transect_path, line_path, out_path):
     transects = gpd.read_file(transect_path)
@@ -43,15 +44,21 @@ def get_ndwi_label(image_path, points_path, ksize = (500, 500)):
     # establish the ndwi calculation and copy metadata
     with rio.open(image_path, driver='GTiff') as src_raster:
         green = src_raster.read(2).astype(rio.float64)
-        try: # may be 5-banded image, in which case NIR is on band 5
-            nir = src_raster.read(5).astype(rio.float64)
-        except: # otherwise it's on band 4
-            nir = src_raster.read(4).astype(rio.float64)
+        nir_num = src_raster.count  # adjusting NIR band to 4 or 5 band images
+        nir = src_raster.read(nir_num)
+        np.seterr(divide='ignore', invalid='ignore')
         ndwi = (green - nir) / (green + nir)
         meta = src_raster.meta
+        # blank label layer
+        label = np.zeros((src_raster.height, src_raster.width))
 
-    # create blank label layer
-
+    # preparing points for creating label masks
+    points_shp = gpd.read_file(points_path)
+    points_geom = points_shp.geometry
+    for multipoint in points_geom:
+        for point in multipoint:
+            print(point)
+    
     pass
 
 
@@ -61,6 +68,9 @@ boundary = {'type': 'Polygon',
                              [-162.674560546875, 66.10883816429516],
                              [-162.8235626220703, 66.10883816429516], 
                              [-162.8235626220703, 66.05622435812153]]]}
+image_path = "data/input/369619_2016-09-04_RE2_3A_Analytic_SR_clip.tif"
+points_path = "data/Deering_transect_points_2016.shp"
+get_ndwi_label(image_path, points_path)
 
 # path_to_shp = "C:\\Users\\kjcar\\Downloads\\Deering_DSAS_Calculations\\WestChukchi_exposed_STepr_rates\\WestChukchi_exposed_STepr_rates.shp"
 # clip_shp(path_to_shp, boundary)
