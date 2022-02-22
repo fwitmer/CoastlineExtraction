@@ -40,7 +40,7 @@ def clip_shp(path_to_shp, boundary_geojson):
     shp_clipped.to_file(out_path)
     
 
-def get_ndwi_label(image_path, points_path, ksize = (500, 500)):
+def get_ndwi_label(image_path, points_path, ksize = 100):
     # establish the ndwi calculation and copy metadata
     with rio.open(image_path, driver='GTiff') as src_raster:
         green = src_raster.read(2).astype(rio.float64)
@@ -52,16 +52,25 @@ def get_ndwi_label(image_path, points_path, ksize = (500, 500)):
         # blank label layer
         label = np.zeros((src_raster.height, src_raster.width))
         src_CRS = src_raster.crs
+        # getting pixel size for correct calculation of buffer
+        pixel_size = abs(src_raster.transform[0])
+
+        
 
     # preparing points for creating label masks
     points_shp = gpd.read_file(points_path)
     points_geom = points_shp.geometry
     points_geom = points_geom.set_crs(epsg=4326)
     points_geom = points_geom.to_crs(src_CRS)
+    figs, ax = plt.subplots(figsize=(18, 12))
     for multipoint in points_geom:
         for point in multipoint:
-            print(point)
-    
+            buffer = point.buffer(ksize * pixel_size, cap_style=3)
+            buffer_series = gpd.GeoSeries(buffer)
+            buffer_series.exterior.plot(ax=ax, color='red')
+            
+    points_geom.plot(ax=ax, color='blue')
+    plt.show()
     pass
 
 
