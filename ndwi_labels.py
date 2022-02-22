@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 
 def create_transect_points(transect_path, line_path, out_path):
     transects = gpd.read_file(transect_path)
-    coastline = gpd.read_file(coastline_path)
+    coastline = gpd.read_file(line_path)
     points = coastline.unary_union.intersection(transects.unary_union)
     fig, ax = plt.subplots(figsize=(14,14))
     plot_points = gpd.GeoSeries(points)
@@ -39,7 +39,19 @@ def clip_shp(path_to_shp, boundary_geojson):
     shp_clipped.to_file(out_path)
     
 
-def get_ndwi_label(path, ksize = (500, 500)):
+def get_ndwi_label(image_path, points_path, ksize = (500, 500)):
+    # establish the ndwi calculation and copy metadata
+    with rio.open(image_path, driver='GTiff') as src_raster:
+        green = src_raster.read(2).astype(rio.float64)
+        try: # may be 5-banded image, in which case NIR is on band 5
+            nir = src_raster.read(5).astype(rio.float64)
+        except: # otherwise it's on band 4
+            nir = src_raster.read(4).astype(rio.float64)
+        ndwi = (green - nir) / (green + nir)
+        meta = src_raster.meta
+
+    # create blank label layer
+
     pass
 
 
@@ -52,19 +64,3 @@ boundary = {'type': 'Polygon',
 
 # path_to_shp = "C:\\Users\\kjcar\\Downloads\\Deering_DSAS_Calculations\\WestChukchi_exposed_STepr_rates\\WestChukchi_exposed_STepr_rates.shp"
 # clip_shp(path_to_shp, boundary)
-
-transect_path = "C:\\Users\\kjcar\\Downloads\\Deering_DSAS_Calculations\\WestChukchi_exposed_STepr_rates\\WestChukchi_exposed_STepr_rates_clipped.shp"
-coastline_path = "C:\\Users\\kjcar\\Downloads\\Shoreline_Data\\WestChukchi_shorelines\\WestChukchi_shorelines_clipped.shp"
-
-transects = gpd.read_file(transect_path)
-coastline = gpd.read_file(coastline_path)
-points = coastline.unary_union.intersection(transects.unary_union)
-fig, ax = plt.subplots(figsize=(14,14))
-plot_points = gpd.GeoSeries(points)
-plot_points.plot(ax=ax, color='green')
-transects.plot(ax=ax, color='red')
-coastline.plot(ax=ax, color='blue')
-
-plt.show()
-
-plot_points.to_file("C:\\Users\\kjcar\\Downloads\\Deering_DSAS_Calculations\\Deering_transect_points_2016.shp")
