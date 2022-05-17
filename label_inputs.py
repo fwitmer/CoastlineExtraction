@@ -30,8 +30,8 @@ def create_dataset(data, crs, transform):
 def add_labels(input_path, label_path, output_path):
     with rio.open(label_path, 'r', driver='GTiff') as label, \
          rio.open(input_path, 'r', driver='GTiff') as input:
-
         # copying metadat and updating for the new band count
+        input_depth = input.count
         input_meta = input.meta
         input_meta.update(count=5)
 
@@ -56,7 +56,7 @@ def add_labels(input_path, label_path, output_path):
             dst.write_band(1, input.read(1))
             dst.write_band(2, input.read(2))
             dst.write_band(3, input.read(3))
-            dst.write_band(4, input.read(4))
+            dst.write_band(4, input.read(input_depth))
             dst.write_band(5, cropped_label_array.astype(rio.uint16))
 
 # returns the date from a filename in YYYY-MM-DD string format
