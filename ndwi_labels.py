@@ -61,7 +61,8 @@ def get_ndwi_label(image_path, points_path, ksize = 100):
         print("NDWI min: {}".format(np.nanmin(ndwi)))
         ndwi_profile = src_raster.profile
         # blank label layer
-        label = np.zeros((src_raster.height, src_raster.width))
+        label = np.zeros((src_raster.height, src_raster.width)).astype(np.uint8)
+        agg_mask = np.zeros((src_raster.height, src_raster.width)).astype(np.uint8)
         src_CRS = src_raster.crs
         # getting pixel size for correct calculation of buffer
         pixel_size = abs(src_raster.transform[0])
@@ -91,10 +92,15 @@ def get_ndwi_label(image_path, points_path, ksize = 100):
                 with memfile.open(**ndwi_profile) as mem_data:
                     mem_data.write_band(1, ndwi)
                 with memfile.open() as dataset:
-                    out_image, out_transform = mask(dataset, shapes=[buffer], crop=True)
+                    out_image, out_transform = mask(dataset, shapes=[buffer], nodata=0, crop=False)
+                    temp_mask = np.ma.getmaskarray(out_image)
+                    #plt.imshow(temp_mask[0])
+                    #plt.show()
                     out_image = out_image[0]
                     out_image = (out_image * 127) + 128
                     out_image = out_image.astype(np.uint8)
+                    #plt.imshow(out_image)
+                    #plt.show()
                     
                     if out_image.shape[0] < 200 or out_image.shape[1] < 200:
                         skipped += 1
@@ -102,11 +108,24 @@ def get_ndwi_label(image_path, points_path, ksize = 100):
                     else:
                         otsu_threshold, image_result = cv2.threshold(out_image, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
                         otsu_thresholds.append(otsu_threshold)
+                        agg_mask = (agg_mask | np.ma.getmask(out_image).astype(np.uint8)).astype(np.uint8)
+                        threshold_window = np.where(out_image >= otsu_threshold, 1, 0).astype(np.uint8)
+                        label = label | threshold_window.astype(np.uint8)
     print("Total number of valid thresholds: {}".format(len(otsu_thresholds)))
     print("Number of skipped windows: {}".format(skipped))
     print("Actual thresholds (8-bit unsigned): \n{}".format(otsu_thresholds))
     print("Average threshold value (8-bit unsigned): {}".format(np.mean(otsu_thresholds)))
     print("Average threshold value (-1 to 1 NDWI range): {}".format((np.mean(otsu_thresholds) - 128) / 127))
+
+    print("\nLabel max: {}".format(np.nanmax(label)))
+    print("Label min: {}".format(np.nanmin(label)))
+    plt.imshow(label)
+    plt.show()
+
+    print("\nMask max: {}".format(np.nanmax(agg_mask)))
+    print("Mask min: {}".format(np.nanmin(agg_mask)))
+    plt.imshow(agg_mask)
+    plt.show()
 
     mean_threshold = np.mean(otsu_thresholds) + 10
     ndwi_8bit = ((ndwi * 127) + 128).astype(np.uint8)

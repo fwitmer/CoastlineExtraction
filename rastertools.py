@@ -668,11 +668,11 @@ def get_snake(file, plot=False):
 # plt.imshow(open_closed, cmap='gray')
 # plt.show()
 
-get_snake("data/test/OrthoTiles/20160904_NDWI_8bit_filled.tif", plot=True)
-get_contours("data/test/OrthoTiles/20160904_NDWI_8bit_filled_chan_vese.tif", plot=True)
+# get_snake("data/test/OrthoTiles/20160904_NDWI_8bit_filled.tif", plot=True)
+# get_contours("data/test/OrthoTiles/20160904_NDWI_8bit_filled_chan_vese.tif", plot=True)
 
-get_snake("data/test/OrthoTiles/20160906_NDWI_8bit_filled.tif", plot=True)
-get_contours("data/test/OrthoTiles/20160906_NDWI_8bit_filled_chan_vese.tif", plot=True)
+# get_snake("data/test/OrthoTiles/20160906_NDWI_8bit_filled.tif", plot=True)
+# get_contours("data/test/OrthoTiles/20160906_NDWI_8bit_filled_chan_vese.tif", plot=True)
 
 
 # get_snake("data/test/DeepWaterMap/September_6_2016_REOrthoTile_Explorer_dwm.tif", plot=True)
