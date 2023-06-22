@@ -2,15 +2,22 @@ import warnings
 import os
 import rasterio
 import cv2
+import shapely
+import fiona
+from shapely import wkt
 from rasterio.plot import show_hist
 from rasterio.fill import fillnodata
+from rasterio import features
 import numpy as np
 import math
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
+import geopandas as gpd
 from xml.dom import minidom
 from skimage.filters import threshold_yen
 from skimage import feature
+from skimage import measure
 from arosics import COREG
 import time
 from skimage.segmentation import (morphological_chan_vese,
@@ -19,6 +26,16 @@ from skimage.segmentation import (morphological_chan_vese,
                                   checkerboard_level_set)
 from scipy.interpolate import make_interp_spline, BSpline, splprep, splev
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
+
+
+
+# added modules
+import flopy
+from flopy.export.utils import  export_contourf
+import geopandas as gpd
+from inspect import getmembers, isclass
+import skimage
+import gdal
 
 
 class MidpointNormalize(colors.Normalize):
@@ -466,6 +483,12 @@ def georeference(base_image, target_image, outfile=None):
     return target_filepath + path_out
 
 
+
+
+
+
+
+
 def morph_transform(fname, kwidth, kheight, outname=None):
     '''
     Perform opening/closing as described in the Paravolidakis paper.
@@ -489,6 +512,15 @@ def morph_transform(fname, kwidth, kheight, outname=None):
         return cv2.imwrite(outname, opened_closed)
     else:
         return opened_closed
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
 # This function should only be passed files with values as unsigned integers
 # still looking into how to interpolate signed float values
@@ -526,11 +558,52 @@ def fill_nodata(file_to_fill, mask_file = None, plot=False):
         dst.write_band(1, filled.astype(rasterio.float32))
 
 def get_snake(file, plot=False):
+    """
+    6 May 2022
+
+    Parameters
+    ----------
+    file : Preprocessed image with differentiated areas
+    plot(bool): Outputs contour evolution    
+    
+    
+    Based off the morpholigical snakes method. 
+    Optimized to return contours of .tif type images preprossed with raster. 
+    
+    Takes as input a preprocessed NDWI image. Using Morphological Active Contours without Edges methodology, defines the difference in average pixel value to segment a
+    contour between land and water within the image and maps the contour. Performs opening/closing as described in the Paravolidakis paper to reduce 
+    image noise occuring in the satellite imagery. 
+    
+    
+    OUT: 
+        contour plot as MultiLineString
+        Export skimage.MultiLineString as shapefile
+        
+        Outputs a shapefile containing a Multi-Line String Vector of the coastline for use in transect intersection. 
+        For our purposes, we require the vectorization of the contour for further analysis using QGIS
+        
+        
+    
+        
+    REFRENCES
+    ----------------
+        
+    https://scikit-image.org/docs/dev/auto_examples/segmentation/plot_morphsnakes.html    
+    
+    Bakker, Mark, Post, Vincent, Hughes, J. D., Langevin, C. D., White, J. T., Leaf, A. T., Paulinski, S. R., Bellino, J. C., Morway, E. D., Toews, 
+    M. W., Larsen, J. D., Fienen, M. N., Starn, J. J., and Brakenhoff, Davíd, 2022, 
+    FloPy v3.3.6 — release candidate: U.S. Geological Survey Software Release, 08 March 2022, https://doi.org/10.5066/F7BK19FH
+    
+    """
+    
+    
     def store_evolution_in(lst):
         def _store(x):
             lst.append(np.copy(x))
 
         return _store
+    
+    iterations = 5
     evolution = []
     callback = store_evolution_in(evolution)
     raster_filepath = os.path.dirname(file) + "/"
@@ -538,23 +611,113 @@ def get_snake(file, plot=False):
     with rasterio.open(file, driver='GTiff') as src:
         kwargs = src.meta
         kwargs.update(count=1, dtype=rasterio.uint8)
+        crs  =  src.crs
         input = src.read(1).astype(rasterio.uint8)
-    if plot:
-        plt.imshow(input, cmap='gray')
-        plt.show()
+        
+    
+    
     init_lvl_set = checkerboard_level_set(input.shape)
-    lvl_set = morphological_chan_vese(input, 100, init_level_set=init_lvl_set,iter_callback=callback, smoothing=1)
+    lvl_set = morphological_chan_vese(input, iterations, init_level_set=init_lvl_set,iter_callback=callback, smoothing=1)
+    #Removed plotting of image at every step
+    """
     if plot:
-        plt.imshow(lvl_set, cmap='gray')
+        #print()
+        plt.imshow(lvl_set, cmap='gray')      
+        plt.contour(lvl_set, [0.5], colors='r')
         plt.show()
-    noise_reduced = morph_transform(lvl_set.astype(rasterio.uint8), 9, 9)
+   """    
+    noise_reduced = morph_transform(lvl_set.astype(rasterio.uint8), 9, 9) # Opening/Closing via erosion & dilation 
+   
+    
     if plot:
-        plt.imshow(noise_reduced)
+        plt.imshow(noise_reduced, cmap = 'gray')
+        coast = plt.contour(lvl_set, [0.5], colors = 'r')
         plt.show()
-    out_filename = raster_filepath + raster_filename.split(sep=".")[0] + "_chan_vese.tif"
-    with rasterio.open(out_filename, 'w', **kwargs) as dst:
-        dst.write_band(1, noise_reduced.astype(rasterio.uint8))
-    return lvl_set
+
+    """    
+    At this point, the noise_reduced contour is an ndarray that needs to be vectorized to map intersections with transect lines
+    We convert the ndarray to shapely MultiLineString 
+    
+    """    
+    out = skimage.measure.find_contours(noise_reduced , 0.5) # 
+    fig, ax = plt.subplots()
+    ax.imshow(noise_reduced, cmap=plt.cm.gray)
+    
+    cs=[]
+    for contour in out:
+        cs.append(ax.plot(contour[:, 1], contour[:, 0], linewidth=2))
+        
+    if plot:    
+        ax.axis('image')
+        #plt.show()
+    
+    #image = src.read()[0,:,:]
+    from shapely.geometry import mapping,MultiLineString,LineString
+    poly = [] 
+    
+    for i in cs: 
+        x=i[0].get_xdata()
+        y=i[0].get_ydata()
+        aa = rasterio.transform.xy(src.transform, y, x)                     #   
+        poly.append(LineString([(i[0], i[1]) for i in zip(aa[0], aa[1])]))  #
+        
+    list_lstrings = [shapely.wkt.loads(p.wkt) for p in poly]    
+    multi_line_contour = shapely.geometry.MultiLineString(list_lstrings) # convert list of line string into single multiline string variable
+   
+    from fiona.crs import from_epsg
+    crs = from_epsg(32603) #manual update of 32603, can get form orignal assignment of crs
+    
+    schema = { 
+        'geometry': 'MultiLineString',
+        'properties': {'id' : 'int'}
+        }
+    
+    with fiona.open(raster_filepath + raster_filename.split(sep=".")[0] + "_Coast_Contour.shp", 'w', 'ESRI Shapefile', schema, crs=crs) as c:    
+        c.write( { 
+            'geometry': mapping(multi_line_contour), 
+            'properties': {'id': 1}, 
+            })
+
+        
+    # mult as MultiLineString (shapely geometry) contour for passing to create_transect_points
+    # This can be ammended to return the ndarray or file/filepath depending on needs
+    return multi_line_contour
+
+
+
+
+
+
+def create_intersect_points(transect_path, contour_path, out_path):
+    """
+    7 May 2022
+    
+    This function calculates and maps the intersection points of 2 vectors, here being 
+    the West Chucki Step Rate Transects and the defined contour of 
+            
+    Output: Writes plotted points to shapefile
+    
+    """
+    transects = gpd.read_file(transect_path)
+    transects = transects.to_crs(epsg = 32603) #Set Transect ESPG to maintain geographical continuity
+    coastline = gpd.read_file(contour_path)
+    
+    points = coastline.unary_union.intersection(transects.unary_union)
+    #points = transects.unary_union(coastline)
+    
+    
+    fig, ax = plt.subplots(figsize=(10,10))
+    
+    plot_points = gpd.GeoSeries(points)
+    plot_points.plot(ax=ax, color='red')
+    transects.plot(ax=ax, color='black')
+    coastline.plot(ax=ax, color='blue')
+
+    plt.show()
+
+    plot_points.to_file(out_path)
+    print('Saving Intersections to ', out_path)
+
 
 
 # raster = "data/test/20161015_merged.tif"
