@@ -1,0 +1,702 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<metadata>
+  <idinfo>
+    <citation>
+      <citeinfo>
+        <origin>Alexander G. Snyder</origin>
+        <origin>Ann E. Gibbs</origin>
+        <pubdate>20191227</pubdate>
+        <title>Digital Shoreline Analysis System (DSAS) version 4.4 transects with short-term end-point rate-of-change calculations for the exposed north coast of Alaska, from Icy Cape to Cape Prince of Wales</title>
+        <geoform>polyline shapefile</geoform>
+        <serinfo>
+          <sername>data release</sername>
+          <issue>DOI: 10.5066/P9H1S1PV</issue>
+        </serinfo>
+        <pubinfo>
+          <pubplace>Pacific Coastal and Marine Science Center, Santa Cruz, CA</pubplace>
+          <publish>U.S. Geological Survey</publish>
+        </pubinfo>
+        <onlink>https://doi.org/10.5066/P9H1S1PV</onlink>
+        <onlink>https://www.sciencebase.gov/catalog/file/get/5dfb19ffe4b0b5e61c053995</onlink>
+        <lworkcit>
+          <citeinfo>
+            <origin>Alexander G. Snyder</origin>
+            <origin>Ann E. Gibbs</origin>
+            <pubdate>2019</pubdate>
+            <title>National Assessment of Shoreline Change: A GIS compilation of vector shorelines and associated shoreline change data for the north coast of Alaska, Icy Cape to Cape Prince of Wales</title>
+            <serinfo>
+              <sername>data release</sername>
+              <issue>DOI: 10.5066/P9H1S1PV</issue>
+            </serinfo>
+            <pubinfo>
+              <pubplace>Pacific Coastal and Marine Science Center, Santa Cruz, CA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/P9H1S1PV</onlink>
+          </citeinfo>
+        </lworkcit>
+      </citeinfo>
+    </citation>
+    <descript>
+      <abstract>This dataset consists of short-term (less than 37 years) shoreline change rates for the exposed coast of the north coast of Alaska from Icy Cape to Cape Prince of Wales. Rate calculations were computed within a GIS using the Digital Shoreline Analysis System (DSAS) version 4.4, an ArcGIS extension developed by the U.S. Geological Survey. Rates of shoreline change were calculated using an end point rate-of-change (epr) method based on available shoreline data between 1980 and 2016. A reference baseline was used as the originating point for the orthogonal transects cast by the DSAS software. The transects intersect each shoreline establishing measurement points, which are then used to calculate shoreline change rates.</abstract>
+      <purpose>Beach erosion is a persistent problem along most open-ocean shores of the United States. Along the Arctic coast of Alaska, coastal erosion is widespread and is threatens Native communities, defense and energy-related infrastructure, and coastal habitat. As coastal populations continue to expand and infrastructure and habitat are increasingly threatened by erosion, there is increased demand for accurate information regarding past and present trends and rates of shoreline movement. There also is a need for a comprehensive analysis of shoreline change with metrics that are consistent from one coastal region to another. To meet these national needs, the U.S. Geological Survey is conducting an analysis of historical shoreline changes along the open-ocean sandy shores of the conterminous United States and parts of Hawaii, Alaska, and the Great Lakes. One purpose of this work is to develop standard, repeatable methods for mapping and analyzing shoreline change so that periodic, systematic, and internally consistent updates regarding coastal erosion and land loss can be made nationally.</purpose>
+      <supplinf>Any use of trade, product, or firm names is for descriptive purposes only and does not imply endorsement by the U.S. Government.
+
+Although this Federal Geographic Data Committee-compliant metadata file is intended to document the dataset in nonproprietary form, as well as in Esri format, this metadata file may include some Esri-specific terminology.</supplinf>
+    </descript>
+    <timeperd>
+      <timeinfo>
+        <rngdates>
+          <begdate>19480701</begdate>
+          <enddate>20160903</enddate>
+        </rngdates>
+      </timeinfo>
+      <current>ground condition.</current>
+    </timeperd>
+    <status>
+      <progress>Complete</progress>
+      <update>None planned</update>
+    </status>
+    <spdom>
+      <bounding>
+        <westbc>-168.039030077147</westbc>
+        <eastbc>-161.546036792057</eastbc>
+        <northbc>70.3308990876812</northbc>
+        <southbc>65.7048136812478</southbc>
+      </bounding>
+    </spdom>
+    <keywords>
+      <theme>
+        <themekt>ISO 19115 Topic Category</themekt>
+        <themekey>oceans</themekey>
+        <themekey>environment</themekey>
+        <themekey>geoscientificInformation</themekey>
+      </theme>
+      <theme>
+        <themekt>Data Categories for Marine Planning</themekt>
+        <themekey>Distributions</themekey>
+        <themekey>Physical/Chemical Features</themekey>
+      </theme>
+      <theme>
+        <themekt>USGS Thesaurus</themekt>
+        <themekey>coastal processes</themekey>
+      </theme>
+      <theme>
+        <themekt>Marine Realms Information Bank (MRIB) keywords</themekt>
+        <themekey>shoreline accretion</themekey>
+        <themekey>shoreline erosion</themekey>
+      </theme>
+      <theme>
+        <themekt>None</themekt>
+        <themekey>U.S. Geological Survey</themekey>
+        <themekey>USGS</themekey>
+        <themekey>Coastal and Marine Hazards and Resources Program</themekey>
+        <themekey>CMHRP</themekey>
+        <themekey>Pacific Coastal and Marine Science Center</themekey>
+        <themekey>PCMSC</themekey>
+        <themekey>Shoreline</themekey>
+        <themekey>Shoreline Change</themekey>
+        <themekey>Digital Shoreline Analysis System</themekey>
+        <themekey>DSAS</themekey>
+      </theme>
+      <place>
+        <placekt>Geographic Names Information System (GNIS)</placekt>
+        <placekey>North Slope</placekey>
+        <placekey>Chukchi Sea</placekey>
+        <placekey>Kotzebue Sound</placekey>
+        <placekey>Bering Land Bridge National Preserve</placekey>
+        <placekey>Cape Krusenstern National Monument</placekey>
+        <placekey>Icy Cape</placekey>
+        <placekey>Point Lay</placekey>
+        <placekey>Cape Lisburne</placekey>
+        <placekey>Point Hope</placekey>
+        <placekey>Cape Thompson</placekey>
+        <placekey>Cape Espenberg</placekey>
+        <placekey>Cape Prince of Wales</placekey>
+        <placekey>Kivalina</placekey>
+        <placekey>Deering</placekey>
+        <placekey>Shishhmaref</placekey>
+        <placekey>Wales</placekey>
+      </place>
+      <place>
+        <placekt>None</placekt>
+        <placekey>Arctic</placekey>
+        <placekey>Red Dog Dock</placekey>
+      </place>
+    </keywords>
+    <accconst>None</accconst>
+    <useconst>USGS-authored or produced data and information are in the public domain from the U.S. Government and are freely redistributable with proper metadata and source attribution. Please recognize and acknowledge the U.S. Geological Survey as the originator(s) of the dataset and in products derived from these data.</useconst>
+    <ptcontac>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey, Pacific Coastal and Marine Science Center</cntorg>
+          <cntper>PCMSC Science Data Coordinator</cntper>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>2885 Mission Street</address>
+          <city>Santa Cruz</city>
+          <state>CA</state>
+          <postal>95060</postal>
+        </cntaddr>
+        <cntvoice>831-427-4747</cntvoice>
+        <cntemail>pcmsc_data@usgs.gov</cntemail>
+      </cntinfo>
+    </ptcontac>
+    <native>Generated as a feature class contained in a Personal Geodatabase by DSAS in ArcGIS.</native>
+    <crossref>
+      <citeinfo>
+        <origin>Ann E. Gibbs</origin>
+        <origin>Alexander G. Snyder</origin>
+        <origin>Bruce M. Richmond</origin>
+        <pubdate>2019</pubdate>
+        <title>National Assessment of Shoreline Change: Historical Shoreline Change Along the North Coast of Alaska, Icy Cape to Cape Prince of Wales.</title>
+        <othercit>Gibbs, A.E., Snyder, A.G., Richmond, B.M., 2019, National Assessment of Shoreline Change: Historical Shoreline Change Along the North Coast of Alaska, Icy Cape to Cape Prince of Wales: U.S. Geological Survey Open-File Report 2019-1146.</othercit>
+        <onlink>https:/doi.org/10.3133/ofr20191146</onlink>
+      </citeinfo>
+    </crossref>
+    <crossref>
+      <citeinfo>
+        <origin>Robert E. Thieler</origin>
+        <origin>Emily A. Himmelstoss</origin>
+        <origin>Jessica L. Zichichi</origin>
+        <origin>Ayhan Ergul</origin>
+        <pubdate>2009</pubdate>
+        <title>Digital Shoreline Analysis System (DSAS) version 4.0 - An ArcGIS extension for calculating shoreline change</title>
+        <othercit>Thieler, E.R., Himmelstoss, E.A., Zichichi, J.L., and Ergul, A., 2009, Digital Shoreline Analysis System (DSAS) version 4.0‚ÄîAn ArcGIS extension for calculating shoreline change: U.S. Geological Survey Open-File Report 2008-1278.</othercit>
+        <onlink>https://doi.org/10.3133/ofr20081278</onlink>
+      </citeinfo>
+    </crossref>
+  </idinfo>
+  <dataqual>
+    <attracc>
+      <attraccr>The attributes in this layer is based on the requirements for use within the Digital Shoreline Analysis System (DSAS) software (USGS Open-File Report 2008-1278). The data have been quality checked.</attraccr>
+    </attracc>
+    <logic>All polylines have a unique identification attribute (ID). This field is used by the Digital Shoreline Analysis System (DSAS) to measure shoreline change.</logic>
+    <complete>This dataset contains the transects automatically generated by the DSAS software application that were used to calculate shoreline change rates along the coast of Alaska, between Icy Cape and Cape Prince of Wales, where shoreline position data were available. Additional transects may have been generated but did not intersect the shoreline dates specified.</complete>
+    <posacc>
+      <horizpa>
+        <horizpar>The transect serves as a reference point along which measurements are calculated by the Digital Shoreline Analysis System (DSAS) software. It does not correspond to any real-world feature.</horizpar>
+      </horizpa>
+      <vertacc>
+        <vertaccr>The transect serves as a reference point along which measurements are calculated by the Digital Shoreline Analysis System (DSAS) software. It does not correspond to any real-world feature.</vertaccr>
+      </vertacc>
+    </posacc>
+    <lineage>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <pubdate>2019</pubdate>
+            <title>Offshore baseline generated to calculate shoreline change rates for the north coast of Alaska, Icy Cape to Cape Prince Wales.</title>
+            <geoform>shapefile</geoform>
+            <pubinfo>
+              <pubplace>online</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://www.sciencebase.gov/catalog/file/get/5dbb7aa1e4b06957974eda35?facet=WestChukchi_Baselines</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital Resources</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>Unknown</begdate>
+              <enddate>Unknown</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>Not Applicable</srccurr>
+        </srctime>
+        <srccitea>DSAS baseline</srccitea>
+        <srccontr>DSAS baseline used for calculation of shoreline change rates.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <pubdate>2019</pubdate>
+            <title>Shorelines from 1948 to 2016 for the north coast of Alaska, Icy Cape to Cape Prince Wales.</title>
+            <geoform>shapefile</geoform>
+            <pubinfo>
+              <pubplace>online</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://www.sciencebase.gov/catalog/file/get/5dbb7ac3e4b06957974eda38?facet=WestChukchi_shorelines</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital Resources</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>1948</begdate>
+              <enddate>2016</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>ground condition</srccurr>
+        </srctime>
+        <srccitea>shorelines</srccitea>
+        <srccontr>Shorelines used for calculation of shoreline change rates.</srccontr>
+      </srcinfo>
+      <procstep>
+        <procdesc>Transect features were generated using DSAS v4.4 in ArcMap v10.6. Parameters Used: baseline, transect spacing=50 meters, transect length=500m, cast direction=onshore, baseline location=offshore, cast method=smoothed, smoothing distance=50 meters. For additional details on these parameters, please see the DSAS help file distributed with the DSAS software.</procdesc>
+        <srcused>DSAS Baseline</srcused>
+        <procdate>2019</procdate>
+      </procstep>
+      <procstep>
+        <procdesc>Some transects were manually edited to ensure that intersected all shorelines and were as close to perpendicular as possible.</procdesc>
+        <srcused>shorelines</srcused>
+        <procdate>2019</procdate>
+      </procstep>
+      <procstep>
+        <procdesc>Rate calculations performed using DSAS v4.4 in ArcMap v10.6 on selected shoreline features. Parameters Used: shoreline layer=WestChukchi_shorelines, shoreline date field=DATE_, shoreline uncertainty field name=Uncy, the default accuracy= 0 meters, stats calculations=SCE/NSM/EPR , confidence interval=90%.</procdesc>
+        <srcused>shorelines</srcused>
+        <procdate>2019</procdate>
+      </procstep>
+      <procstep>
+        <procdesc>Shoreline change rates table was joined to the transect feature class in ArcMap v10.6 by right-clicking on the transect layer; joins and relates; join; join attributes from a table.  Parameters: join field - ObjectID; field in table: TransectID; join options - keep only matching records.</procdesc>
+        <procdate>2019</procdate>
+      </procstep>
+      <procstep>
+        <procdesc>The joined transect feature class was exported to a shapefile in ArcMap v10.6 by right-clicking the transect layer; data; export data, permanently linking the joined rate fields to the transect attribute table.</procdesc>
+        <procdate>2019</procdate>
+      </procstep>
+      <procstep>
+        <procdesc>The exported transect shapefile was projected in Esri's ArcToolbox (v10.6); Data Management Tools; Projections and Transformations; Feature; Project. Parameters: input projection - UTM zone 3 (NAD83); output projection - geographic coordinates (WGS84); transformation = WGS_1984_(ITRF00)_To_NAD_1983.</procdesc>
+        <procdate>2019</procdate>
+      </procstep>
+    </lineage>
+  </dataqual>
+  <spdoinfo>
+    <direct>Vector</direct>
+    <ptvctinf>
+      <sdtsterm>
+        <sdtstype>String</sdtstype>
+        <ptvctcnt>12888</ptvctcnt>
+      </sdtsterm>
+    </ptvctinf>
+  </spdoinfo>
+  <spref>
+    <horizsys>
+      <geograph>
+        <latres>0.0196106556</latres>
+        <longres>0.0558147069</longres>
+        <geogunit>Decimal seconds</geogunit>
+      </geograph>
+      <geodetic>
+        <horizdn>D_WGS_1984</horizdn>
+        <ellips>WGS_1984</ellips>
+        <semiaxis>6378137.0</semiaxis>
+        <denflat>298.257223563</denflat>
+      </geodetic>
+    </horizsys>
+  </spref>
+  <eainfo>
+    <detailed>
+      <enttyp>
+        <enttypl>Attribute Table</enttypl>
+        <enttypd>Table containing attribute information associated with the dataset.</enttypd>
+        <enttypds>Producer defined</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>FID</attrlabl>
+        <attrdef>Index number unique to each record in the attribute table.</attrdef>
+        <attrdefs>Assigned by ArcMap</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>12887</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Shape</attrlabl>
+        <attrdef>Defines what type of spatial information is associated with this record (for example, polyline, polygon, point).</attrdef>
+        <attrdefs>Assigned by ArcMap.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>Polyline</edomv>
+            <edomvd>A shape defined by one or more paths, in which a path is a series of connected segments.</edomvd>
+            <edomvds>ArcMap 10.6</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>BaselineID</attrlabl>
+        <attrdef>Field required by the Digital Shoreline Analysis System (DSAS) software. DSAS uses this value to determine the ordering sequence of transects when the baseline feature contains multiple segments. Individual segments are numbered sequentially alongshore.</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>101</rdommin>
+            <rdommax>121</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Group_</attrlabl>
+        <attrdef>Region ID as defined in Gibbs and others (2019).</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>1</edomv>
+            <edomvd>Icy Cape to Amatsuk Creek</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>2</edomv>
+            <edomvd>Amatusuk Creek to Cape Lisburne</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>3</edomv>
+            <edomvd>Cape Lisburne to Kowtuk Point</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>4</edomv>
+            <edomvd>Kowtuk Point to Cape Thompson</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>5</edomv>
+            <edomvd>Cape Thompson to Asikpak Lagoon</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>6</edomv>
+            <edomvd>Asikpak Lagoon to Sheshalik Spit (CAKR)</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>7</edomv>
+            <edomvd>Kotzebue to Sullivan Lake</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>8</edomv>
+            <edomvd>Sullivan Lake to Cape Prince of Wales (BELA)</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>TransOrder</attrlabl>
+        <attrdef>Assigned by DSAS based on ordering of transects along the baseline. Used to allow user to sort transect data along the baseline from baseline start to baseline end.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1</rdommin>
+            <rdommax>24334</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ProcTime</attrlabl>
+        <attrdef>Date and time (YYYY/MM/DD HH:MM:SS) a transect was processed. This value is automatically assigned by the DSAS extension.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>2018/12/19 16:44:40</rdommin>
+            <rdommax>2018/12/19 16:50:09</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Autogen</attrlabl>
+        <attrdef>Assigned by DSAS to indicate whether or not a transect was automatically created by DSAS (1= transect was auto generated by DSAS; 0=transect was not auto-generated).</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>0</edomv>
+            <edomvd>Transect was not auto-generated by DSAS.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>1</edomv>
+            <edomvd>Transect was auto-generated by DSAS.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>StartX</attrlabl>
+        <attrdef>Easting component of the coordinate (in NAD83 UTM Zone 3) defining the start of the transect.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>360539.92</rdommin>
+            <rdommax>654782.91</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>StartY</attrlabl>
+        <attrdef>Northing component of the coordinate (in NAD83 UTM Zone 3) defining the start of the transect.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>7290774.93</rdommin>
+            <rdommax>7805780.19</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>EndX</attrlabl>
+        <attrdef>Easting component of the coordinate (in NAD83 UTM Zone 3) defining the end of the transect.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>360827.96</rdommin>
+            <rdommax>655225.91</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>EndY</attrlabl>
+        <attrdef>Northing component of the coordinate (in NAD83 UTM Zone 3) defining the end of the transect.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>7290366.23</rdommin>
+            <rdommax>7805309.84</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Azimuth</attrlabl>
+        <attrdef>The azimuth of the transect, defined in degrees.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0.01</rdommin>
+            <rdommax>359.89</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ShoreType</attrlabl>
+        <attrdef>User defined shoreline type.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>Exposed Barrier Beach</edomv>
+            <edomvd>Sand or gravel deposit extending across a body of water.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>Exposed Barrier Island</edomv>
+            <edomvd>Offshore deposits of sand or sediment that run parallel to the coastline.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>Exposed Barrier Spit</edomv>
+            <edomvd>Sand or gravel deposit extending from the mainland into a body of water.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>Exposed Mainland</edomv>
+            <edomvd>A large, continuous extent of land that does not include offshore islands or other detached territories.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>Exposed Mainland, rocky</edomv>
+            <edomvd>A large, continuous extent of rocky land that does not include offshore islands or other detached territories.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SHAPE_Leng</attrlabl>
+        <attrdef>Length of the polyline represented by this record.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>122.205579</rdommin>
+            <rdommax>978.941659</rdommax>
+            <attrunit>Meters</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>TransectID</attrlabl>
+        <attrdef>Same value as ObjectID. Used as a permanent and unique identification number for each transect in the output rates table calculated by DSAS. This attribute was used as the common field when joining the rates table (.dbf) to the transect feature class in a geodatabase.</attrdef>
+        <attrdefs>Thieler and others (2009).</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1</rdommin>
+            <rdommax>7901</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>TCD</attrlabl>
+        <attrdef>Total cumulative distance in meters from start of baseline to transect location.</attrdef>
+        <attrdefs>Thieler and others (2009).</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>538235.44</rdommax>
+            <attrunit>Meters</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>EPR</attrlabl>
+        <attrdef>The end point rate is calculated by dividing the distance of shoreline movement by the time elapsed between the two shorelines. The rate is reported in meters per year with positive values indicating accretion and negative values indicating erosion.</attrdef>
+        <attrdefs>Thieler and others (2009).</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-12.93</rdommin>
+            <rdommax>20.02</rdommax>
+            <attrunit>Meters</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ECI</attrlabl>
+        <attrdef>Describes the uncertainty of the reported end point rate in meters. The shoreline uncertainties for the two positions used in the end point calculation are each squared, then added together (summation of squares). The square root of the summation of squares is divided by the number of years between the two shorelines. This result is reported as the confidence of the end point rate calculation (ECI).</attrdef>
+        <attrdefs>Thieler and others (2009).</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0.159</rdommin>
+            <rdommax>0.63</rdommax>
+            <attrunit>Meters</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SCE</attrlabl>
+        <attrdef>The shoreline change envelope reports a distance, not a rate. The SCE is the distance between the shoreline farthest from and closest to the baseline at each transect. This represents the total change in shoreline movement for all available shoreline positions and is not related to their dates.</attrdef>
+        <attrdefs>Thieler and others (2009).</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>722.53</rdommax>
+            <attrunit>Meters</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>NSM</attrlabl>
+        <attrdef>The Net shoreline movement (NSM) reports the distance between the oldest and youngest shorelines for each transect. This represents the total distance between the oldest and youngest shorelines. If this distance is divided by the number of years elapsed between the two shoreline positions, the result is the End Point Rate (EPR).</attrdef>
+        <attrdefs>Thieler and others (2009).</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>-401.38</rdommin>
+            <rdommax>722.53</rdommax>
+            <attrunit>Meters</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CalcEra</attrlabl>
+        <attrdef>Decade (era) of shorelines used to calculate shoreline change rates.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>1980s, 2010s</edomv>
+            <edomvd>Shorelines used from specified decades.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>1980s, 2000s</edomv>
+            <edomvd>Shorelines used from specified decades.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+    </detailed>
+  </eainfo>
+  <distinfo>
+    <distrib>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey - ScienceBase</cntorg>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>Mailing and Physical</addrtype>
+          <address>Denver Federal Center, Building 810, Mail Stop 302</address>
+          <city>Denver</city>
+          <state>CO</state>
+          <postal>80225</postal>
+        </cntaddr>
+        <cntvoice>1-888-275-8747</cntvoice>
+        <cntemail>sciencebase@usgs.gov</cntemail>
+      </cntinfo>
+    </distrib>
+    <resdesc>These data are available in shapefile format contained in a single zip file, which also includes CSDGM FGDC-compliant metadata.</resdesc>
+    <distliab>Unless otherwise stated, all data, metadata and related materials are considered to satisfy the quality standards relative to the purpose for which the data were collected. Although these data and associated metadata have been reviewed for accuracy and completeness and approved for release by the U.S. Geological Survey (USGS), no warranty expressed or implied is made regarding the display or utility of the data on any other system or for general or scientific purposes, nor shall the act of distribution constitute any such warranty.</distliab>
+    <stdorder>
+      <digform>
+        <digtinfo>
+          <formname>Shapefile</formname>
+          <formvern>ArcGIS Desktop 10.6</formvern>
+          <formspec>Esri polyline shapefile</formspec>
+          <formcont>Zip file contains shoreline change rates measured along shore perpendicular transects on the northern coast of Alaska.</formcont>
+          <filedec>Use WinZip or equivalent.</filedec>
+          <transize>1.1</transize>
+        </digtinfo>
+        <digtopt>
+          <onlinopt>
+            <computer>
+              <networka>
+                <networkr>https://www.sciencebase.gov/catalog/file/get/5dfb19ffe4b0b5e61c053995</networkr>
+                <networkr>https://doi.org/10.5066/P9H1S1PV</networkr>
+              </networka>
+            </computer>
+            <accinstr>Data can be downloaded using the Network_Resource_Name links. The first link is a direct link to download the zipped file of data and metadata. The second link points to a landing page for the entire data release.</accinstr>
+          </onlinopt>
+        </digtopt>
+      </digform>
+      <fees>None.</fees>
+    </stdorder>
+    <techpreq>This zip file contains data available in Environmental Systems Research Institute (Esri) polyline shapefile format. The user must have ArcGIS or ArcView 3.0 or greater software to read and process the data file. In lieu of ArcView or ArcGIS, the user may utilize another GIS application package capable of importing the data. A free data viewer, ArcExplorer, capable of displaying the data is available from Esri at www.esri.com.</techpreq>
+  </distinfo>
+  <metainfo>
+    <metd>20191227</metd>
+    <metc>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey, Pacific Coastal and Marine Science Center</cntorg>
+          <cntper>PCMSC Science Data Coordinator</cntper>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>2885 Mission Street</address>
+          <city>Santa Cruz</city>
+          <state>CA</state>
+          <postal>95060</postal>
+        </cntaddr>
+        <cntvoice>831-427-4747</cntvoice>
+        <cntemail>pcmsc_data@usgs.gov</cntemail>
+      </cntinfo>
+    </metc>
+    <metstdn>Content Standard for Digital Geospatial Metadata</metstdn>
+    <metstdv>FGDC-STD-001-1998</metstdv>
+  </metainfo>
+</metadata>

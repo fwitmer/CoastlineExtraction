@@ -1,0 +1,587 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<metadata>
+  <idinfo>
+    <citation>
+      <citeinfo>
+        <origin>Alexander G. Snyder</origin>
+        <origin>Ann E. Gibbs</origin>
+        <pubdate>20191227</pubdate>
+        <title>Shorelines from 1948 to 2016 for the north coast of Alaska, Icy Cape to Cape Prince Wales used in shoreline change analysis</title>
+        <geoform>polyline shapefile</geoform>
+        <serinfo>
+          <sername>data release</sername>
+          <issue>DOI: 10.5066/P9H1S1PV</issue>
+        </serinfo>
+        <pubinfo>
+          <pubplace>Pacific Coastal and Marine Science Center, Santa Cruz, CA</pubplace>
+          <publish>U.S. Geological Survey</publish>
+        </pubinfo>
+        <onlink>https://doi.org/10.5066/P9H1S1PV</onlink>
+        <onlink>https://www.sciencebase.gov/catalog/item/5dbb7ac3e4b06957974eda38</onlink>
+        <lworkcit>
+          <citeinfo>
+            <origin>Alexander G. Snyder</origin>
+            <origin>Ann E. Gibbs</origin>
+            <pubdate>2019</pubdate>
+            <title>National Assessment of Shoreline Change: A GIS compilation of vector shorelines and associated shoreline change data for the north coast of Alaska, Icy Cape to Cape Prince of Wales</title>
+            <serinfo>
+              <sername>data release</sername>
+              <issue>DOI:10.5066/P9H1S1PV</issue>
+            </serinfo>
+            <pubinfo>
+              <pubplace>Pacific Coastal and Marine Science Center, Santa Cruz, CA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/P9H1S1PV</onlink>
+          </citeinfo>
+        </lworkcit>
+      </citeinfo>
+    </citation>
+    <descript>
+      <abstract>This dataset includes shorelines that span 68 years, from 1948 to 2016, for the north coast of Alaska from Icy Cape to Cape Prince of Wales. Shorelines were compiled from topographic survey sheets (T-sheets; National Oceanic and Atmospheric Administration (NOAA)) and aerial orthophotographs (U.S. Geological Survey (USGS) and Alaska High Altitude Photography (AHAP)). Historical shoreline positions serve as easily understood features that can be used to describe the movement of beaches through time. These data are used to calculate rates of shoreline change for the U.S. Geological Survey's National Assessment of Shoreline Change Project. Rates of long-term and short-term shoreline change were generated in a GIS using the Digital Shoreline Analysis System (DSAS) version 4.4. DSAS uses a measurement baseline method to calculate rate-of-change statistics. Transects are cast from the reference baseline to intersect each shoreline, establishing measurement points used to calculate shoreline change rates.</abstract>
+      <purpose>Beach erosion is a persistent problem along most open-ocean shores of the United States. Along the Arctic coast of Alaska, coastal erosion is widespread and is threatens Native communities, defense and energy-related infrastructure, and coastal habitat. As coastal populations continue to expand and infrastructure and habitat are increasingly threatened by erosion, there is increased demand for accurate information regarding past and present trends and rates of shoreline movement. There also is a need for a comprehensive analysis of shoreline change with metrics that are consistent from one coastal region to another. To meet these national needs, the U.S. Geological Survey is conducting an analysis of historical shoreline changes along the open-ocean sandy shores of the conterminous United States and parts of Hawaii, Alaska, and the Great Lakes. One purpose of this work is to develop standard, repeatable methods for mapping and analyzing shoreline change so that periodic, systematic, and internally consistent updates regarding coastal erosion and land loss can be made nationally.</purpose>
+      <supplinf>Any use of trade, product, or firm names is for descriptive purposes only and does not imply endorsement by the U.S. Government.
+
+Although this Federal Geographic Data Committee-compliant metadata file is intended to document the dataset in nonproprietary form, as well as in Esri format, this metadata file may include some Esri-specific terminology.</supplinf>
+    </descript>
+    <timeperd>
+      <timeinfo>
+        <rngdates>
+          <begdate>19480701</begdate>
+          <enddate>20160903</enddate>
+        </rngdates>
+      </timeinfo>
+      <current>Ground condition</current>
+    </timeperd>
+    <status>
+      <progress>Complete</progress>
+      <update>As needed</update>
+    </status>
+    <spdom>
+      <bounding>
+        <westbc>-168.125477210333</westbc>
+        <eastbc>-161.551585613264</eastbc>
+        <northbc>70.3304809057524</northbc>
+        <southbc>65.6000415003095</southbc>
+      </bounding>
+    </spdom>
+    <keywords>
+      <theme>
+        <themekt>ISO 19115 Topic Category</themekt>
+        <themekey>oceans</themekey>
+        <themekey>environment</themekey>
+        <themekey>geoscientificInformation</themekey>
+      </theme>
+      <theme>
+        <themekt>Data Categories for Marine Planning</themekt>
+        <themekey>Distributions</themekey>
+        <themekey>Physical/Chemical Features</themekey>
+      </theme>
+      <theme>
+        <themekt>USGS Thesaurus</themekt>
+        <themekey>coastal processes</themekey>
+      </theme>
+      <theme>
+        <themekt>Marine Realms Information Bank (MRIB) keywords</themekt>
+        <themekey>shoreline accretion</themekey>
+        <themekey>shoreline erosion</themekey>
+      </theme>
+      <theme>
+        <themekt>None</themekt>
+        <themekey>U.S. Geological Survey</themekey>
+        <themekey>USGS</themekey>
+        <themekey>Coastal and Marine Hazards and Resources Program</themekey>
+        <themekey>CMHRP</themekey>
+        <themekey>Pacific Coastal and Marine Science Center</themekey>
+        <themekey>PCMSC</themekey>
+        <themekey>Shoreline</themekey>
+        <themekey>Shoreline Change</themekey>
+        <themekey>Digital Shoreline Analysis System</themekey>
+        <themekey>DSAS</themekey>
+      </theme>
+      <place>
+        <placekt>Geographic Names Information System (GNIS)</placekt>
+        <placekey>North Slope</placekey>
+        <placekey>Chukchi Sea</placekey>
+        <placekey>Kotzebue Sound</placekey>
+        <placekey>Bering Land Bridge National Preserve</placekey>
+        <placekey>Cape Krusenstern National Monument</placekey>
+        <placekey>Icy Cape</placekey>
+        <placekey>Point Lay</placekey>
+        <placekey>Cape Lisburne</placekey>
+        <placekey>Point Hope</placekey>
+        <placekey>Cape Thompson</placekey>
+        <placekey>Cape Espenberg</placekey>
+        <placekey>Cape Prince of Wales</placekey>
+        <placekey>Kivalina</placekey>
+        <placekey>Deering</placekey>
+        <placekey>Shishhmaref</placekey>
+        <placekey>Wales</placekey>
+      </place>
+      <place>
+        <placekt>None</placekt>
+        <placekey>Arctic</placekey>
+        <placekey>Red Dog Dock</placekey>
+      </place>
+    </keywords>
+    <accconst>None</accconst>
+    <useconst>USGS-authored or produced data and information are in the public domain from the U.S. Government and are freely redistributable with proper metadata and source attribution. Please recognize and acknowledge the U.S. Geological Survey as the originator(s) of the dataset and in products derived from these data.</useconst>
+    <ptcontac>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey, Pacific Coastal and Marine Science Center</cntorg>
+          <cntper>PCMSC Science Data Coordinator</cntper>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>2885 Mission Street</address>
+          <city>Santa Cruz</city>
+          <state>CA</state>
+          <postal>95060</postal>
+        </cntaddr>
+        <cntvoice>831-427-4747</cntvoice>
+        <cntemail>pcmsc_data@usgs.gov</cntemail>
+      </cntinfo>
+    </ptcontac>
+    <native>Generated as a feature class contained in a Personal Geodatabase by DSAS in ArcGIS.</native>
+    <crossref>
+      <citeinfo>
+        <origin>Ann E. Gibbs</origin>
+        <origin>Alexander G. Snyder</origin>
+        <origin>Bruce M. Richmond</origin>
+        <pubdate>2019</pubdate>
+        <title>National Assessment of Shoreline Change: Historical Shoreline Change Along the North Coast of Alaska, Icy Cape to Cape Prince of Wales.</title>
+        <othercit>Gibbs, A.E., Snyder, A.G., Richmond, B.M., 2019, National Assessment of Shoreline Change: Historical Shoreline Change Along the North Coast of Alaska, Icy Cape to Cape Prince of Wales: U.S. Geological Survey Open-File Report 2019-1146.</othercit>
+        <onlink>https:/doi.org/10.3133/ofr20191146</onlink>
+      </citeinfo>
+    </crossref>
+    <crossref>
+      <citeinfo>
+        <origin>Robert E. Thieler</origin>
+        <origin>Emily A. Himmelstoss</origin>
+        <origin>Jessica L. Zichichi</origin>
+        <origin>Ayhan Ergul</origin>
+        <pubdate>2009</pubdate>
+        <title>Digital Shoreline Analysis System (DSAS) version 4.0 - An ArcGIS extension for calculating shoreline change</title>
+        <othercit>Thieler, E.R., Himmelstoss, E.A., Zichichi, J.L., and Ergul, A., 2009, Digital Shoreline Analysis System (DSAS) version 4.0—An ArcGIS extension for calculating shoreline change: U.S. Geological Survey Open-File Report 2008-1278.</othercit>
+        <onlink>https://doi.org/10.3133/ofr20081278</onlink>
+      </citeinfo>
+    </crossref>
+    <crossref>
+      <citeinfo>
+        <origin>L. R. Lestak</origin>
+        <origin>W. F. Manley</origin>
+        <origin>E. G. Parrish</origin>
+        <pubdate>2010</pubdate>
+        <title>Digital Shoreline Analysis of Coastal Change in Bering Land Bridge NP (BELA) and Cape Krusenstern NM (CAKR)</title>
+        <othercit>Lestak, L.R., Manley, W.F., and Parrish, E.G., 2010, Digital Shoreline Analysis of Coastal Change in Bering Land Bridge NP (BELA) and Cape Krusenstern NM (CAKR), Northwest Alaska: Fairbanks, AK: National Park Service, Arctic Network I&amp;M Program. Digital Media.</othercit>
+      </citeinfo>
+    </crossref>
+  </idinfo>
+  <dataqual>
+    <attracc>
+      <attraccr>The attributes in this table record positional and measurement uncertainties and datum offsets calculated during the process of extracting a land/water interface shoreline from the orthoimagery data as described in the process steps. The field names are based on the requirements for use within the Digital Shoreline Analysis System (DSAS) software (USGS Open-File Report 2008-1278).</attraccr>
+    </attracc>
+    <logic>Adjacent shoreline segments do not overlap and are not necessarily continuous. Shorelines were quality checked for accuracy. Any slight offsets between adjacent segments due to georeferencing and digitizing error are taken into account in the uncertainty calculations included in Gibbs and others (2019).</logic>
+    <complete>This shoreline file is complete and contains all shoreline segments used to calculate shoreline change rates along sections of the specified Alaska coastal region where shoreline position data were available. These data adequately represented the shoreline position at the time of the survey. Remaining gaps in these data are a consequence of nonexisting data or existing data that did not meet quality assurance standards.</complete>
+    <posacc>
+      <horizpa>
+        <horizpar>Shoreline data have been acquired from 1948 to 2016, the horizontal accuracy of which varies with respect to the data source from which the shorelines were digitized and the time period. Shorelines digitized from the 1980s era Alaska High Altitude Photography (AHAP) have an estimated shoreline position uncertainty of plus or minus 10.4 to 22.4 meters. Shorelines digitized from the 1940s and 1950s era T-sheets have an estimated total shoreline position uncertainty of plus or minus 15.7 meters. Shorelines digitized from 2016 orthophotographs have an estimated total shoreline position uncertainty of plus or minus 2.1 to 3.8 meters. Shorelines used in this analysis that were published in Lestak and others (2010) have an estimated total shoreline position uncertainty ranging from 2.3 to 2.9 meters, 2.2 to 2.7 meters, and 1.7 to 1.0 meters for orthoimagery collected in the 1950s, 1980s, and 2003, respectively. Please visit the 'Estimation of Shoreline Position Uncertainty' section in Gibbs and others (2019) for a complete explanation of the measurement uncertainties associated with these shorelines.</horizpar>
+      </horizpa>
+      <vertacc>
+        <vertaccr>A formal accuracy assessment of the vertical positional information in the dataset has either not been conducted, or is not applicable.</vertaccr>
+      </vertacc>
+    </posacc>
+    <lineage>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>National Oceanic and Atmospheric Administration</origin>
+            <pubdate>Unpublished material</pubdate>
+            <title>Topographic sheets (T-sheets)</title>
+            <geoform>Raster Digital Dataset</geoform>
+            <pubinfo>
+              <pubplace>online</pubplace>
+              <publish>National Oceanic and Atmospheric Administration</publish>
+            </pubinfo>
+            <onlink>https://nosimagery.noaa.gov/images/shoreline_surveys/survey_scans/NOAA_Shoreline_Survey_Scans.html</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital Data (.tif)</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>19490701</begdate>
+              <enddate>19520701</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>ground condition at time data were collected.</srccurr>
+        </srctime>
+        <srccitea>T-sheets</srccitea>
+        <srccontr>T-sheet imagery was used to delineate the MHW shoreline.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Fish and Wildlife Service</origin>
+            <origin>Arctic Landscape Conservation Cooperative</origin>
+            <origin>University of Alaska, Fairbanks’ Alaska Satellite Facility and the Geographic Information Network of Alaska</origin>
+            <pubdate>2012</pubdate>
+            <title>Orthorectified 1:64,000-scale color-infrared Alaska High-Altitude Aerial Photography</title>
+            <geoform>Raster Digital Dataset</geoform>
+            <pubinfo>
+              <pubplace>Unpublished data</pubplace>
+              <publish>Unpublished data</publish>
+            </pubinfo>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital Data (.tif)</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>1978</begdate>
+              <enddate>1985</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>ground condition at time data were collected.</srccurr>
+        </srctime>
+        <srccitea>AHAP</srccitea>
+        <srccontr>Alaska high altitude aerial photography was used to delineate the instantaneous land-water interface shoreline.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <origin>Far North Geospatial, LLC</origin>
+            <pubdate>Unpublished material</pubdate>
+            <title>Orthorectified 1:64,000-scale color-infrared Alaska High-Altitude Aerial Photography</title>
+            <pubinfo>
+              <pubplace>Unpublished data</pubplace>
+              <publish>Unpublished data</publish>
+            </pubinfo>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital Data (.tif)</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>1978</begdate>
+              <enddate>1985</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>ground condition at time data were collected.</srccurr>
+        </srctime>
+        <srccitea>AHAP</srccitea>
+        <srccontr>Alaska high altitude aerial photography was used to delineate the instantaneous land-water interface shoreline.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>J. R. Overbeck</origin>
+            <origin>M. D. Hendricks</origin>
+            <origin>N. E. M. Kinsman</origin>
+            <pubdate>2017</pubdate>
+            <title>Photogrammetric digital surface models and orthoimagery for the continuous coastline, Wales to Platinum, Alaska, segment A: Wales to Teller.</title>
+            <geoform>Raster Digital Dataset</geoform>
+            <pubinfo>
+              <pubplace>online</pubplace>
+              <publish>Alaska Division of Geological &amp; Geophysical Surveys</publish>
+            </pubinfo>
+            <onlink>http://dggs.alaska.gov/pubs/id/29771</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital Data (.tif)</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>20150827</begdate>
+              <enddate>20160903</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>ground condition at time data were collected.</srccurr>
+        </srctime>
+        <srccitea>Fodar</srccitea>
+        <srccontr>Fodar imagery was used to delineate the instantaneous land-water interface shoreline.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <origin>Fairbanks Fodar</origin>
+            <pubdate>Unpublished material</pubdate>
+            <title>Orthorectified natural color aerial photography for the continuous coastline, Icy Cape to Cape Prince of Wales</title>
+            <geoform>Raster Digital Dataset</geoform>
+            <pubinfo>
+              <pubplace>Unpublished data</pubplace>
+              <publish>Unpublished data</publish>
+            </pubinfo>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital Data (.tif)</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>2016</begdate>
+              <enddate>2016</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>ground condition at time data were collected.</srccurr>
+        </srctime>
+        <srccitea>Fodar</srccitea>
+        <srccontr>Fodar imagery was used to delineate the instantaneous land-water interface shoreline.</srccontr>
+      </srcinfo>
+      <procstep>
+        <procdesc>High-resolution scans of T-sheets were geo-registered using Esri ArcMap software (v10.6) by placing 4 well-spaced registration points at gridline intersections of registered T-Sheets of lower resolution and applying a first-order polynomial transformation. An additional 1-10 ground control points (GCPs) were placed using benchmarks and geomorphic features with known locations, then applying a first-order polynomial transformation.</procdesc>
+        <procdate>2019</procdate>
+      </procstep>
+      <procstep>
+        <procdesc>Vector shorelines were digitized from all data sources using standard editing tools in ArcMap 10.6 using criteria described in Gibbs and others (2019).</procdesc>
+        <procdate>2019</procdate>
+      </procstep>
+      <procstep>
+        <procdesc>Attributes describing geomorphic setting and specifics of source data were added to vector shorelines.</procdesc>
+        <procdate>2019</procdate>
+      </procstep>
+    </lineage>
+  </dataqual>
+  <spdoinfo>
+    <direct>Vector</direct>
+    <ptvctinf>
+      <sdtsterm>
+        <sdtstype>String</sdtstype>
+        <ptvctcnt>3168</ptvctcnt>
+      </sdtsterm>
+    </ptvctinf>
+  </spdoinfo>
+  <spref>
+    <horizsys>
+      <geograph>
+        <latres>0.0196106556</latres>
+        <longres>0.0558147069</longres>
+        <geogunit>Decimal seconds</geogunit>
+      </geograph>
+      <geodetic>
+        <horizdn>D_WGS_1984</horizdn>
+        <ellips>WGS_1984</ellips>
+        <semiaxis>6378137.0</semiaxis>
+        <denflat>298.257223563</denflat>
+      </geodetic>
+    </horizsys>
+  </spref>
+  <eainfo>
+    <detailed>
+      <enttyp>
+        <enttypl>Attribute Table</enttypl>
+        <enttypd>Table containing attribute information associated with the dataset.</enttypd>
+        <enttypds>Producer defined</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>FID</attrlabl>
+        <attrdef>Index number unique to each record in the attribute table.</attrdef>
+        <attrdefs>Assigned by ArcMap.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>2327</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Shape</attrlabl>
+        <attrdef>Defines what type of spatial information is associated with this record (for example, polyline, polygon, point).</attrdef>
+        <attrdefs>Assigned by ArcMap.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>Polyline</edomv>
+            <edomvd>A shape defined by one or more paths, in which a path is a series of connected segments.</edomvd>
+            <edomvds>ArcMap 10.6</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>DATE_</attrlabl>
+        <attrdef>Date on which the source imagery for the digitized shorelines was collected. The precision of the date provided is specified in the ‘Default_D’ field. When only the year was defined, July 1 was used for the month and day. When only the month and year were defined, the first of the month was used.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>07/01/1948</rdommin>
+            <rdommax>09/03/2016</rdommax>
+            <attrunit>Days, Months, Years</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Year_</attrlabl>
+        <attrdef>Year in which the source imagery for the digitized shorelines was collected.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1948</rdommin>
+            <rdommax>2016</rdommax>
+            <attrunit>Years</attrunit>
+            <attrmres>1</attrmres>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Uncy</attrlabl>
+        <attrdef>total shoreline position uncertainty, in meters. Actual shoreline position is within the range of this value. The uncertainty was determined by equation 1 in Gibbs and others (2019).</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1</rdommin>
+            <rdommax>22.4</rdommax>
+            <attrunit>Meters</attrunit>
+            <attrmres>0.1</attrmres>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Default_D</attrlabl>
+        <attrdef>Number that indicates the precision of the source imagery collection date.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>0</edomv>
+            <edomvd>The year, month, and day of source imagery collection are known.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>1</edomv>
+            <edomvd>The year of source imagery collection is known.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>2</edomv>
+            <edomvd>The year and month of source imagery collection are known.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Source</attrlabl>
+        <attrdef>Identifies the source of the map or imagery from which the shorelines in this dataset were digitized.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>NOAA, T-Sheet</edomv>
+            <edomvd>National Oceanographic and Atmospheric Administration Topographic Sheets.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>NASA, Alaska High Altitude Photography</edomv>
+            <edomvd>Orthorectified Alaska high altitude photography mosaics</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>Fairbanks FODAR SfM – State of Alaska Orthoimagery</edomv>
+            <edomvd>Orthorectified aerial photo mosaics generated by Fairbanks FODAR using Structure from Motion (SfM).</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+        <attrdomv>
+          <edom>
+            <edomv>Lestak and others, 2010</edomv>
+            <edomvd>Published shorelines generated by Lestak and others (2010) using orthorectified photo mosaics.</edomvd>
+            <edomvds>Producer defined.</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Source_a</attrlabl>
+        <attrdef>Identification numbers used by the organization that produced the imagery or map from which the shorelines were digitized. The identification number convention varies base on the source of the map or imagery, which is identified in the attribute 'Source'. NOAA, T-sheets: refers to the unique identification number on the original topographic maps. NASA--Alaska High Altitude Photography: refers to the unique identification number given to individual image files produced by the organization that post-processed the imagery. Lestak and others 2010: refers to the unique identification number given to individual image files produced by the organization that post-processed the imagery. Fairbanks FODAR SfM--USGS Orthoimagery: refers to the unique identification number given to individual image files produced by the organization that post-processed the imagery.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <udom>Unique identifier assigned by the organization that produced the source data</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Shape_Leng</attrlabl>
+        <attrdef>Length of the shoreline segment.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>10.298835</rdommin>
+            <rdommax>21098.001620</rdommax>
+            <attrunit>Meters</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+    </detailed>
+  </eainfo>
+  <distinfo>
+    <distrib>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey - ScienceBase</cntorg>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>Mailing and Physical</addrtype>
+          <address>Denver Federal Center, Building 810, Mail Stop 302</address>
+          <city>Denver</city>
+          <state>CO</state>
+          <postal>80225</postal>
+        </cntaddr>
+        <cntvoice>1-888-275-8747</cntvoice>
+        <cntemail>sciencebase@usgs.gov</cntemail>
+      </cntinfo>
+    </distrib>
+    <resdesc>These data are available in shapefile format contained in a single zip file, which also includes CSDGM FGDC-compliant metadata.</resdesc>
+    <distliab>Unless otherwise stated, all data, metadata and related materials are considered to satisfy the quality standards relative to the purpose for which the data were collected. Although these data and associated metadata have been reviewed for accuracy and completeness and approved for release by the U.S. Geological Survey (USGS), no warranty expressed or implied is made regarding the display or utility of the data on any other system or for general or scientific purposes, nor shall the act of distribution constitute any such warranty.</distliab>
+    <stdorder>
+      <digform>
+        <digtinfo>
+          <formname>Shapefile</formname>
+          <formvern>ArcGIS Desktop 10.6</formvern>
+          <formspec>Esri polyline shapefile</formspec>
+          <formcont>Zip file contains digitized shoreline position representing the land/water interface on the northern coast of Alaska.</formcont>
+          <filedec>Use WinZip or equivalent.</filedec>
+          <transize>3.2</transize>
+        </digtinfo>
+        <digtopt>
+          <onlinopt>
+            <computer>
+              <networka>
+                <networkr>https://www.sciencebase.gov/catalog/file/get/5dbb7ac3e4b06957974eda38?facet=WestChukchi_shorelines</networkr>
+                <networkr>https://doi.org/10.5066/P9H1S1PV</networkr>
+              </networka>
+            </computer>
+            <accinstr>Data can be downloaded using the Network_Resource_Name links. The first link is a direct link to download the zipped file of data and metadata. The second link points to a landing page with metadata and data.</accinstr>
+          </onlinopt>
+        </digtopt>
+      </digform>
+      <fees>None.</fees>
+    </stdorder>
+    <techpreq>This zip file contains data available in Environmental Systems Research Institute (Esri) polyline shapefile format. The user must have ArcGIS or ArcView 3.0 or greater software to read and process the data file. In lieu of ArcView or ArcGIS, the user may utilize another GIS application package capable of importing the data. A free data viewer, ArcExplorer, capable of displaying the data is available from Esri at www.esri.com.</techpreq>
+  </distinfo>
+  <metainfo>
+    <metd>20191227</metd>
+    <metc>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey, Pacific Coastal and Marine Science Center</cntorg>
+          <cntper>PCMSC Science Data Coordinator</cntper>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>2885 Mission Street</address>
+          <city>Santa Cruz</city>
+          <state>CA</state>
+          <postal>95060</postal>
+        </cntaddr>
+        <cntvoice>831-427-4747</cntvoice>
+        <cntemail>pcmsc_data@usgs.gov</cntemail>
+      </cntinfo>
+    </metc>
+    <metstdn>Content Standard for Digital Geospatial Metadata</metstdn>
+    <metstdv>FGDC-STD-001-1998</metstdv>
+  </metainfo>
+</metadata>

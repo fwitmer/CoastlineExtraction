@@ -1,0 +1,372 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<metadata>
+  <idinfo>
+    <citation>
+      <citeinfo>
+        <origin>Alexander G. Snyder</origin>
+        <origin>Ann E. Gibbs</origin>
+        <pubdate>20191227</pubdate>
+        <title>Offshore baseline generated to calculate shoreline change rates for the north coast of Alaska, Icy Cape to Cape Prince of Wales</title>
+        <geoform>polyline shapefile</geoform>
+        <serinfo>
+          <sername>data release</sername>
+          <issue>DOI: 10.5066/P9H1S1PV</issue>
+        </serinfo>
+        <pubinfo>
+          <pubplace>Pacific Coastal and Marine Science Center, Santa Cruz, CA</pubplace>
+          <publish>U.S. Geological Survey</publish>
+        </pubinfo>
+        <onlink>https://doi.org/10.5066/P9H1S1PV</onlink>
+        <onlink>https://www.sciencebase.gov/catalog/file/get/5dbb7aa1e4b06957974eda35</onlink>
+        <lworkcit>
+          <citeinfo>
+            <origin>Alexander G. Snyder</origin>
+            <origin>Ann E. Gibbs</origin>
+            <pubdate>2019</pubdate>
+            <title>National Assessment of Shoreline Change: A GIS compilation of vector shorelines and associated shoreline change data for the north coast of Alaska, Icy Cape to Cape Prince of Wales</title>
+            <serinfo>
+              <sername>data release</sername>
+              <issue>DOI: 10.5066/P9H1S1PV</issue>
+            </serinfo>
+            <pubinfo>
+              <pubplace>Pacific Coastal and Marine Science Center, Santa Cruz, CA</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/P9H1S1PV</onlink>
+          </citeinfo>
+        </lworkcit>
+      </citeinfo>
+    </citation>
+    <descript>
+      <abstract>This dataset includes a reference baseline used by the Digital Shoreline Analysis System (DSAS) to calculate rate-of-change statistics for the exposed coast of Alaska from Icy Cape and Cape Prince Wales for the time period 1948 to 2016. This baseline layer serves as the starting point for all transects cast by the DSAS application and can be used to establish measurement points used to calculate shoreline-change rates.</abstract>
+      <purpose>Beach erosion is a persistent problem along most open-ocean shores of the United States. Along the Arctic coast of Alaska, coastal erosion is widespread and is threatens Native communities, defense and energy-related infrastructure, and coastal habitat. As coastal populations continue to expand and infrastructure and habitat are increasingly threatened by erosion, there is increased demand for accurate information regarding past and present trends and rates of shoreline movement. There also is a need for a comprehensive analysis of shoreline change with metrics that are consistent from one coastal region to another. To meet these national needs, the U.S. Geological Survey is conducting an analysis of historical shoreline changes along the open-ocean sandy shores of the conterminous United States and parts of Hawaii, Alaska, and the Great Lakes. One purpose of this work is to develop standard, repeatable methods for mapping and analyzing shoreline change so that periodic, systematic, and internally consistent updates regarding coastal erosion and land loss can be made nationally.</purpose>
+      <supplinf>Any use of trade, product, or firm names is for descriptive purposes only and does not imply endorsement by the U.S. Government.
+
+Although this Federal Geographic Data Committee-compliant metadata file is intended to document the dataset in nonproprietary form, as well as in Esri format, this metadata file may include some Esri-specific terminology.</supplinf>
+    </descript>
+    <timeperd>
+      <timeinfo>
+        <sngdate>
+          <caldate>2019</caldate>
+        </sngdate>
+      </timeinfo>
+      <current>publication date</current>
+    </timeperd>
+    <status>
+      <progress>Complete</progress>
+      <update>None planned</update>
+    </status>
+    <spdom>
+      <bounding>
+        <westbc>-168.127648502765</westbc>
+        <eastbc>-161.054806597465</eastbc>
+        <northbc>70.3309867174378</northbc>
+        <southbc>65.5822749027625</southbc>
+      </bounding>
+    </spdom>
+    <keywords>
+      <theme>
+        <themekt>ISO 19115 Topic Category</themekt>
+        <themekey>oceans</themekey>
+        <themekey>environment</themekey>
+        <themekey>geoscientificInformation</themekey>
+      </theme>
+      <theme>
+        <themekt>Data Categories for Marine Planning</themekt>
+        <themekey>Distributions</themekey>
+        <themekey>Physical/Chemical Features</themekey>
+      </theme>
+      <theme>
+        <themekt>USGS Thesaurus</themekt>
+        <themekey>coastal processes</themekey>
+      </theme>
+      <theme>
+        <themekt>Marine Realms Information Bank (MRIB) keywords</themekt>
+        <themekey>shoreline accretion</themekey>
+        <themekey>shoreline erosion</themekey>
+      </theme>
+      <theme>
+        <themekt>None</themekt>
+        <themekey>U.S. Geological Survey</themekey>
+        <themekey>USGS</themekey>
+        <themekey>Coastal and Marine Hazards and Resources Program</themekey>
+        <themekey>CMHRP</themekey>
+        <themekey>Pacific Coastal and Marine Science Center</themekey>
+        <themekey>PCMSC</themekey>
+        <themekey>Shoreline</themekey>
+        <themekey>Shoreline Change</themekey>
+        <themekey>Digital Shoreline Analysis System</themekey>
+        <themekey>DSAS</themekey>
+      </theme>
+      <place>
+        <placekt>Geographic Names Information System (GNIS)</placekt>
+        <placekey>North Slope</placekey>
+        <placekey>Chukchi Sea</placekey>
+        <placekey>Kotzebue Sound</placekey>
+        <placekey>Bering Land Bridge National Preserve</placekey>
+        <placekey>Cape Krusenstern National Monument</placekey>
+        <placekey>Icy Cape</placekey>
+        <placekey>Point Lay</placekey>
+        <placekey>Cape Lisburne</placekey>
+        <placekey>Point Hope</placekey>
+        <placekey>Cape Thompson</placekey>
+        <placekey>Cape Espenberg</placekey>
+        <placekey>Cape Prince of Wales</placekey>
+        <placekey>Kivalina</placekey>
+        <placekey>Deering</placekey>
+        <placekey>Shishhmaref</placekey>
+        <placekey>Wales</placekey>
+      </place>
+      <place>
+        <placekt>None</placekt>
+        <placekey>Arctic</placekey>
+        <placekey>Red Dog Dock</placekey>
+      </place>
+    </keywords>
+    <accconst>None</accconst>
+    <useconst>USGS-authored or produced data and information are in the public domain from the U.S. Government and are freely redistributable with proper metadata and source attribution. Please recognize and acknowledge the U.S. Geological Survey as the originator(s) of the dataset and in products derived from these data.</useconst>
+    <ptcontac>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey, Pacific Coastal and Marine Science Center</cntorg>
+          <cntper>PCMSC Science Data Coordinator</cntper>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>2885 Mission Street</address>
+          <city>Santa Cruz</city>
+          <state>CA</state>
+          <postal>95060</postal>
+        </cntaddr>
+        <cntvoice>831-427-4747</cntvoice>
+        <cntemail>pcmsc_data@usgs.gov</cntemail>
+      </cntinfo>
+    </ptcontac>
+    <native>Generated as a feature class contained in a Personal Geodatabase by DSAS in ArcGIS.</native>
+    <crossref>
+      <citeinfo>
+        <origin>Ann E. Gibbs</origin>
+        <origin>Alexander G. Snyder</origin>
+        <origin>Bruce M. Richmond</origin>
+        <pubdate>2019</pubdate>
+        <title>National Assessment of Shoreline Change: Historical Shoreline Change Along the North Coast of Alaska, Icy Cape to Cape Prince of Wales.</title>
+        <othercit>Gibbs, A.E., Snyder, A.G., Richmond, B.M., 2019, National Assessment of Shoreline Change: Historical Shoreline Change Along the North Coast of Alaska, Icy Cape to Cape Prince of Wales: U.S. Geological Survey Open-File Report 2019-1146.</othercit>
+        <onlink>https:/doi.org/10.3133/ofr20191146</onlink>
+      </citeinfo>
+    </crossref>
+    <crossref>
+      <citeinfo>
+        <origin>Robert E. Thieler</origin>
+        <origin>Emily A. Himmelstoss</origin>
+        <origin>Jessica L. Zichichi</origin>
+        <origin>Ayhan Ergul</origin>
+        <pubdate>2009</pubdate>
+        <title>Digital Shoreline Analysis System (DSAS) version 4.0 - An ArcGIS extension for calculating shoreline change</title>
+        <othercit>Thieler, E.R., Himmelstoss, E.A., Zichichi, J.L., and Ergul, A., 2009, Digital Shoreline Analysis System (DSAS) version 4.0—An ArcGIS extension for calculating shoreline change: U.S. Geological Survey Open-File Report 2008-1278.</othercit>
+        <onlink>https://doi.org/10.3133/ofr20081278</onlink>
+      </citeinfo>
+    </crossref>
+  </idinfo>
+  <dataqual>
+    <attracc>
+      <attraccr>The attribute in this layer is based on the requirements for use within the Digital Shoreline Analysis System (DSAS) software (USGS Open-File Report 2008-1278). The data have been quality checked.</attraccr>
+    </attracc>
+    <logic>All polylines have a unique identification attribute (ID). This field is used by the Digital Shoreline Analysis System (DSAS) to designate the alongshore order of baselines if there are more than one. Adjacent baseline segments do not overlap and are not necessarily continuous.</logic>
+    <complete>This baseline file is complete and contains all baseline segments used to cast transects where shoreline data are present to calculate a rate of change.</complete>
+    <posacc>
+      <horizpa>
+        <horizpar>The baseline serves as a reference point for transects cast by the Digital Shoreline Analysis System (DSAS) software. It does not correspond to any real-world feature.</horizpar>
+      </horizpa>
+      <vertacc>
+        <vertaccr>The baseline serves as a reference point for transects cast by the Digital Shoreline Analysis System (DSAS) software. It does not correspond to any real-world feature.</vertaccr>
+      </vertacc>
+    </posacc>
+    <lineage>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>National Oceanic and Atmospheric Administration</origin>
+            <pubdate>Unpublished material</pubdate>
+            <title>Topographic sheets (T-sheets)</title>
+            <geoform>Raster Digital Dataset</geoform>
+            <pubinfo>
+              <pubplace>online</pubplace>
+              <publish>National Oceanic and Atmospheric Administration</publish>
+            </pubinfo>
+            <onlink>https://nosimagery.noaa.gov/images/shoreline_surveys/survey_scans/NOAA_Shoreline_Survey_Scans.html</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital Data (.tif)</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>19490701</begdate>
+              <enddate>19520701</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>ground condition at time data were collected.</srccurr>
+        </srctime>
+        <srccitea>T-sheets</srccitea>
+        <srccontr>T-sheet imagery was used to delineate approximate land-water interface. The baseline in this dataset was initially generated by creating an offset of the T-sheet derived shoreline.</srccontr>
+      </srcinfo>
+      <procstep>
+        <procdesc>Baselines were constructed offshore from the time series of shoreline positions using standard editing tools in Esri ArcMap v. 10.6. The baselines were positioned to conform to changes in the orientation of the historical shorelines also presented in this data release. This was done so that transects, which are generated by the Digital Shoreline Analysis System v 4.4 from the baseline, would intersect perpendicular to the general trend of the shorelines.</procdesc>
+        <procdate>2019</procdate>
+      </procstep>
+      <procstep>
+        <procdesc>The joined baseline feature class was exported to a shapefile in ArcMap v10.6 by right-clicking the transect layer.</procdesc>
+        <procdate>2019</procdate>
+      </procstep>
+      <procstep>
+        <procdesc>The exported baseline shapefile was projected in Esri's ArcToolbox (v10.6); Data Management Tools; Projections and Transformations; Feature; Project. Parameters: input projection - UTM zone 3 (NAD83); output projection - geographic coordinates (WGS84); transformation = WGS_1984_(ITRF00)_To_NAD_1983.</procdesc>
+        <procdate>2019</procdate>
+      </procstep>
+    </lineage>
+  </dataqual>
+  <spdoinfo>
+    <direct>Vector</direct>
+    <ptvctinf>
+      <sdtsterm>
+        <sdtstype>String</sdtstype>
+        <ptvctcnt>52</ptvctcnt>
+      </sdtsterm>
+    </ptvctinf>
+  </spdoinfo>
+  <spref>
+    <horizsys>
+      <geograph>
+        <latres>0.0196106556</latres>
+        <longres>0.0558147069</longres>
+        <geogunit>Decimal seconds</geogunit>
+      </geograph>
+      <geodetic>
+        <horizdn>D_WGS_1984</horizdn>
+        <ellips>WGS_1984</ellips>
+        <semiaxis>6378137.0</semiaxis>
+        <denflat>298.257223563</denflat>
+      </geodetic>
+    </horizsys>
+  </spref>
+  <eainfo>
+    <detailed>
+      <enttyp>
+        <enttypl>Attribute Table</enttypl>
+        <enttypd>Table containing attribute information associated with the dataset.</enttypd>
+        <enttypds>Producer defined</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>FID</attrlabl>
+        <attrdef>Index number unique to each record in the attribute table.</attrdef>
+        <attrdefs>Assigned by ArcMap</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>0</rdommin>
+            <rdommax>51</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Shape</attrlabl>
+        <attrdef>Defines what type of spatial information is associated with this record (for example, polyline, polygon, point).</attrdef>
+        <attrdefs>Assigned by ArcMap.</attrdefs>
+        <attrdomv>
+          <edom>
+            <edomv>Polyline</edomv>
+            <edomvd>A shape defined by one or more paths, in which a path is a series of connected segments.</edomvd>
+            <edomvds>ArcMap 10.6</edomvds>
+          </edom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>ID</attrlabl>
+        <attrdef>Field required by the Digital Shoreline Analysis System (DSAS) software. DSAS uses this value to determine the ordering sequence of transects when the baseline feature contains multiple segments. Individual segments are numbered sequentially alongshore.</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>101</rdommin>
+            <rdommax>231</rdommax>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>SHAPE_Leng</attrlabl>
+        <attrdef>Length of the polyline represented by this record.</attrdef>
+        <attrdefs>Producer defined.</attrdefs>
+        <attrdomv>
+          <rdom>
+            <rdommin>1333.921452</rdommin>
+            <rdommax>142819.277739</rdommax>
+            <attrunit>Meters</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+    </detailed>
+  </eainfo>
+  <distinfo>
+    <distrib>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey - ScienceBase</cntorg>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>Mailing and Physical</addrtype>
+          <address>Denver Federal Center, Building 810, Mail Stop 302</address>
+          <city>Denver</city>
+          <state>CO</state>
+          <postal>80225</postal>
+        </cntaddr>
+        <cntvoice>1-888-275-8747</cntvoice>
+        <cntemail>sciencebase@usgs.gov</cntemail>
+      </cntinfo>
+    </distrib>
+    <resdesc>These data are available in shapefile format contained in a single zip file, which also includes CSDGM FGDC-compliant metadata.</resdesc>
+    <distliab>Unless otherwise stated, all data, metadata and related materials are considered to satisfy the quality standards relative to the purpose for which the data were collected. Although these data and associated metadata have been reviewed for accuracy and completeness and approved for release by the U.S. Geological Survey (USGS), no warranty expressed or implied is made regarding the display or utility of the data on any other system or for general or scientific purposes, nor shall the act of distribution constitute any such warranty.</distliab>
+    <stdorder>
+      <digform>
+        <digtinfo>
+          <formname>Shapefile</formname>
+          <formvern>ArcGIS Desktop 10.6</formvern>
+          <formspec>Esri polyline shapefile</formspec>
+          <formcont>Zip file contains shoreline change rates measured along shore perpendicular transects on the northern coast of Alaska.</formcont>
+          <filedec>Use WinZip or equivalent.</filedec>
+          <transize>0.172</transize>
+        </digtinfo>
+        <digtopt>
+          <onlinopt>
+            <computer>
+              <networka>
+                <networkr>https://www.sciencebase.gov/catalog/file/get/5dbb7aa1e4b06957974eda35</networkr>
+                <networkr>https://doi.org/10.5066/P9H1S1PV</networkr>
+              </networka>
+            </computer>
+            <accinstr>Data can be downloaded using the Network_Resource_Name links. The first link is a direct link to download the zipped file of data and metadata. The second link points to a landing page with metadata and data.</accinstr>
+          </onlinopt>
+        </digtopt>
+      </digform>
+      <fees>None.</fees>
+    </stdorder>
+    <techpreq>This zip file contains data available in Environmental Systems Research Institute (Esri) polyline shapefile format. The user must have ArcGIS or ArcView 3.0 or greater software to read and process the data file. In lieu of ArcView or ArcGIS, the user may utilize another GIS application package capable of importing the data. A free data viewer, ArcExplorer, capable of displaying the data is available from Esri at www.esri.com.</techpreq>
+  </distinfo>
+  <metainfo>
+    <metd>20191227</metd>
+    <metc>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey, Pacific Coastal and Marine Science Center</cntorg>
+          <cntper>PCMSC Science Data Coordinator</cntper>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>2885 Mission Street</address>
+          <city>Santa Cruz</city>
+          <state>CA</state>
+          <postal>95060</postal>
+        </cntaddr>
+        <cntvoice>831-427-4747</cntvoice>
+        <cntemail>pcmsc_data@usgs.gov</cntemail>
+      </cntinfo>
+    </metc>
+    <metstdn>Content Standard for Digital Geospatial Metadata</metstdn>
+    <metstdv>FGDC-STD-001-1998</metstdv>
+  </metainfo>
+</metadata>
