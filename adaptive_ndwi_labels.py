@@ -10,7 +10,7 @@ import os
 from matplotlib import pyplot as plt
 import numpy as np
 import cv2
-
+# Function to create transect points
 def create_transect_points(transect_path, line_path, out_path):
     transects = gpd.read_file(transect_path)
     coastline = gpd.read_file(line_path)
@@ -25,7 +25,7 @@ def create_transect_points(transect_path, line_path, out_path):
 
     plot_points.to_file(out_path)
 
-
+# Function to clip shapefile
 def clip_shp(path_to_shp, boundary_geojson):
     path_name = os.path.dirname(path_to_shp) + "/"
     shp_name = os.path.basename(path_to_shp)
@@ -43,74 +43,78 @@ def clip_shp(path_to_shp, boundary_geojson):
 
     out_path = path_name + shp_base + "_clipped.shp"
     shp_clipped.to_file(out_path)
-
-
-def get_ndwi_label(image_path, points_path, ksize = 100):
-    # establish the ndwi calculation and copy metadata
+# Function to get NDWI label using sliding window approach
+def get_ndwi_label(image_path, points_path, ksize=100, window_size=50):
+    # Open raster image 
     with rio.open(image_path, driver='GTiff') as src_raster:
         green = src_raster.read(2).astype(np.float32)
-        nir_num = src_raster.count  # adjusting NIR band to 4 or 5 band images
+        nir_num = src_raster.count  
         nir = src_raster.read(nir_num).astype(np.float32)
         np.seterr(divide='ignore', invalid='ignore')
         ndwi = (green - nir) / (green + nir)
         ndwi[np.isnan(ndwi)] = 0
-        
-        print("Green max: {}".format(green.max()))
-        print("NIR max: {}".format(nir.max()))
-        print("NDWI max: {}".format(np.nanmax(ndwi)))
-        print("NDWI min: {}".format(np.nanmin(ndwi)))
         ndwi_profile = src_raster.profile
-        # blank label layer
         label = np.zeros((src_raster.height, src_raster.width)).astype(np.uint8)
         agg_mask = np.zeros((src_raster.height, src_raster.width)).astype(np.uint8)
         src_CRS = src_raster.crs
-        # getting pixel size for correct calculation of buffer
         pixel_size = abs(src_raster.transform[0])
-        figs, ax = plt.subplots(figsize=(12, 8))
-        show(ndwi, transform=src_raster.transform, ax=ax, cmap='gray')
+        fig, ax = plt.subplots(figsize=(12, 8))
 
-    # preparing points for creating label masks
+        # Plot NDWI image
+        ndwi_image = ax.imshow(ndwi, cmap='gray', extent=(0, src_raster.transform.a * ndwi.shape[1], src_raster.transform.e * ndwi.shape[0], 0))
+        ax.set_title("NDWI")
+        ax.set_xlabel("Easting")
+        ax.set_ylabel("Northing")
+        ndwi_colorbar = plt.colorbar(ndwi_image, ax=ax, label="NDWI Value")
+        ndwi_colorbar.set_label("NDWI Value", rotation=90)
+        plt.show()
+    # Read shapefile points
     points_shp = gpd.read_file(points_path)
+    points_shp.plot(ax=plt.gca(), color='red', edgecolor='black', alpha=0.5)
+    plt.title("points_shp ")
+    plt.show()
+    # Set CRS and plot points
     points_geom = points_shp.geometry
+    points_geom.plot()
+    plt.title("points_geom ")
+    plt.show()
+
     points_geom = points_geom.set_crs(epsg=4326)
     points_geom = points_geom.to_crs(src_CRS)
+    points_geom.plot()
+    plt.title("points_geom in raster CRS")
+    plt.show()
 
-    # creating a holder for Otsu's threshold values
     otsu_thresholds = []
     skipped = 0
-    
-    # processing each point found
+
+    ndwi_profile.update(count=1, nodata=0, dtype=rio.float32)
+
     for multipoint in points_geom:
         for point in multipoint.geoms:
             buffer = point.buffer(ksize * pixel_size, cap_style=3)
             buffer_series = gpd.GeoSeries(buffer)
-            buffer_series.exterior.plot(ax=ax, color='red', linewidth=1)
-
-            # writing NDWI to an in-memory dataset to use for masking
-            ndwi_profile.update(count=1, nodata=0, dtype=rio.float32)
-            with MemoryFile() as memfile:
-                with memfile.open(**ndwi_profile) as mem_data:
-                    mem_data.write_band(1, ndwi)
-                with memfile.open() as dataset:
-                    out_image, out_transform = mask(dataset, shapes=[buffer], nodata=0, crop=False)
-                    temp_mask = np.ma.getmaskarray(out_image)
-                    #plt.imshow(temp_mask[0])
-                    #plt.show()
-                    out_image = out_image[0]
-                    out_image = (out_image * 127) + 128
-                    out_image = out_image.astype(np.uint8)
-                    #plt.imshow(out_image)
-                    #plt.show()
-                    
-                    if out_image.shape[0] < 200 or out_image.shape[1] < 200:
-                        skipped += 1
-                        continue
-                    else:
-                        otsu_threshold, image_result = cv2.threshold(out_image, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU, )
-                        otsu_thresholds.append(otsu_threshold)
-                        agg_mask = (agg_mask | np.ma.getmask(out_image).astype(np.uint8)).astype(np.uint8)
-                        threshold_window = np.where(out_image >= otsu_threshold, 1, 0).astype(np.uint8)
-                        label = label | threshold_window.astype(np.uint8)
+            for window in buffer_series.buffer(window_size * pixel_size):
+               with MemoryFile() as memfile:
+                   with memfile.open(**ndwi_profile) as mem_data:
+                       mem_data.write_band(1, ndwi)
+                   with memfile.open() as dataset:
+                       out_image, out_transform = mask(dataset, shapes=[window], nodata=0, crop=False)
+                       out_image = out_image[0]
+                       out_image = (out_image * 127) + 128
+                       out_image = out_image.astype(np.uint8)
+                       
+                       if out_image.shape[0] < 200 or out_image.shape[1] < 200:
+                           skipped += 1
+                           continue
+                       else: 
+                           otsu_threshold, image_result = cv2.threshold(out_image, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                           otsu_thresholds.append(otsu_threshold)
+                           mask_values = np.ma.getmask(out_image).astype(np.uint8)
+                           agg_mask += mask_values
+                           threshold_window = np.where(out_image >= otsu_threshold, 1, 0).astype(np.uint8)
+                           label += threshold_window.astype(np.uint8)
+                            
     print("Total number of valid thresholds: {}".format(len(otsu_thresholds)))
     print("Number of skipped windows: {}".format(skipped))
     print("Actual thresholds (8-bit unsigned): \n{}".format(otsu_thresholds))
@@ -120,24 +124,25 @@ def get_ndwi_label(image_path, points_path, ksize = 100):
     print("\nLabel max: {}".format(np.nanmax(label)))
     print("Label min: {}".format(np.nanmin(label)))
     plt.imshow(label)
+    plt.title("Label")
     plt.show()
 
     print("\nMask max: {}".format(np.nanmax(agg_mask)))
     print("Mask min: {}".format(np.nanmin(agg_mask)))
     plt.imshow(agg_mask)
+    plt.title("Aggregated Mask")
     plt.show()
 
     mean_threshold = np.mean(otsu_thresholds) + 10
     ndwi_8bit = ((ndwi * 127) + 128).astype(np.uint8)
     ndwi_classified = np.where(ndwi_8bit >= mean_threshold, 1, 0)
     plt.imshow(ndwi_classified, cmap="gray")
+    plt.title("NDWI Classified")
     plt.show()
 
-
-            
-    points_geom.plot(ax=ax, color='blue', markersize=5)
+    points_geom.plot(color='blue', markersize=5)
+    plt.title("points_geom in raster CRS-2")
     plt.show()
-    pass
 
 
 boundary = {'type': 'Polygon',
@@ -146,10 +151,12 @@ boundary = {'type': 'Polygon',
                              [-162.674560546875, 66.10883816429516],
                              [-162.8235626220703, 66.10883816429516], 
                              [-162.8235626220703, 66.05622435812153]]]}
-image_path = "data/369619_2016-08-29_RE1_3A_Analytic_SR_clip.tif"
-# image_path = "data/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif"
-points_path = "data/Deering_transect_points_2016.shp"
+
+
+image_path = "sample_data/PlanetLabs/20160909_213103_0e19_3B_AnalyticMS_SR_clip.tif"
+points_path = "USGS_Coastlines/Deering_transect_points_2016_fw.shp"
 get_ndwi_label(image_path, points_path)
 
 # path_to_shp = "C:\\Users\\kjcar\\Downloads\\Deering_DSAS_Calculations\\WestChukchi_exposed_STepr_rates\\WestChukchi_exposed_STepr_rates.shp"
 # clip_shp(path_to_shp, boundary)
+
