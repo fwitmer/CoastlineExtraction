@@ -6,17 +6,19 @@
 #
 ##############################
 
-   
+import time
+import pathlib
+import requests
+from datetime import datetime
+from dotenv import load_dotenv
 
 # Retrieve API keys from local .env file
 # TODO: Change env_path, JACK_KEY and FRANK_KEY to the respective path and variable names on your system
-from dotenv import load_dotenv
 env_path = r'C:\Users\Flomi\.spyder-py3\API_Keys.env'
 load_dotenv(dotenv_path=env_path)
 
 # Provides two different Planet user's API keys that can be choosen as 
 # Planet_Key variable to access the Planet Labs API
-import os
 JACK_KEY = os.getenv("JACK_KEY")
 FRANK_KEY = os.getenv("FRANK_KEY")
 
@@ -49,14 +51,6 @@ geojson_geometry = {
          ]
        ]
 }
-
-
-# Import helper modules
-import json
-import requests
-import time
-import pathlib
-
 
 # Helper function to printformatted JSON using the json module
 def p(data):
@@ -347,21 +341,30 @@ def init_image_arr(geojson, res, image_ids):
         # Exit if page has no further results
         if len(geojson["features"]) == 0:
             break
+    
+# RE_format: This function take id of RE image and return the date as date time object
+# ID like this => 2018-12-03T083453_RE4_1B_band1.tif
+def RE_format(image_id):
+    time = image_id[:17] 
+    time = datetime.strptime(time, "%Y-%m-%dT%H%M%S")
+    return time
 
-
+# PS_format: This function take id of PS image and return the date as date time object
+# ID like this => 20181203T083453_PS_1B_band1.tif
+def PS_format(image_id):
+    time = image_id[:15] 
+    time = datetime.strptime(time, "%Y%m%dT%H%M%S")
+    return time
+                
 # Function to remove images of the winter months (Oct 16 to May 15)
+# Oct 16 = 290 day of year , May 15 = 136 day of year
+# Returns id array of images after removing winter months
 # TODO: Alter to desired winter month range
-# Returns id array
 def rem_winter(ids = []):
-    
-    # Array to store id indexes for removal
-    removal = []
-    
-    for i in range(0, len(ids)):
-        
-        # Holds info- 0-3: year, 4-5: month, 6-7: day, 8-11: time
-        time = []
-
+   clear_ids = []
+   
+   for i in range(0, len(ids)):
+       
         # Reformat current min for comparison
         # Check for RE image
         if ids[i][4] == '-':
@@ -371,41 +374,12 @@ def rem_winter(ids = []):
         else:
             time = PS_format(ids[i])
             
-        # Convert date to string
-        curr_string = list_to_string(time)
+        day_of_year = time.timetuple().tm_yday # Get the day of the year from the datetime object
 
-        # Get image month and day
-        month = int(curr_string[4:6])
-        day = int(curr_string[6:8])
-        
-        # Remove images of Nov-March
-        if month in [11, 12, 1, 2, 3, 4]:
-            removal.append(1)
-        
-        # Additional check if month is October or May
-        elif month in [10, 5]:
-            
-            # Remove images after October 15 and before May 15
-            if month == 10 and day > 15:
-                removal.append(1)
-            elif month == 5 and day < 15:
-                removal.append(1)
-            else:
-                removal.append(0)
-        else:
-            removal.append(0)
-            
-    # Create new array to return
-    clear_ids = []
-    
-    # Add each non-winter element to new array
-    for i in range(0, len(ids)):
-        if removal[i] == 0:
+        if not(day_of_year >= 290) and not(day_of_year <= 136):
             clear_ids.append(ids[i])
-            
-    # Return array with winter months removed
-    return clear_ids
-
+   return clear_ids
+      
 
 # Function to merge the PSScene3band ids array when image_ids
 # Doesn't already contain a 4 banded version of the image
@@ -551,44 +525,6 @@ def date_sort(image_ids, scope3band_count):
     # Return locations of PSScene 3 band images
     return locations
                 
-
-# TODO: If more image types required; It might be simpler to
-# combine format functions into a single function that takes
-# any image type, checks for type, and then formats
-    
-# Helper function to parse RE images into sortable form
-# Formates titles of the form 2018-12-03T083453_RE4_1B_band1.tif
-def RE_format(image_id):
-    ele = []
-    ele.append(image_id[0])
-    ele.append(image_id[1])
-    ele.append(image_id[2])
-    ele.append(image_id[3])
-    ele.append(image_id[5])
-    ele.append(image_id[6])
-    ele.append(image_id[8])
-    ele.append(image_id[9])
-    for i in range(11, 17):
-        ele.append(image_id[i])
-    return ele 
-
-# Helper function to parse PS images into sortable form
-def PS_format(image_id):
-    ele = []
-    for i in range(0,8):
-        ele.append(image_id[i])
-    for i in range(9, 15):
-        ele.append(image_id[i])
-    return ele
-                
-# Helper function to convert list to string  
-def list_to_string(s):  
-    
-    # initialize an empty string 
-    str1 = "" 
-    
-    # return string   
-    return (str1.join(s)) 
 
 
 # Creates the order to submit to Planet database
