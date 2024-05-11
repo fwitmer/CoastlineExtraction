@@ -67,7 +67,7 @@ def p(data):
 #     1.4. Check Date in this format "YYYY-MM-DD" (Dashes, Numbers, Order of year month day )
 # 2. Verifies that the start date is before the end date.
 # 3. Validates that both the start and end dates are 2009 or later.
-def validate_and_compare_dates():
+def validate_and_compare_dates(): #(*NEW*)
     try:
         # Get dates input from user
         start_date_input = input("Enter start date (yyyy-mm-dd): ")
@@ -648,23 +648,20 @@ scope3band_count = 0
 # Bool array to store the positions of scope3band images in the image_ids array
 locations = []
 
-# Loops until user inputs meaningful date range (*jNew*)
+# Loops until user inputs meaningful date range (*New*)
 while True:
     print("Print date in format of YYYY-MM-DD")
     print("1. Ensure start date is before end date")
     print("2. Year is after 2009 ")
     
-    date_valid, start_date, end_date = validate_and_compare_dates()
+    date_valid, start, end = validate_and_compare_dates()
     
     if date_valid:
         print(f"Start date: {start_date}, End date: {end_date}")
         break
 
 while True:
-    # Get user defined parameters
-    start = get_start()
-    end = get_end(start)
-    
+   
     # Creates the request
     request = request_init(start, end)
     
