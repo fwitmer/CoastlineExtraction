@@ -409,31 +409,14 @@ def rem_winter(ids = []):
 
 # Function to merge the PSScene3band ids array when image_ids
 # Doesn't already contain a 4 banded version of the image
-# Returns number of added 3band images
+# Returns image_ids after merging and number of added 3band images
 # NOTE: This function is only necessary if both 3 banded and 4 banded images are being searched for
 def merge_ids(image_ids = [], scope3band_ids = []):
     
-    # Counter to keep track of 3banded images added
-    counter_3band = 0
+    images_to_append = list(set(scope3band_ids)-set(image_ids))
+    image_ids = image_ids + images_to_append
     
-    # Loop through each item in scope3band_ids
-    for i in range(0, len(scope3band_ids)):
-        
-        # Bool to keep track of whether item is duplicate
-        new = True
-        
-        # Loop through each item in image_ids, change bool value if image is dupe
-        for j in range(0, len(image_ids)):
-            if scope3band_ids[i] == image_ids[j]:
-                new = False
-
-        # If image is new, append to image_ids list, increment counter_3band
-        if new:
-            image_ids.append(scope3band_ids[i])
-            counter_3band = counter_3band + 1
-    
-    # Return number of 3band images added
-    return counter_3band
+    return image_ids, len(images_to_append)
             
 # Function to sort the image ids based on date
 # Uses modified simple selection sort
