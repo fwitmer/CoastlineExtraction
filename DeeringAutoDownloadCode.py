@@ -13,6 +13,14 @@ import requests
 from datetime import datetime
 from dotenv import load_dotenv
 
+import os
+import json
+import time
+import pathlib
+import requests
+from datetime import datetime
+from dotenv import load_dotenv
+
    
 
 # Retrieve API keys from local .env file
@@ -27,7 +35,6 @@ FRANK_KEY = os.getenv("FRANK_KEY")
 
 # Save desired API key to variable
 Planet_Key = JACK_KEY
-
 
 # Setup Planet Data API base URL
 URL = "https://api.planet.com/data/v1"
@@ -55,163 +62,50 @@ geojson_geometry = {
        ]
 }
 
-
-
 # Helper function to printformatted JSON using the json module
 def p(data):
     print(json.dumps(data, indent=2))
-   
-    
-# Function to get and return start date from the user
-def get_start():
-    
-    # Variable init
-    start = ''
-    start_nums = []
-    
-    while True:
-        start = input("Please enter a start date of the form: \nyear-mo-dy \nex: 2009-01-13 \n")
-        
-        # Basic checks to ensure formatting
-        if len(start) != 10:
-            print("\nInvalid input. \n")
-        elif start[4] != '-' or start[7] != '-':
-            print("\nInvalid input. \n")
-        
-        # Checks to ensure date is a functional filters
-        else:
-            
-            # Break string into int array
-            for word in start.split('-'):
-                if word.isdigit():
-                    start_nums.append(int(word))
-                    
-            # Ensures no characters were entered        
-            if len(start_nums) != 3:
-                print("\nInvalid input. \n")
-                
-            # Start year must be after 2009
-            elif start_nums[0] < 2009:
-                print("\nEntered year must be 2009 or later!")
-                start_nums = []
-                
-            # Check month is valid
-            elif start_nums[1] < 1 or start_nums[1] > 12:
-                print("\nInvalid month entered")
-                start_nums = []
-                
-            # Check day is valid
-            elif not day_check(start_nums[0], start_nums[1], start_nums[2]):
-                print("\nInvalid day entered")
-                start_nums = []
-            else:
-                return start
 
-
-# Function to get and return end date from the user
-# start is the start date previously given from user
-def get_end(start):
-    
-    # Variable init
-    start_nums = []
-    end = ''
-    end_nums = []
-    
-    # Break start date string into year, day, month ints for comparison
-    for word in start.split('-'):
-            start_nums.append(int(word))
-    
-    while True:
-        end = input("Please enter an end date of the same form \nyear-mo-dy \n")
+# This function is designed to get start date and end date, Check that these dates are correct.
+# It performs the following checks:
+# 1. Converts the date strings to datetime objects using datetime.strptime.
+#     1.1. Checks if the month is between 1 and 12.
+#     1.2. Ensures the day is correct between 1 and 30 or 31 depending on the month.
+#     1.3. Checks for February month if it's 28 or 29 days.
+#     1.4. Check Date in this format "YYYY-MM-DD" (Dashes, Numbers, Order of year month day )
+# 2. Verifies that the start date is before the end date.
+# 3. Validates that both the start and end dates are 2009 or later.
+def validate_and_compare_dates(): #(*NEW*)
+    try:
+        # Get dates input from user
+        start_date_input = input("Enter start date (yyyy-mm-dd): ")
+        end_date_input = input("Enter end date (yyyy-mm-dd): ")
         
-        # Basic checks to ensure formatting
-        if len(end) != 10:
-            print("\nInvalid input. \n")
-        elif end[4] != '-' or end[7] != '-':
-            print("\nInvalid input. \n")
-            
-        # Checks to ensure date is a functional filter
-        else:
-            
-            # Break string into int array
-            for word in end.split('-'):
-                if word.isdigit():
-                    end_nums.append(int(word))
-                    
-            # Ensures no characters were entered
-            if len(end_nums) != 3:
-                print("\nInvalid input. \n")
-                
-            # Check month is valid
-            elif end_nums[1] < 1 or end_nums[1] > 12:
-                print("\nInvalid month entered")
-                end_nums = []
-                
-            # Check day is valid
-            elif not day_check(end_nums[0], end_nums[1], end_nums[2]):
-                print("\nInvalid day entered")
-                end_nums = [] 
-                
-            #Further checks to ensure end date is later than start date
-            # Compare start year and end year
-            elif end_nums[0] < start_nums[0]:
-                print("\nYour end date must be later than your start date")
-                print("Your start date is ", start)
-                end_nums = []
-                
-            # Additional checks when start and end year are same
-            elif end_nums[0] == start_nums[0]:
-                
-                # Check end month is later than start month
-                if end_nums[1] < start_nums[1]:
-                    print("\nYour end date must be later than your start date")
-                    print("Your start date is ", start)
-                    end_nums = []
-                    
-                # Further checks when start and end month are the same
-                elif end_nums[1] == start_nums[1]:
-                    
-                    # Check end day is later than start day
-                    if end_nums[2] < start_nums[2]:
-                        print("\nYour end date must be later than your start date")
-                        print("Your start date is ", start)
-                        end_nums = []
-                    else:
-                        return end
-                else:
-                    return end
-            else:
-                return end
-  
-    
-# Helper function to ensure the day entered is valid
-# Returns true if valid, false if not
-def day_check(year, month, day):
-    
-    # General Check
-    if day > 31 or day < 1:
-        return False
-    
-    # Check for months with 30 days
-    elif month == 2 or month == 4 or month == 6 or month == 9 or month == 11:
-        if day > 30:
-            return False
+        # Attempt to parse the input strings as dates in the format "yyyy-mm-dd"
+        start_date = datetime.strptime(start_date_input, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date_input, '%Y-%m-%d')
+        print("Valid date format.")
         
-    # Check February individually
-    elif month == 2:
+        date_valid = True
+        # Check if start and end years are 2009 or later
+        if start_date.year < 2009 or end_date.year < 2009:
+            print("Invalid: Start and End year must be 2009 or later.")
+            date_valid = False
         
-        # Check if leap year
-        leap_year = False
-        if (year % 4) == 0:  
-            if (year % 100) == 0:  
-                if (year % 400) == 0:  
-                    leap_year = True  
-        if leap_year and day > 29:
-            return False
-        elif day > 29:
-            return False
-    return True
-
+        # Check if start date is before end date
+        if start_date >= end_date:
+            print("Invalid: Start date must be before end date.")
+            date_valid = False
+        
+        # Convert start_date and end_date to strings in "YYYY-MM-DD" format
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
+        
+        return date_valid, start_date_str, end_date_str
+    
+    except ValueError:
+        print("Invalid date format. Please write the date correctly (YYYY-MM-DD).")
+        return False, None, None
                 
             
 # Initializes the server request
@@ -656,12 +550,20 @@ scope3band_count = 0
 # Bool array to store the positions of scope3band images in the image_ids array
 locations = []
 
-# Loops until user inputs meaningful date range
+# Loops until user inputs meaningful date range (*New*)
 while True:
-    # Get user defined parameters
-    start = get_start()
-    end = get_end(start)
+    print("Print date in format of YYYY-MM-DD")
+    print("1. Ensure start date is before end date")
+    print("2. Year is after 2009 ")
     
+    date_valid, start, end = validate_and_compare_dates()
+    
+    if date_valid:
+        print(f"Start date: {start_date}, End date: {end_date}")
+        break
+
+while True:
+   
     # Creates the request
     request = request_init(start, end)
     
