@@ -5,13 +5,6 @@
 #   Deering, AK Imagery Download Code
 #
 ##############################
-import os
-import json
-import time
-import pathlib
-import requests
-from datetime import datetime
-from dotenv import load_dotenv
 
 import os
 import json
@@ -242,21 +235,6 @@ def init_image_arr(geojson, res, image_ids):
             break
 
 
-# RE_format: This function take id of RE image and return the date as date time object
-# ID like this => 2018-12-03T083453_RE4_1B_band1.tif
-def RE_format(image_id):
-    time = image_id[:17] 
-    time = datetime.strptime(time, "%Y-%m-%dT%H%M%S")
-    return time
-
-# PS_format: This function take id of PS image and return the date as date time object
-# ID like this => 20181203T083453_PS_1B_band1.tif
-def PS_format(image_id):
-    time = image_id[:15] 
-    time = datetime.strptime(time, "%Y%m%dT%H%M%S")
-    return time
-
-
 # Function to remove images of the winter months (Oct 16 to May 15)
 # TODO: Alter to desired winter month range
 # Returns id array
@@ -342,40 +320,161 @@ def merge_ids(image_ids = [], scope3band_ids = []):
     
     # Return number of 3band images added
     return counter_3band
-
             
 # Function to sort the image ids based on date
-# Returns image ids list after sorting, list with locations of PSScene3band images
+# Uses modified simple selection sort
+# Returns array with locations of PSScene3band images
+# TODO: To simplify, represent dates as a datetime object
 # NOTE: scope3band_count will always be 0 unless 3 banded images are also included in the search
 def date_sort(image_ids, scope3band_count):
     
-    locations = ([0]* (len(image_ids) - scope3band_count)) + [1]* scope3band_count
-    dates = []
+    # Init array with locations of PSScene3band images
+    locations = []
+    for i in range(0, len(image_ids)):
+        if i < len(image_ids) - scope3band_count:
+            locations.append(0)
+        else:
+            locations.append(1)
     
     for i in range(0, len(image_ids)):
         
+        # Find min element in unsorted array
+        min_id = i
+        min_ele = []
+        
+        # Reformat current min for comparison
         # Check for RE image
-        if ids[i][4] == '-':
-            time = RE_format(ids[i])
+        if image_ids[i][4] == '-':
+            min_ele = RE_format(image_ids[i])
             
         # Else is PS image
         else:
-            time = PS_format(ids[i])
-
-        dates.append(time)
-    
-    combined_list = list(zip(dates, image_ids, locations))
-    sorted_images = sorted(combined_list)
-    
-    # Extract the sorted dates, image_id , locations 
-    dates = [item[0] for item in sorted_images]
-    image_ids = [item[1] for item in sorted_images]
-    locations = [item[2] for item in sorted_images]
-
+            min_ele = PS_format(image_ids[i])
+            
+        ele_string = list_to_string(min_ele)
+        # Gets year, month and day of current min
+        min_year = int(ele_string[0:4])
+        min_mo = int(ele_string[4:6])
+        min_day = int(ele_string[6:8])
+        min_time = int(ele_string[8:14])
+        
+        for j in range(i+1, len(image_ids)):
+            curr_ele = []
+            
+            # Reformat current id to comparable format
+            if image_ids[j][4] == '-':
+                curr_ele = RE_format(image_ids[j])
+            else:
+                curr_ele = PS_format(image_ids[j])
+                
+            curr_string = list_to_string(curr_ele)
+            # Gets year, month, day of current comparison element
+            curr_year = int(curr_string[0:4])
+            curr_mo = int(curr_string[4:6])
+            curr_day = int(curr_string[6:8])
+            curr_time = int(ele_string[8:14])
+            
+            # Comparison
+            # Compare years
+            if min_year > curr_year:
+                
+                # Reassign min variables
+                min_id = j
+                min_ele = curr_ele
+                min_year = curr_year
+                min_mo = curr_mo
+                min_day = curr_day
+                min_time = curr_time
+            
+            # Additional code if year is the same
+            elif min_year == curr_year:
+                
+                # Compare months
+                if min_mo > curr_mo:
+                    
+                    # Reassign min variables
+                    min_id = j
+                    min_ele = curr_ele
+                    min_year = curr_year
+                    min_mo = curr_mo
+                    min_day = curr_day
+                    min_time = curr_time
+                    
+                # Additional code if month is the same
+                elif min_mo == curr_mo:
+                    
+                    # Compare days:
+                    if min_day > curr_day:
+                        
+                        # Reassign min variables
+                        min_id = j
+                        min_ele = curr_ele
+                        min_year = curr_year
+                        min_mo = curr_mo
+                        min_day = curr_day
+                        min_time = curr_time
+                        
+                    # Additional code if day is the same
+                    elif min_day == curr_day:
+                        
+                        # Call comparison
+                        if min_time > curr_time:
+                            
+                            # Reassign min variables
+                            min_id = j
+                            min_ele = curr_ele
+                            min_year = curr_year
+                            min_mo = curr_mo
+                            min_day = curr_day
+                            min_time = curr_time
+                    
+        # Swap first element and minimum element
+        image_ids[i], image_ids[min_id] = image_ids[min_id], image_ids[i]
+        
+        # Swap bool values representing PSScene 3 band images
+        locations[i], locations[min_id] = locations[min_id], locations[i]
+        
     # Return locations of PSScene 3 band images
-    return image_ids, locations
+    return locations
                 
 
+# TODO: If more image types required; It might be simpler to
+# combine format functions into a single function that takes
+# any image type, checks for type, and then formats
+    
+# Helper function to parse RE images into sortable form
+# Formates titles of the form 2018-12-03T083453_RE4_1B_band1.tif
+def RE_format(image_id):
+    ele = []
+    ele.append(image_id[0])
+    ele.append(image_id[1])
+    ele.append(image_id[2])
+    ele.append(image_id[3])
+    ele.append(image_id[5])
+    ele.append(image_id[6])
+    ele.append(image_id[8])
+    ele.append(image_id[9])
+    for i in range(11, 17):
+        ele.append(image_id[i])
+    return ele 
+
+# Helper function to parse PS images into sortable form
+def PS_format(image_id):
+    ele = []
+    for i in range(0,8):
+        ele.append(image_id[i])
+    for i in range(9, 15):
+        ele.append(image_id[i])
+    return ele
+                
+# Helper function to convert list to string  
+def list_to_string(s):  
+    
+    # initialize an empty string 
+    str1 = "" 
+    
+    # return string   
+    return (str1.join(s)) 
 
 
 # Creates the order to submit to Planet database
@@ -592,7 +691,7 @@ image_ids = rem_winter(image_ids)
     
 
 # Sorts ids based on date
-image_ids, locations = (image_ids, scope3band_count)
+locations = date_sort(image_ids, scope3band_count)
 
 
 print("\nThere are", len(image_ids),"images availabe to download in your AOI from", start, "to", end)
