@@ -376,7 +376,7 @@ def rem_winter(ids = []):
             
         day_of_year = time.timetuple().tm_yday # Get the day of the year from the datetime object
 
-        if not(day_of_year >= 290) and not(day_of_year <= 136):
+        if  136 < day_of_year < 290:
             clear_ids.append(ids[i])
    return clear_ids
       
