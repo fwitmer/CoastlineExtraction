@@ -258,18 +258,14 @@ def PS_format(image_id):
 
 
 # Function to remove images of the winter months (Oct 16 to May 15)
+# Oct 16 = 290 day of year , May 15 = 136 day of year
+# Returns id array of images after removing winter months
 # TODO: Alter to desired winter month range
-# Returns id array
 def rem_winter(ids = []):
-    
-    # Array to store id indexes for removal
-    removal = []
-    
-    for i in range(0, len(ids)):
-        
-        # Holds info- 0-3: year, 4-5: month, 6-7: day, 8-11: time
-        time = []
-
+   clear_ids = []
+   
+   for i in range(0, len(ids)):
+       
         # Reformat current min for comparison
         # Check for RE image
         if ids[i][4] == '-':
@@ -279,40 +275,12 @@ def rem_winter(ids = []):
         else:
             time = PS_format(ids[i])
             
-        # Convert date to string
-        curr_string = list_to_string(time)
+        day_of_year = time.timetuple().tm_yday # Get the day of the year from the datetime object
 
-        # Get image month and day
-        month = int(curr_string[4:6])
-        day = int(curr_string[6:8])
-        
-        # Remove images of Nov-March
-        if month in [11, 12, 1, 2, 3, 4]:
-            removal.append(1)
-        
-        # Additional check if month is October or May
-        elif month in [10, 5]:
-            
-            # Remove images after October 15 and before May 15
-            if month == 10 and day > 15:
-                removal.append(1)
-            elif month == 5 and day < 15:
-                removal.append(1)
-            else:
-                removal.append(0)
-        else:
-            removal.append(0)
-            
-    # Create new array to return
-    clear_ids = []
-    
-    # Add each non-winter element to new array
-    for i in range(0, len(ids)):
-        if removal[i] == 0:
+        if 136 < day_of_year < 290::
             clear_ids.append(ids[i])
-            
-    # Return array with winter months removed
-    return clear_ids
+   return clear_ids
+
 
 
 # Function to merge the PSScene3band ids array when image_ids
