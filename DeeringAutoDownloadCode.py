@@ -1,17 +1,13 @@
 ##############################
 #
-#   Jack Carroll
-#   27 May 2020
+#   Original author: Jack Carroll
+#   	27 May 2020
+#
 #   Deering, AK Imagery Download Code
 #
+#	Modifications made by Rawan Elframawy, May 2024
+#
 ##############################
-import os
-import json
-import time
-import pathlib
-import requests
-from datetime import datetime
-from dotenv import load_dotenv
 
 import os
 import json
@@ -21,7 +17,6 @@ import requests
 from datetime import datetime
 from dotenv import load_dotenv
 
-   
 
 # Retrieve API keys from local .env file
 # TODO: Change env_path, JACK_KEY and FRANK_KEY to the respective path and variable names on your system
