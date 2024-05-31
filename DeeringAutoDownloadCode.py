@@ -8,54 +8,53 @@
 #	Modifications made by Rawan Elframawy, May 2024
 #
 ##############################
+"""
+## Helpful Links
 
+1. [Planet API - Scenes](https://developers.planet.com/apis/orders/scenes/)
+
+2. [Planet API - Tools: Clip](https://developers.planet.com/apis/orders/tools/#clip)
+
+3. [Planet Labs Jupyter Notebooks - Data API](https://github.com/planetlabs/notebooks/tree/master/jupyter-notebooks/Data-API)
+"""
+
+
+### Import Libraries:
 import os
 import json
 import time
 import pathlib
 import requests
 from datetime import datetime
-from dotenv import load_dotenv
+from requests.auth import HTTPBasicAuth
+from planet import Session, DataClient, OrdersClient
 
 
-# Retrieve API keys from local .env file
-# TODO: Change env_path, JACK_KEY and FRANK_KEY to the respective path and variable names on your system
-env_path = r'C:\Users\Flomi\.spyder-py3\API_Keys.env'
-load_dotenv(dotenv_path=env_path)
+### Authenticating
+RAWAN_KEY = "**************************"
 
-# Provides two different Planet user's API keys that can be choosen as 
-# Planet_Key variable to access the Planet Labs API
-JACK_KEY = os.getenv("JACK_KEY")
-FRANK_KEY = os.getenv("FRANK_KEY")
+# If your Planet API Key is not set as an environment variable, you can paste it below
+if os.environ.get('PL_API_KEY', ''):
+    API_KEY = os.environ.get('PL_API_KEY', '')
+else:
+    API_KEY = RAWAN_2
+    
+session = requests.Session() # Setup the session
+session.auth = (API_KEY, "") # Authenticate
 
-# Save desired API key to variable
-Planet_Key = JACK_KEY
 
-# Setup Planet Data API base URL
-URL = "https://api.planet.com/data/v1"
+### Planet URLs:
+""" 
+- This code initializes the environment for interacting with the Planet Data API (Communications with planet API), 
+defining key URLs and setting the content type header.
+"""
+URL = "https://api.planet.com/data/v1" # Setup Planet Data API base URL
+quick_url = "{}/quick-search".format(URL) # Setup the quick search endpoint url
+orders_url = 'https://api.planet.com/compute/ops/orders/v2' 
 
-# Setup boundry region of Deering, AK (Could be imported; Included here for simplicity)
-# TODO:Change this to import the GeoJSON file
-geojson_geometry = {
-       "type":"Polygon","coordinates":[
-         [
-           [-162.80862808227536,66.05894122802519],
-           [-162.67404556274414,66.05636369184131],
-           [-162.67919540405273,66.07085023305528],
-           [-162.7140426635742,66.07669822834144],
-           [-162.73550033569333,66.08216210323748],
-           [-162.74871826171872,66.09256457840145],
-           [-162.73558616638186,66.09760772349222],
-           [-162.73798942565915,66.10125903100771],
-           [-162.74631500244138,66.10338002568206],
-           [-162.76588439941403,66.09764250032609],
-           [-162.76399612426752,66.09576448313807],
-           [-162.79583930969235,66.08953821061128],
-           [-162.81051635742185,66.09166018442527],
-           [-162.80862808227536,66.05894122802519]
-         ]
-       ]
-}
+headers = {'content-type': 'application/json'} # set content type to json
+
+
 
 # Helper function to printformatted JSON using the json module
 def p(data):
