@@ -9,30 +9,49 @@
 #
 ##############################
 
+"""
+## Helpful Links
+1. [Planet API - Scenes](https://developers.planet.com/apis/orders/scenes/)
+2. [Planet API - Tools: Clip](https://developers.planet.com/apis/orders/tools/#clip)
+3. [Planet Labs Jupyter Notebooks - Data API](https://github.com/planetlabs/notebooks/tree/master/jupyter-notebooks/Data-API)
+"""
+
+### Import Libraries:
 import os
 import json
 import time
 import pathlib
 import requests
 from datetime import datetime
-from dotenv import load_dotenv
+from requests.auth import HTTPBasicAuth
+from planet import Session, DataClient, OrdersClient
+
+### Authenticating :
+RAWAN_KEY = "************************************"
+FRANK_KEY = "************************************"
+JACK_KEY = "************************************"
+
+# if your Planet API Key is not set as an environment variable, you can paste it below
+if os.environ.get('PL_API_KEY', ''):
+    API_KEY = os.environ.get('PL_API_KEY', '')
+else:
+    API_KEY = RAWAN_KEY
+
+session = requests.Session() # Setup the session
+session.auth = (API_KEY, "") # Authenticate
 
 
-# Retrieve API keys from local .env file
-# TODO: Change env_path, JACK_KEY and FRANK_KEY to the respective path and variable names on your system
-env_path = r'C:\Users\Flomi\.spyder-py3\API_Keys.env'
-load_dotenv(dotenv_path=env_path)
 
-# Provides two different Planet user's API keys that can be choosen as 
-# Planet_Key variable to access the Planet Labs API
-JACK_KEY = os.getenv("JACK_KEY")
-FRANK_KEY = os.getenv("FRANK_KEY")
+### Planet URLs:
+"""
+- This code initializes the environment for interacting with the Planet Data API, 
+defining key URLs and setting the content type header.
+"""
+URL = "https://api.planet.com/data/v1" # Setup Planet Data API base URL
+quick_url = "{}/quick-search".format(URL) # Setup the quick search endpoint url
+orders_url = 'https://api.planet.com/compute/ops/orders/v2' 
 
-# Save desired API key to variable
-Planet_Key = JACK_KEY
-
-# Setup Planet Data API base URL
-URL = "https://api.planet.com/data/v1"
+headers = {'content-type': 'application/json'} # set content type to json
 
 # Setup boundry region of Deering, AK (Could be imported; Included here for simplicity)
 # TODO:Change this to import the GeoJSON file
