@@ -10,13 +10,13 @@
 ##############################
 
 """
-## Helpful Links
+# Helpful Links
 1. [Planet API - Scenes](https://developers.planet.com/apis/orders/scenes/)
 2. [Planet API - Tools: Clip](https://developers.planet.com/apis/orders/tools/#clip)
 3. [Planet Labs Jupyter Notebooks - Data API](https://github.com/planetlabs/notebooks/tree/master/jupyter-notebooks/Data-API)
 """
 
-### Import Libraries:
+# Import Libraries:
 import os
 import json
 import time
@@ -26,7 +26,7 @@ from datetime import datetime
 from requests.auth import HTTPBasicAuth
 from planet import Session, DataClient, OrdersClient
 
-### Authenticating :
+# Authenticating :
 RAWAN_KEY = "************************************"
 FRANK_KEY = "************************************"
 JACK_KEY = "************************************"
@@ -42,7 +42,7 @@ session.auth = (API_KEY, "") # Authenticate
 
 
 
-### Planet URLs:
+# Planet URLs:
 """
 - This code initializes the environment for interacting with the Planet Data API, 
 defining key URLs and setting the content type header.
@@ -53,23 +53,16 @@ orders_url = 'https://api.planet.com/compute/ops/orders/v2'
 
 headers = {'content-type': 'application/json'} # set content type to json
 
-
 # ========================================= Functions =========================================
-### Geojson files Functions:
+# Geojson files Functions:
 
 """
-- There are 2 function: 
+This function takes a list of polygon coordinates, and saves it to a GeoJSON file.
 
-    2.1 Takes a list of polygon coordinates, sets it as the geojson_geometry variable, and saves it to a GeoJSON file.
-
-    2.2 Reads a polygon from a GeoJSON file and returns it as a GeoJSON dictionary.
-"""
-"""
 * Args:
 - polygon_coordinates: A list of coordinates defining a polygon.
 - output_file (optional): The path to the file where the GeoJSON data will be saved. 
 """
-
 def save_polygon(polygon_coordinates, geojson_folder_path, location_name):
 
     geojson_geometry = {
@@ -112,16 +105,17 @@ def get_boundry_from_file(geojson_folder_path, location_name):
 def p(data):
     print(json.dumps(data, indent=2))
 
-# This function is designed to get start date and end date, Check that these dates are correct.
-# It performs the following checks:
-# 1. Converts the date strings to datetime objects using datetime.strptime.
-#     1.1. Checks if the month is between 1 and 12.
-#     1.2. Ensures the day is correct between 1 and 30 or 31 depending on the month.
-#     1.3. Checks for February month if it's 28 or 29 days.
-#     1.4. Check Date in this format "YYYY-MM-DD" (Dashes, Numbers, Order of year month day )
-# 2. Verifies that the start date is before the end date.
-# 3. Validates that both the start and end dates are 2009 or later.
 
+# Validate Dates functions:
+# - This function validates and compares two dates provided as strings.
+#     1. Validate dates are written correctly also as this format "yyyy-mm-dd".
+#     2. Make sure that start date is before end date.
+
+# - Dates are Invalid if:
+#     1. Dates are not written in this format "yyyy-mm-dd". 
+#     2. Year is before 2009.
+
+# Note: Make sure of months that 30 days not 31 days. Also Leap Years. 
 """
 * Args:
 - start_date: The start date as a string in the format "yyyy-mm-dd".
@@ -164,6 +158,96 @@ def validate_and_compare_dates(): #(*NEW*)
     except ValueError:
         print("Invalid date format. Please write the date correctly (YYYY-MM-DD).")
         return False, None, None
+    
+    
+### Get final filter:
+# - This function creates a filter configuration for querying satellite imagery based on:
+#     1. Cloud Filter. 
+#     2. Geometry.
+#     3. Date Range.
+"""
+* Args:
+- geojson_geometry: A GeoJSON dictionary representing the geometry to filter images within.
+- start_date: The start date as a string in the format "yyyy-mm-dd".
+- end_date: The end date as a string in the format "yyyy-mm-dd".
+- cloud_threshold: A float representing the maximum allowable cloud cover (default is 0.1).
+
+* Returns:
+- A dictionary representing the combined filter configuration.
+"""
+def get_filter(geojson_geometry, start_date, end_date, cloud_threshold=0.1):
+    
+    # Setup Cloud filter; Filters images with over 10% cloud cover
+    cloud_filter = {
+      "type": "RangeFilter",
+      "field_name": "cloud_cover",
+      "config": {
+      "lte": cloud_threshold
+       }
+     }
+       
+    # Setup Geometry filter; Filters images to those that are
+    # contained within Deering, AK as an example 
+    geom_filter = {
+      "type": "GeometryFilter",
+      "field_name": "geometry",
+      "config": geojson_geometry
+    }
+    
+    # Set up DateRangeFilter
+    # Find imagery within user-defined dates
+    start = start_date + "T00:00:00Z"
+    end = end_date + "T23:59:59Z"
+    
+    date_filter = {
+      "type": "DateRangeFilter",
+      "field_name": "acquired",
+      "config": {
+        "gt": start,
+        "lte": end
+      }
+    }
+        
+    # Setup And logical filter; Combines all filters into one
+    and_filter = {
+      "type": "AndFilter",
+      "config": [cloud_filter, geom_filter, date_filter]
+    }
+    return and_filter
+
+
+### Get images ids:
+# - This function retrieves planet image IDs based on the search filter and item type using planet quick search.
+"""
+* Args:
+- search_filter: A dictionary representing the search filter configuration.
+- item_type: A string represents the class of spacecraft and/or processing level of an item.
+
+* Returns:
+- A list of strings representing the IDs of the images that match the search criteria.
+"""
+def get_images_ids(search_filter, item_type):
+    # API request object
+    search_request = {
+    "item_types": [item_type],
+    "filter": search_filter
+    }
+    
+    # fire off the POST request
+    search_result = \
+    requests.post(
+        quick_url,
+        auth=HTTPBasicAuth(API_KEY, ''),
+        json=search_request)
+    
+    geojson = search_result.json()
+    image_ids = [feature['id'] for feature in geojson['features']]
+    
+    return image_ids
+
+
+
+
                 
             
 # Initializes the server request
@@ -209,50 +293,6 @@ def request_init_3band(start_date, end_date):
     # Return request
     return temp_request
 
-# Helper function to get query filter
-def get_filter(start_date, end_date):
-    
-    # Setup Cloud filter; Filters images with over 10% cloud cover
-    cloud_filter = {
-       "type": "RangeFilter",
-       "field_name": "cloud_cover",
-       "config": {
-         "lte": 0.1
-       }
-     }
-       
-    # Setup Geometry filter; Filters images to those that are
-    # contained within Deering, AK
-    geom_filter = {
-       "type": "GeometryFilter",
-       "field_name": "geometry",
-       "config": geojson_geometry
-    }
-
-    
-    # Set up DateRangeFilter
-    # Find imagery within user-defined dates
-    start = start_date + "T00:00:00Z"
-    end = end_date + "T23:59:59Z"
-    
-    date_filter = {
-      "type": "DateRangeFilter",
-      "field_name": "acquired",
-      "config": {
-        "gt": start,
-        "lte": end
-      }
-    }
-
-        
-    # Setup And logical filter; Combines all filters into one
-    and_filter = {
-            "type": "AndFilter",
-            "config": [cloud_filter, geom_filter, 
-                        date_filter]
-    }
-    
-    return and_filter
 
 
 # Prompts user and gets the number of images they would like to download
