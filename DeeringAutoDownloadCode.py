@@ -636,13 +636,22 @@ def poll(geojson):
 
 # Function to download results
 # Code taken from https://github.com/planetlabs/notebooks/blob/master/jupyter-notebooks/orders/ordering_and_delivery.ipynb
-def download_results(results, overwrite=False):
+"""
+* Args:
+- results (list of dict): A list of dictionaries containing 'location' (URL) and 'name' (file name) of the results to be downloaded.
+- folder_path (str): The path to the folder where the files will be downloaded.
+- overwrite (bool): If True, existing files will be overwritten. Defaults to False.
+
+* Returns:
+- None
+"""
+def download_results(results, folder_path, overwrite=False):
     results_urls = [r['location'] for r in results]
     results_names = [r['name'] for r in results]
     print('{} items to download'.format(len(results_urls)))
     
     for url, name in zip(results_urls, results_names):
-        path = pathlib.Path(os.path.join('data', name))
+        path = pathlib.Path(os.path.join(folder_path, name))
         
         if overwrite or not path.exists():
             print('downloading {} to {}'.format(name, path))
