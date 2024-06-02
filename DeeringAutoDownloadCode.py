@@ -246,7 +246,29 @@ def get_images_ids(search_filter, item_type):
     return image_ids
 
 
+# Get images dates from IDs:
+# - Parses the image ID using the provided date format and returns the date as a datetime object.
+"""
+* Args:
+- image_id (str): The image ID containing the date and time information.
+- date_format (str): The date format string that specifies how the date and time are formatted in the image ID.
+- slice_length (int): The number of characters to extract from the start of the image ID for parsing.
 
+* Returns:
+- datetime: The parsed date and time as a datetime object.
+
+* Raises:
+- ValueError: If the image ID does not match the provided date format.
+"""
+def get_image_date(image_id, date_format, date_length):
+    
+    try:
+        # Extract the specified portion of the image_id based on slice_length
+        time_string = image_id[:date_length ]
+        time = datetime.strptime(time_string, date_format)
+        return time
+    except ValueError:
+        raise ValueError(f"Image ID '{image_id}' does not match the provided date format '{date_format}'")
 
                 
             
