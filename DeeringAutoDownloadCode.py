@@ -160,7 +160,7 @@ def validate_and_compare_dates(): #(*NEW*)
         return False, None, None
     
     
-### Get final filter:
+# Get final filter:
 # - This function creates a filter configuration for querying satellite imagery based on:
 #     1. Cloud Filter. 
 #     2. Geometry.
@@ -216,7 +216,7 @@ def get_filter(geojson_geometry, start_date, end_date, cloud_threshold=0.1):
     return and_filter
 
 
-### Get images ids:
+# Get images ids:
 # - This function retrieves planet image IDs based on the search filter and item type using planet quick search.
 """
 * Args:
@@ -302,7 +302,74 @@ def rem_winter(ids, date_format, date_length, winter_start, winter_end):
     
     return clear_ids
                 
+                
+# Get Order URL:
+# This function defines the order details (item type, product bundle, item IDs, and coordinates) 
+# and sends a request to the API. The function then extracts the order ID from the response 
+# and returns the complete order URL for further tracking or management.
+"""
+* Args:
+- item_type (str): A string represents the class of spacecraft and/or processing level of an item.
+- product_bundle (str): Product bundles comprise of a group of assets for an item
+[All available item and asset types: https://developers.planet.com/docs/apis/data/items-assets/]
+[All available Product Budles: https://developers.planet.com/apis/orders/product-bundles-reference/]
+
+- item_ids (list of str): A list of item IDs to include in the order.
+- coordinates (list of lists): A list of coordinates defining the area of interest (AOI). 
+  The coordinates should be in the format [[[longitude, latitude], ...]].
+- auth (tuple): Authentication credentials as a tuple.
+
+* Returns:
+- str: The URL of the created order.
+"""
+
+def place_order(item_type, product_bundle, item_ids, coordinates, auth):
+  request = {"name": "image_details", "source_type": "scenes",
+            "products": [{
+              "item_ids": item_ids,
+              "item_type": item_type,
+              "product_bundle": product_bundle}],
             
+            "tools": [{
+              "clip": {
+                "aoi": { "type": "Polygon", "coordinates": coordinates
+        }}}]}
+  response = requests.post(orders_url, data=json.dumps(request), auth=auth, headers=headers)
+  print(response)
+  order_id = response.json()['id']
+  print(order_id)
+  order_url = orders_url + '/' + order_id
+  return order_url
+            
+# Poll for Order Success:
+# - Polls the order URL until the order reaches a final state.                        
+"""
+* Args:
+- order_url (str): The URL of the order to poll.
+- auth (tuple): Authentication credentials as a tuple
+
+* Returns:
+- str: The final state of the order, which can be 'success', 'failed', or 'partial'.
+"""
+def poll_for_success(order_url, auth):
+    end_states = ['success', 'failed', 'partial']
+    state = "unknown"
+    
+    while state not in end_states:
+        print("Running...")
+        
+        r = requests.get(order_url, auth=auth)
+        response = r.json()
+        state = response['state']
+        print(state)
+        
+        if state not in end_states:
+            time.sleep(60)
+    
+    return state     
+                
+                
+                
                 
 # Initializes the server request
 # Inputs are the user-defined start and end date to search through
