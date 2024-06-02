@@ -269,9 +269,41 @@ def get_image_date(image_id, date_format, date_length):
         return time
     except ValueError:
         raise ValueError(f"Image ID '{image_id}' does not match the provided date format '{date_format}'")
+    
+    
+# Remove winter image ids :
+# - Removes images taken during winter months specified by day of the year range.
+"""
+* Args:
+- ids (list of str): List of image IDs.
+- date_format (str): The date format string used to parse the date from the image IDs.
+- date_length (int): The number of characters to extract from image ID for parsing. [The whole date]
+- winter_start (int): The starting day of the year for the winter period (e.g., 290 for Oct 16).
+- winter_end (int): The ending day of the year for the winter period (e.g., 136 for May 15).
 
+* Returns:
+- list of str: List of image IDs that are not taken during the specified winter period.
+"""
+
+def rem_winter(ids, date_format, date_length, winter_start, winter_end):
+
+    clear_ids = []
+    
+    for image_id in ids:
+        try:
+            date = get_image_date(image_id, date_format, date_length)
+            day_of_year = date.timetuple().tm_yday  # Get the day of the year from the datetime object
+            
+            # Keep the image if the day is outside the winter period
+            if not (winter_start <= day_of_year or day_of_year <= winter_end):
+                clear_ids.append(image_id)
+        except ValueError as e:
+            print(e)  # Print error if the date format does not match
+    
+    return clear_ids
                 
             
+                
 # Initializes the server request
 # Inputs are the user-defined start and end date to search through
 # Start and end dates must be entered in the form year-mo-dy
@@ -362,44 +394,8 @@ def init_image_arr(geojson, res, image_ids):
             break
 
 
-# RE_format: This function take id of RE image and return the date as date time object
-# ID like this => 2018-12-03T083453_RE4_1B_band1.tif
-def RE_format(image_id):
-    time = image_id[:17] 
-    time = datetime.strptime(time, "%Y-%m-%dT%H%M%S")
-    return time
-
-# PS_format: This function take id of PS image and return the date as date time object
-# ID like this => 20181203T083453_PS_1B_band1.tif
-def PS_format(image_id):
-    time = image_id[:15] 
-    time = datetime.strptime(time, "%Y%m%dT%H%M%S")
-    return time
 
 
-# Function to remove images of the winter months (Oct 16 to May 15)
-# Oct 16 = 290 day of year , May 15 = 136 day of year
-# Returns id array of images after removing winter months
-# TODO: Alter to desired winter month range
-def rem_winter(ids = []):
-   clear_ids = []
-   
-   for i in range(0, len(ids)):
-       
-        # Reformat current min for comparison
-        # Check for RE image
-        if ids[i][4] == '-':
-            time = RE_format(ids[i])
-            
-        # Else is PS image
-        else:
-            time = PS_format(ids[i])
-            
-        day_of_year = time.timetuple().tm_yday # Get the day of the year from the datetime object
-
-        if 136 < day_of_year < 290:
-            clear_ids.append(ids[i])
-   return clear_ids
 
 
 
