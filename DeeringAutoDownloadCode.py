@@ -53,6 +53,68 @@ orders_url = 'https://api.planet.com/compute/ops/orders/v2'
 
 headers = {'content-type': 'application/json'} # set content type to json
 
+
+# ========================================= Functions =========================================
+### Geojson files Functions:
+
+"""
+- There are 2 function: 
+
+    2.1 Takes a list of polygon coordinates, sets it as the geojson_geometry variable, and saves it to a GeoJSON file.
+
+    2.2 Reads a polygon from a GeoJSON file and returns it as a GeoJSON dictionary.
+"""
+"""
+* Args:
+- polygon_coordinates: A list of coordinates defining a polygon.
+- output_file (optional): The path to the file where the GeoJSON data will be saved. 
+"""
+
+def save_polygon(polygon_coordinates, geojson_folder_path, location_name):
+
+    geojson_geometry = {
+        "type" : "Polygon",
+        "coordinates" : [polygon_coordinates]
+    }
+
+    # Save the GeoJSON data to a file
+    file_path = f"{geojson_folder_path}{location_name}.geojson"
+    try:
+        with open(file_path, "w") as f:
+            json.dump(geojson_geometry, f, indent=4)
+            print(f"Boundary saved to GeoJSON file: {file_path}")
+    except IOError as e:
+        print(f"Error saving GeoJSON file: {e}")
+        
+#=======================================================================
+"""
+This function reads a polygon from a GeoJSON file and returns it as a GeoJSON dictionary.
+
+* Args:
+- file_path: The path to the GeoJSON file containing the polygon.
+
+* Returns:
+- A GeoJSON dictionary representing the polygon, or None if an error occurs.
+"""
+def get_boundry_from_file(geojson_folder_path, location_name):
+    file_path = f"{geojson_folder_path}{location_name}.geojson"
+    try:
+        with open(file_path, "r") as f:
+            geojson_data = f.read()
+            print("Read the GeoJson file successfully")
+            return json.loads(geojson_data)
+    except (IOError, json.JSONDecodeError) as e:
+        print(f"Error reading GeoJSON file: {e}")
+        return None
+
+
+
+
+
+
+
+
+
 # Setup boundry region of Deering, AK (Could be imported; Included here for simplicity)
 # TODO:Change this to import the GeoJSON file
 geojson_geometry = {
