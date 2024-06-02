@@ -108,36 +108,6 @@ def get_boundry_from_file(geojson_folder_path, location_name):
         return None
 
 
-
-
-
-
-
-
-
-# Setup boundry region of Deering, AK (Could be imported; Included here for simplicity)
-# TODO:Change this to import the GeoJSON file
-geojson_geometry = {
-       "type":"Polygon","coordinates":[
-         [
-           [-162.80862808227536,66.05894122802519],
-           [-162.67404556274414,66.05636369184131],
-           [-162.67919540405273,66.07085023305528],
-           [-162.7140426635742,66.07669822834144],
-           [-162.73550033569333,66.08216210323748],
-           [-162.74871826171872,66.09256457840145],
-           [-162.73558616638186,66.09760772349222],
-           [-162.73798942565915,66.10125903100771],
-           [-162.74631500244138,66.10338002568206],
-           [-162.76588439941403,66.09764250032609],
-           [-162.76399612426752,66.09576448313807],
-           [-162.79583930969235,66.08953821061128],
-           [-162.81051635742185,66.09166018442527],
-           [-162.80862808227536,66.05894122802519]
-         ]
-       ]
-}
-
 # Helper function to printformatted JSON using the json module
 def p(data):
     print(json.dumps(data, indent=2))
@@ -151,6 +121,18 @@ def p(data):
 #     1.4. Check Date in this format "YYYY-MM-DD" (Dashes, Numbers, Order of year month day )
 # 2. Verifies that the start date is before the end date.
 # 3. Validates that both the start and end dates are 2009 or later.
+
+"""
+* Args:
+- start_date: The start date as a string in the format "yyyy-mm-dd".
+- end_date: The end date as a string in the format "yyyy-mm-dd".
+
+* Returns:
+- A tuple (date_valid, start_date_str, end_date_str):
+    1. date_valid (bool): True if both dates are valid and start_date is before end_date, otherwise False.
+    2. start_date_str (str): The validated start date in the format "yyyy-mm-dd" if valid, otherwise None.
+    3. end_date_str (str): The validated end date in the format "yyyy-mm-dd" if valid, otherwise None.
+"""
 def validate_and_compare_dates(): #(*NEW*)
     try:
         # Get dates input from user
