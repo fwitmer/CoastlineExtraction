@@ -10,11 +10,14 @@
 ##############################
 
 """
+
 # Helpful Links
 1. [Planet API - Scenes](https://developers.planet.com/apis/orders/scenes/)
-2. [Planet API - Tools: Clip](https://developers.planet.com/apis/orders/tools/#clip)
-3. [Planet Labs Jupyter Notebooks - Data API](https://github.com/planetlabs/notebooks/tree/master/jupyter-notebooks/Data-API)
-"""
+2. [Planet API - Items and Asset Types](https://developers.planet.com/docs/apis/data/items-assets/)
+3. [Planet API - Scenes Product Bundles Reference](https://developers.planet.com/apis/orders/product-bundles-reference/)
+4. [Planet API - Tools: Clip](https://developers.planet.com/apis/orders/tools/#clip)
+5. [Planet Labs Jupyter Notebooks - Data API](https://github.com/planetlabs/notebooks/tree/master/jupyter-notebooks/Data-API)
+6. [Planet Labs Jupyter Notebooks - Order API](https://github.com/planetlabs/notebooks/tree/master/jupyter-notebooks/Orders-API)"""
 
 # Import Libraries:
 import os
@@ -243,6 +246,8 @@ def get_images_ids(search_filter, item_type):
     geojson = search_result.json()
     image_ids = [feature['id'] for feature in geojson['features']]
     
+    print(f"Number of images available is {len(image_ids)}")
+    
     return image_ids
 
 
@@ -404,25 +409,28 @@ def download_results(results, folder_path, overwrite=False):
 # Start Downloading:
 
 # Configuration Vraibles (Change these Vraiables According to your preferences)
+
 item_type = "PSScene"
 product_bundle =  "analytic_sr_udm2"
-asset_type = "ortho_analytic_8b_sr"
 
-location_name = "Deerings"
+date_format_dict = {
+    "PSScene" : "%Y%m%d_%H%M%S" , # 15
+    "REScene" : "%Y-%m-%dT%H%M%S" # 17
+}
 
-start_date_input = "2023-07-01"
-end_date_input = "2023-07-15"
+start_date_input = "2023-08-01"
+end_date_input = "2023-08-10"
 
 winter_start_day = 290
 winter_end_day = 136
 
-date_format = "%Y%m%d_%H%M%S"
+date_format = date_format_dict[item_type] # Date format in ID string
 date_length = 15                # image_id example: "20240529_213419_83_24b2"
 
+download_folder = "D:/GSoC/download/"
 
 geojson_geometry = {
-       "type":"Polygon","coordinates":[
-         [
+       "type":"Polygon","coordinates":[[
            [-162.80862808227536,66.05894122802519],
            [-162.67404556274414,66.05636369184131],
            [-162.67919540405273,66.07085023305528],
@@ -437,48 +445,26 @@ geojson_geometry = {
            [-162.79583930969235,66.08953821061128],
            [-162.81051635742185,66.09166018442527],
            [-162.80862808227536,66.05894122802519]
-         ]
-       ]
-}
-download_folder = "D:/GSoC/download/"     # Do not forget to change this to the folder path to download in
-
-
-
-geojson_folder_path = "D:/GSoC/PolygonsGeoJSON/" 
-# polygon_coordinates = [
-# [-162.80862808227536,66.05894122802519],
-# [-162.67404556274414,66.05636369184131],
-# [-162.67919540405273,66.07085023305528],
-# [-162.7140426635742,66.07669822834144],
-# [-162.73550033569333,66.08216210323748],
-# [-162.74871826171872,66.09256457840145],
-# [-162.73558616638186,66.09760772349222],
-# [-162.73798942565915,66.10125903100771],
-# [-162.74631500244138,66.10338002568206],
-# [-162.76588439941403,66.09764250032609],
-# [-162.76399612426752,66.09576448313807],
-# [-162.79583930969235,66.08953821061128],
-# [-162.81051635742185,66.09166018442527],
-# [-162.80862808227536,66.05894122802519]]
-# save_polygon(polygon_coordinates, geojson_folder_path, location_name)
-# geojson_geometry = get_boundry_from_file(geojson_folder_path, location_name)
+         ]]}
 
 
 coordinates = geojson_geometry["coordinates"]
 date_valid, start_date, end_date = validate_and_compare_dates(start_date_input,end_date_input)
-search_filter = get_filter(geojson_geometry, start_date, end_date)
-images_ids = get_images_ids(search_filter, item_type)
-images_ids = rem_winter(images_ids, date_format, date_length, winter_start_day, winter_end_day)
 
-if len(images_ids) > 0:
-    order_url = place_order(item_type, product_bundle, images_ids, coordinates, session.auth)
+if date_valid :
+    search_filter = get_filter(geojson_geometry, start_date, end_date)
+    images_ids = get_images_ids(search_filter, item_type)
 
-    state = poll_for_success(order_url, session.auth)
+    if len(images_ids) > 0:
+        images_ids = rem_winter(images_ids, date_format, date_length, winter_start_day, winter_end_day)
+        order_url = place_order(item_type, product_bundle, images_ids, coordinates, session.auth)
 
-    if state == "success":
-        r = requests.get(order_url, auth=session.auth)
-        response = r.json()
-        results = response['_links']['results']
+        state = poll_for_success(order_url, session.auth)
 
-else:
-    print("There are not any available images to download")
+        if state == "success":
+            r = requests.get(order_url, auth=session.auth)
+            response = r.json()
+            results = response['_links']['results']
+
+    else:
+        print("There are not any available images to download")
