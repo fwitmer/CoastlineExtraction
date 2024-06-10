@@ -58,15 +58,14 @@ headers = {'content-type': 'application/json'} # set content type to json
 
 # ========================================= Functions =========================================
 # Geojson files Functions:
-
-"""
-This function takes a list of polygon coordinates, and saves it to a GeoJSON file.
-
-* Args:
-- polygon_coordinates: A list of coordinates defining a polygon.
-- output_file (optional): The path to the file where the GeoJSON data will be saved. 
-"""
 def save_polygon(polygon_coordinates, geojson_folder_path, location_name):
+    """
+    This function takes a list of polygon coordinates, and saves it to a GeoJSON file.
+
+    * Args:
+    - polygon_coordinates: A list of coordinates defining a polygon.
+    - output_file (optional): The path to the file where the GeoJSON data will be saved. 
+    """
 
     geojson_geometry = {
         "type" : "Polygon",
@@ -83,16 +82,17 @@ def save_polygon(polygon_coordinates, geojson_folder_path, location_name):
         print(f"Error saving GeoJSON file: {e}")
         
 #=======================================================================
-"""
-This function reads a polygon from a GeoJSON file and returns it as a GeoJSON dictionary.
-
-* Args:
-- file_path: The path to the GeoJSON file containing the polygon.
-
-* Returns:
-- A GeoJSON dictionary representing the polygon, or None if an error occurs.
-"""
 def get_boundry_from_file(geojson_folder_path, location_name):
+    """
+    This function reads a polygon from a GeoJSON file and returns it as a GeoJSON dictionary.
+
+    * Args:
+    - file_path: The path to the GeoJSON file containing the polygon.
+
+    * Returns:
+    - A GeoJSON dictionary representing the polygon, or None if an error occurs.
+    """
+    
     file_path = f"{geojson_folder_path}{location_name}.geojson"
     try:
         with open(file_path, "r") as f:
@@ -119,18 +119,19 @@ def p(data):
 #     2. Year is before 2009.
 
 # Note: Make sure of months that 30 days not 31 days. Also Leap Years. 
-"""
-* Args:
-- start_date: The start date as a string in the format "yyyy-mm-dd".
-- end_date: The end date as a string in the format "yyyy-mm-dd".
-
-* Returns:
-- A tuple (date_valid, start_date_str, end_date_str):
-    1. date_valid (bool): True if both dates are valid and start_date is before end_date, otherwise False.
-    2. start_date_str (str): The validated start date in the format "yyyy-mm-dd" if valid, otherwise None.
-    3. end_date_str (str): The validated end date in the format "yyyy-mm-dd" if valid, otherwise None.
-"""
 def validate_and_compare_dates(start_date, end_date): #(*NEW*)
+    """
+    * Args:
+    - start_date: The start date as a string in the format "yyyy-mm-dd".
+    - end_date: The end date as a string in the format "yyyy-mm-dd".
+
+    * Returns:
+    - A tuple (date_valid, start_date_str, end_date_str):
+        1. date_valid (bool): True if both dates are valid and start_date is before end_date, otherwise False.
+        2. start_date_str (str): The validated start date in the format "yyyy-mm-dd" if valid, otherwise None.
+        3. end_date_str (str): The validated end date in the format "yyyy-mm-dd" if valid, otherwise None.
+    """
+    
     try:
         # Attempt to parse the input strings as dates in the format "yyyy-mm-dd"
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
@@ -168,17 +169,17 @@ def validate_and_compare_dates(start_date, end_date): #(*NEW*)
 #     1. Cloud Filter. 
 #     2. Geometry.
 #     3. Date Range.
-"""
-* Args:
-- geojson_geometry: A GeoJSON dictionary representing the geometry to filter images within.
-- start_date: The start date as a string in the format "yyyy-mm-dd".
-- end_date: The end date as a string in the format "yyyy-mm-dd".
-- cloud_threshold: A float representing the maximum allowable cloud cover (default is 0.1).
-
-* Returns:
-- A dictionary representing the combined filter configuration.
-"""
 def get_filter(geojson_geometry, start_date, end_date, cloud_threshold=0.1):
+    """
+    * Args:
+    - geojson_geometry: A GeoJSON dictionary representing the geometry to filter images within.
+    - start_date: The start date as a string in the format "yyyy-mm-dd".
+    - end_date: The end date as a string in the format "yyyy-mm-dd".
+    - cloud_threshold: A float representing the maximum allowable cloud cover (default is 0.1).
+
+    * Returns:
+    - A dictionary representing the combined filter configuration.
+    """
     
     # Setup Cloud filter; Filters images with over 10% cloud cover
     cloud_filter = {
@@ -221,15 +222,16 @@ def get_filter(geojson_geometry, start_date, end_date, cloud_threshold=0.1):
 
 # Get images ids:
 # - This function retrieves planet image IDs based on the search filter and item type using planet quick search.
-"""
-* Args:
-- search_filter: A dictionary representing the search filter configuration.
-- item_type: A string represents the class of spacecraft and/or processing level of an item.
-
-* Returns:
-- A list of strings representing the IDs of the images that match the search criteria.
-"""
 def get_images_ids(search_filter, item_type):
+    """
+    * Args:
+    - search_filter: A dictionary representing the search filter configuration.
+    - item_type: A string represents the class of spacecraft and/or processing level of an item.
+
+    * Returns:
+    - A list of strings representing the IDs of the images that match the search criteria.
+    """
+    
     # API request object
     search_request = {
     "item_types": [item_type],
@@ -253,19 +255,19 @@ def get_images_ids(search_filter, item_type):
 
 # Get images dates from IDs:
 # - Parses the image ID using the provided date format and returns the date as a datetime object.
-"""
-* Args:
-- image_id (str): The image ID containing the date and time information.
-- date_format (str): The date format string that specifies how the date and time are formatted in the image ID.
-- slice_length (int): The number of characters to extract from the start of the image ID for parsing.
-
-* Returns:
-- datetime: The parsed date and time as a datetime object.
-
-* Raises:
-- ValueError: If the image ID does not match the provided date format.
-"""
 def get_image_date(image_id, date_format, date_length):
+    """
+    * Args:
+    - image_id (str): The image ID containing the date and time information.
+    - date_format (str): The date format string that specifies how the date and time are formatted in the image ID.
+    - slice_length (int): The number of characters to extract from the start of the image ID for parsing.
+
+    * Returns:
+    - datetime: The parsed date and time as a datetime object.
+
+    * Raises:
+    - ValueError: If the image ID does not match the provided date format.
+    """
     
     try:
         # Extract the specified portion of the image_id based on slice_length
@@ -278,20 +280,19 @@ def get_image_date(image_id, date_format, date_length):
     
 # Remove winter image ids :
 # - Removes images taken during winter months specified by day of the year range.
-"""
-* Args:
-- ids (list of str): List of image IDs.
-- date_format (str): The date format string used to parse the date from the image IDs.
-- date_length (int): The number of characters to extract from image ID for parsing. [The whole date]
-- winter_start (int): The starting day of the year for the winter period (e.g., 290 for Oct 16).
-- winter_end (int): The ending day of the year for the winter period (e.g., 136 for May 15).
-
-* Returns:
-- list of str: List of image IDs that are not taken during the specified winter period.
-"""
-
 def rem_winter(ids, date_format, date_length, winter_start, winter_end):
+    """
+    * Args:
+    - ids (list of str): List of image IDs.
+    - date_format (str): The date format string used to parse the date from the image IDs.
+    - date_length (int): The number of characters to extract from image ID for parsing. [The whole date]
+    - winter_start (int): The starting day of the year for the winter period (e.g., 290 for Oct 16).
+    - winter_end (int): The ending day of the year for the winter period (e.g., 136 for May 15).
 
+    * Returns:
+    - list of str: List of image IDs that are not taken during the specified winter period.
+    """
+    
     clear_ids = []
     
     for image_id in ids:
@@ -312,51 +313,53 @@ def rem_winter(ids, date_format, date_length, winter_start, winter_end):
 # This function defines the order details (item type, product bundle, item IDs, and coordinates) 
 # and sends a request to the API. The function then extracts the order ID from the response 
 # and returns the complete order URL for further tracking or management.
-"""
-* Args:
-- item_type (str): A string represents the class of spacecraft and/or processing level of an item.
-- product_bundle (str): Product bundles comprise of a group of assets for an item
-[All available item and asset types: https://developers.planet.com/docs/apis/data/items-assets/]
-[All available Product Budles: https://developers.planet.com/apis/orders/product-bundles-reference/]
-
-- item_ids (list of str): A list of item IDs to include in the order.
-- coordinates (list of lists): A list of coordinates defining the area of interest (AOI). 
-  The coordinates should be in the format [[[longitude, latitude], ...]].
-- auth (tuple): Authentication credentials as a tuple.
-
-* Returns:
-- str: The URL of the created order.
-"""
+# [All available item and asset types: https://developers.planet.com/docs/apis/data/items-assets/]
+# [All available Product Budles: https://developers.planet.com/apis/orders/product-bundles-reference/]
 def place_order(item_type, product_bundle, item_ids, coordinates, auth):
-  request = {"name": "image_details", "source_type": "scenes",
-            "products": [{
-              "item_ids": item_ids,
-              "item_type": item_type,
-              "product_bundle": product_bundle}],
-            
-            "tools": [{
-              "clip": {
-                "aoi": { "type": "Polygon", "coordinates": coordinates
-        }}}]}
-  response = requests.post(orders_url, data=json.dumps(request), auth=auth, headers=headers)
-  print(response)
-  order_id = response.json()['id']
-  print(order_id)
-  order_url = orders_url + '/' + order_id
-  return order_url
+    """
+    * Args:
+    - item_type (str): A string represents the class of spacecraft and/or processing level of an item.
+    - product_bundle (str): Product bundles comprise of a group of assets for an item
+    
+    - item_ids (list of str): A list of item IDs to include in the order.
+    - coordinates (list of lists): A list of coordinates defining the area of interest (AOI). 
+    The coordinates should be in the format [[[longitude, latitude], ...]].
+    - auth (tuple): Authentication credentials as a tuple.
+
+    * Returns:
+    - str: The URL of the created order.
+    """
+    
+    request = {"name": "image_details", "source_type": "scenes",
+                "products": [{
+                "item_ids": item_ids,
+                "item_type": item_type,
+                "product_bundle": product_bundle}],
+                
+                "tools": [{
+                "clip": {
+                    "aoi": { "type": "Polygon", "coordinates": coordinates
+            }}}]}
+    response = requests.post(orders_url, data=json.dumps(request), auth=auth, headers=headers)
+    print(response)
+    order_id = response.json()['id']
+    print(order_id)
+    order_url = orders_url + '/' + order_id
+    return order_url
             
 
 # Poll for Order Success:
 # - Polls the order URL until the order reaches a final state.                        
-"""
-* Args:
-- order_url (str): The URL of the order to poll.
-- auth (tuple): Authentication credentials as a tuple
-
-* Returns:
-- str: The final state of the order, which can be 'success', 'failed', or 'partial'.
-"""
 def poll_for_success(order_url, auth):
+    """
+    * Args:
+    - order_url (str): The URL of the order to poll.
+    - auth (tuple): Authentication credentials as a tuple
+
+    * Returns:
+    - str: The final state of the order, which can be 'success', 'failed', or 'partial'.
+    """
+    
     end_states = ['success', 'failed', 'partial']
     state = "unknown"
     
@@ -370,22 +373,22 @@ def poll_for_success(order_url, auth):
         
         if state not in end_states:
             time.sleep(60)
-    
     return state     
                 
 
 # Downloading each asset individually
 # Code taken from https://github.com/planetlabs/notebooks/blob/master/jupyter-notebooks/orders/ordering_and_delivery.ipynb
-"""
-* Args:
-- results (list of dict): A list of dictionaries containing 'location' (URL) and 'name' (file name) of the results to be downloaded.
-- folder_path (str): The path to the folder where the files will be downloaded.
-- overwrite (bool): If True, existing files will be overwritten. Defaults to False.
-
-* Returns:
-- None
-"""
 def download_results(results, folder_path, overwrite=False):
+    """
+    * Args:
+    - results (list of dict): A list of dictionaries containing 'location' (URL) and 'name' (file name) of the results to be downloaded.
+    - folder_path (str): The path to the folder where the files will be downloaded.
+    - overwrite (bool): If True, existing files will be overwritten. Defaults to False.
+
+    * Returns:
+    - None
+    """
+    
     results_urls = [r['location'] for r in results]
     results_names = [r['name'] for r in results]
     print('{} items to download'.format(len(results_urls)))
@@ -465,6 +468,7 @@ if date_valid :
             r = requests.get(order_url, auth=session.auth)
             response = r.json()
             results = response['_links']['results']
+            download_results(results, download_folder)
 
     else:
         print("There are not any available images to download")
