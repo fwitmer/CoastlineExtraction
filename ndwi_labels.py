@@ -218,6 +218,7 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
     plt.show()
 
 
+
 boundary = {'type': 'Polygon',
             'coordinates': [[[-162.8235626220703, 66.05622435812153], 
                              [-162.674560546875, 66.05622435812153], 
