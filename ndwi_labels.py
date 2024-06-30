@@ -216,7 +216,6 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
     axs[1, 1].axis('off')
 
     plt.show()
-            
 
 
 boundary = {'type': 'Polygon',
@@ -225,6 +224,6 @@ boundary = {'type': 'Polygon',
                              [-162.674560546875, 66.10883816429516],
                              [-162.8235626220703, 66.10883816429516], 
                              [-162.8235626220703, 66.05622435812153]]]}
-image_path = "D:/GSoC2024/data/input/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif"
+image_path = "D:/GSoC2024/data/input/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif" 
 points_path = "D:/GSoC2024/data/Deering2016/Deering_transect_points_2016.shp"
 get_ndwi_label(image_path, points_path)
