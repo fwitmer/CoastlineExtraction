@@ -159,7 +159,6 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
                     buffer_numbers = buffer_numbers + mask_array
     
     # Labelled images based on majority sliding windows
-    majority_threshold = 0.5  # Example value; adjust based on your requirements
     label_majority = np.where(water_count > (buffer_numbers * majority_threshold), 1, 0)
     
     # Labelled image based on mean threshold (one threshold)
