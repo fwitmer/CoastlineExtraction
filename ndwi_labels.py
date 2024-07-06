@@ -183,9 +183,6 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
     print(f"Average threshold value (-1 to 1 NDWI range): {(np.mean(otsu_thresholds_clipped) - 128) / 127}")
 
     print(f"Label min: {np.nanmin(label)} , max: {np.nanmax(label)}")
-
-    # Majority sliding windows
-    label_majority = np.where(water_count > (buffer_numbers * majority_threshold), 1, 0)
     
     # Assuming 'ndwi' is your image data
     plt.imshow(ndwi)
