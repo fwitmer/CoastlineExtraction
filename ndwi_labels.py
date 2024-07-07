@@ -183,7 +183,7 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
 
     print(f"Label min: {np.nanmin(label)} , max: {np.nanmax(label)}")
     
-    # plot ndwi before 
+    # Plot ndwi before segmentation
     plt.imshow(ndwi)
     plt.title('NDWI image')
     plt.show()
