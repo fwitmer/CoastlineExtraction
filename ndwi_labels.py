@@ -159,7 +159,6 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
                     buffer_numbers = buffer_numbers + mask_array
     
     # Labelled images based on majority sliding windows
-    majority_threshold = 0.5  # Example value; adjust based on your requirements
     label_majority = np.where(water_count > (buffer_numbers * majority_threshold), 1, 0)
     
     # Labelled image based on mean threshold (one threshold)
@@ -183,11 +182,8 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
     print(f"Average threshold value (-1 to 1 NDWI range): {(np.mean(otsu_thresholds_clipped) - 128) / 127}")
 
     print(f"Label min: {np.nanmin(label)} , max: {np.nanmax(label)}")
-
-    # Majority sliding windows
-    label_majority = np.where(water_count > (buffer_numbers * majority_threshold), 1, 0)
     
-    # Assuming 'ndwi' is your image data
+    # Plot ndwi before segmentation
     plt.imshow(ndwi)
     plt.title('NDWI image')
     plt.show()
@@ -225,6 +221,8 @@ boundary = {'type': 'Polygon',
                              [-162.674560546875, 66.10883816429516],
                              [-162.8235626220703, 66.10883816429516], 
                              [-162.8235626220703, 66.05622435812153]]]}
+
+# To Run script , you need only to change image and points path to yours.
 image_path = "D:/GSoC2024/data/input/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif" 
 points_path = "D:/GSoC2024/data/Deering2016/Deering_transect_points_2016.shp"
 get_ndwi_label(image_path, points_path)
