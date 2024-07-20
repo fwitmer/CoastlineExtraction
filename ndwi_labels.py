@@ -47,12 +47,11 @@ def clip_shp(path_to_shp, boundary_geojson):
 
 
 # Gaussian blur parameters
-ksize_blur = (11, 11)  # Kernel size (must be positive and odd)
-sigmaX = 6      # Standard deviation in X direction
-sigmaY = 6      # Standard deviation in Y direction
+KSIZE_BLUR = (9, 9)  # Kernel size (must be positive and odd)
+SIGMA_X = 6      # Standard deviation in X direction
+SIGMA_Y = 6      # Standard deviation in Y direction
 
-# majority factor indicate percent of sliding windows to segment pixel as water
-majority_threshold = 0.55
+MAJORITY_THRESHOLD = 0.55
 
 
 def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
@@ -92,7 +91,7 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
         # Apply Gaussian blur
         if blurring:
             print("Gaussian Filtering Applied")
-            ndwi = cv2.GaussianBlur(ndwi, ksize_blur, sigmaX, sigmaY)
+            ndwi = cv2.GaussianBlur(ndwi, KSIZE_BLUR, SIGMA_X, SIGMA_Y)
         
         # Blank label layer
         label = np.zeros((src_raster.height, src_raster.width)).astype(np.uint8)
@@ -159,7 +158,7 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
                     buffer_numbers = buffer_numbers + mask_array
     
     # Labelled images based on majority sliding windows
-    label_majority = np.where(water_count > (buffer_numbers * majority_threshold), 1, 0)
+    label_majority = np.where(water_count > (buffer_numbers * MAJORITY_THRESHOLD), 1, 0)
     
     # Labelled image based on mean threshold (one threshold)
     mean_threshold = np.mean(otsu_thresholds_clipped) + 10
@@ -221,6 +220,7 @@ boundary = {'type': 'Polygon',
                              [-162.674560546875, 66.10883816429516],
                              [-162.8235626220703, 66.10883816429516], 
                              [-162.8235626220703, 66.05622435812153]]]}
+
 
 # To Run script , you need only to change image and points path to yours.
 image_path = "D:/GSoC2024/data/input/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif" 
