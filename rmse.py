@@ -70,29 +70,37 @@ def get_transects(transects, true_shap_path, predicted_shp_path):
         return distances, rmse
     
     
+
 transects = gpd.GeoDataFrame.from_file(transects_lines_path)
 transects = transects[transects['BaselineID'] == 117]
 distances_mean, rmse_mean = get_transects(transects, true_shp_path, predicted_shp_path)
+
 
 # Western Coastline Region
 region_1 = transects[transects['TransOrder'] >= 17443]
 distances_region1, rmse_region1 = get_transects(region_1, true_shp_path, predicted_shp_path)
 
+
 # Northern Cliff Region
-region_2 = transects[transects['TransOrder'] < 17443]
-region_2 = region_2[region_2['TransOrder'] >= 17394]
+region_2 = transects[(transects['TransOrder'] < 17443) & (transects['TransOrder'] >= 17394)]
 distances_region2, rmse_region2 = get_transects(region_2, true_shp_path, predicted_shp_path)
 
+
 # Central Shoreline Region
-region_3 = transects[transects['TransOrder'] < 17394]
-region_3 = region_3[region_3['TransOrder'] >= 17370]
+region_3 = transects[(transects['TransOrder'] < 17394) & (transects['TransOrder'] >= 17370)]
 distances_region3, rmse_region3 = get_transects(region_3, true_shp_path, predicted_shp_path)
 
+
 # Town Shoreline Region
-region_4 = transects[transects['TransOrder'] < 17370]
-region_4 = region_4[region_4['TransOrder'] >= 17337]
+region_4 = transects[(transects['TransOrder'] < 17370) & (transects['TransOrder'] >= 17337)]
 distances_region4, rmse_region4 = get_transects(region_4, true_shp_path, predicted_shp_path)
+
 
 # East Shoreline and Cliff Region
 region_5 = transects[transects['TransOrder'] < 17337]
 distances_region5, rmse_region5 = get_transects(region_5, true_shp_path, predicted_shp_path)
+
+
+
+
+
