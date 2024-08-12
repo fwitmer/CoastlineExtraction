@@ -99,8 +99,3 @@ distances_region4, rmse_region4 = calc_transects_rmse(region_4, true_shp_path, p
 # East Shoreline and Cliff Region
 region_5 = transects[transects['TransOrder'] < 17337]
 distances_region5, rmse_region5 = calc_transects_rmse(region_5, true_shp_path, predicted_shp_path)
-
-
-
-
-
