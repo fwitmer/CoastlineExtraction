@@ -54,20 +54,20 @@ def calc_transects_rmse(transects, true_shap_path, predicted_shp_path):
         removal_ids = [17336, 17335, 17334, 17333, 17332]
         transects = transects[~(transects['TransOrder'].isin(removal_ids))]
         
-        # Reproject the transects and shapefiles to UTM zone 3N
-        transects = transects.to_crs(UTM_ZONE_3N)
-        gdf1 = gdf1.to_crs(UTM_ZONE_3N)
-        gdf2 = gdf2.to_crs(UTM_ZONE_3N)
+    # Reproject the transects and shapefiles to UTM zone 3N
+    transects = transects.to_crs(UTM_ZONE_3N)
+    gdf1 = gdf1.to_crs(UTM_ZONE_3N)
+    gdf2 = gdf2.to_crs(UTM_ZONE_3N)
         
         
-        # Find the intersection of the true and predicted shapefile with transects
-        gdf1 = gdf1.unary_union.intersection(transects.unary_union)
-        gdf2 = gdf2.unary_union.intersection(transects.unary_union)
+    # Find the intersection of the true and predicted shapefile with transects
+    gdf1 = gdf1.unary_union.intersection(transects.unary_union)
+    gdf2 = gdf2.unary_union.intersection(transects.unary_union)
         
-        distances = find_distances(transects, gdf1, gdf2)
-        rmse = calc_rmse(distances)
+    distances = find_distances(transects, gdf1, gdf2)
+    rmse = calc_rmse(distances)
         
-        return distances, rmse
+    return distances, rmse
     
     
 
@@ -99,8 +99,3 @@ distances_region4, rmse_region4 = calc_transects_rmse(region_4, true_shp_path, p
 # East Shoreline and Cliff Region
 region_5 = transects[transects['TransOrder'] < 17337]
 distances_region5, rmse_region5 = calc_transects_rmse(region_5, true_shp_path, predicted_shp_path)
-
-
-
-
-
