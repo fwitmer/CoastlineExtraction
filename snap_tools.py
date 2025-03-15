@@ -135,13 +135,13 @@ def merge_all_dataframes():
     dfs = [base_df]
     failed_files = []
 
-    for fp in data_fps:
+    for i in data_fps:
         try:
-            df = pd.read_csv(fp).iloc[:, 1:]
+            df = pd.read_csv(i).iloc[:, 1:]
             dfs.append(df)
         except Exception as e:
-            logging.error("Error reading file %s: %s", fp, e)
-            failed_files.append(fp)
+            logging.error("Error reading file %s: %s", i, e)
+            failed_files.append(i)
 
     merged_df = pd.concat(dfs, ignore_index=True)
     merged_df.to_csv('SNAP_daily_by_transect_combined.csv', index=False)
