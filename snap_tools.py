@@ -15,6 +15,7 @@ import os
 import pandas as pd
 from datetime import date, timedelta
 import matplotlib.pyplot as plt
+import logging
 
 DATA_INPUT_DIRECTORY = '/usr/local/coastal/snap_processing/snap_output/'
 SNAP_COMBINED_DIRECTORY = 'SNAP_daily_by_transect_combined.csv'
@@ -81,7 +82,7 @@ def narrow_csv_to_transect(transect, filepath):
 
     filtered_df.to_csv('modified_csv.csv')
 
-# This method is a helper function tomerged the t2_only SNAP output files with the rest of the data
+# This method is a helper function to merge the t2_only SNAP output files with the rest of the data
 def merge_t2(data_fp_arr, t2_fp_arr):
 
     if len(data_fp_arr) != len(t2_fp_arr):
@@ -103,7 +104,7 @@ def merge_t2(data_fp_arr, t2_fp_arr):
 
         i = i + 1
 
-# This method merged the t2_only SNAP output files with the rest of the data on a yearly basis
+# This method merges the t2_only SNAP output files with the rest of the data on a yearly basis
 def merge_all_t2s():
 
     data_fps = []
@@ -114,7 +115,8 @@ def merge_all_t2s():
 
     merge_t2(data_fps, t2_fps)
 
-# This method merged all of the individual yearly SNAP datarames into one large dataframe
+# This method merges all of the individual yearly SNAP dataframes into one large dataframe.
+# The updated version now uses pd.concat for better performance, and logging is used to capture errors.
 def merge_all_dataframes():
 
     data_fps = []
@@ -124,18 +126,30 @@ def merge_all_dataframes():
     for i in range(2026, 2101):
         data_fps.append(f'SNAP_daily_by_transect_{i}.csv')
 
-    combined_df = pd.read_csv('SNAP_daily_by_transect_1970_combined.csv')
-    combined_df = combined_df.iloc[:, 1:]
+    try:
+        base_df = pd.read_csv('SNAP_daily_by_transect_1970_combined.csv').iloc[:, 1:]
+    except Exception as e:
+        logging.error("Error reading base file 'SNAP_daily_by_transect_1970_combined.csv': %s", e)
+        return
 
-    for i in data_fps:
+    dfs = [base_df]
+    failed_files = []
+
+    for fp in data_fps:
         try:
-            temp_df = pd.read_csv(i)
-            temp_df = temp_df.iloc[:, 1:]
-            combined_df = combined_df.append(temp_df)
-        except:
-            print(f'Could not find {i}')
+            df = pd.read_csv(fp).iloc[:, 1:]
+            dfs.append(df)
+        except Exception as e:
+            logging.error("Error reading file %s: %s", fp, e)
+            failed_files.append(fp)
 
-    combined_df.to_csv('SNAP_daily_by_transect_combined.csv', index=False)
+    merged_df = pd.concat(dfs, ignore_index=True)
+    merged_df.to_csv('SNAP_daily_by_transect_combined.csv', index=False)
+
+    if failed_files:
+        logging.info("The following files could not be processed: %s", failed_files)
+    else:
+        logging.info("All files processed successfully.")
 
 # This method creates many plots to both compare the divide between 2005 and 2006 SNAP data
 # as well as the variation between 2005, 2006 and 2007 SNAP data
@@ -165,7 +179,6 @@ def year_gap_comparison():
     psfc_vals_2005 = []
     psfc_vals_2006 = []
     psfc_vals_2007 = []
-
 
     start_2005 = date(2005, 1, 1)
     end_2005 = date(2005, 12, 31)
@@ -464,7 +477,6 @@ def transect_comparison():
         start_2005 += delta
 
         days_2005.append(f'{month}-{day}')
-
 
     plt.ylabel('Surface Temperature (C)')
     plt.title('Transect Comparison 2005')
