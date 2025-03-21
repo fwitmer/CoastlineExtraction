@@ -431,8 +431,9 @@ def avg_annual_temp():
             years.append(i)
             avg_val = sum(daily_values) / len(daily_values)
             yearly_avg.append(avg_val)
-        except:
-            pass
+        except KeyError as e:
+            logging.warning(f"Skipping year {i} due to missing data: {e}")
+            continue
 
     plt.ylabel('Average Temperature (C)')
     plt.title('Average Annual Temperature')
@@ -458,7 +459,6 @@ def transect_comparison():
     tsks_2005_17642 = []
 
     days_2005 = []
-
     start_2005 = date(2005, 1, 1)
     end_2005 = date(2005, 12, 31)
     delta = timedelta(days=1)
