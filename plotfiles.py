@@ -29,17 +29,28 @@ def main(args):
         if "udm" in file:
             continue
         with rio.open(file, driver="GTiff") as src:
+               band_count = src.count
+
+        if band_count < 3:
+            # fallback to first band (grayscale)
+            img = src.read(1)
+            fig, ax = plt.subplots()
+            fig.canvas.mpl_connect('key_press_event', on_press)
+            ax.set_title(file + " (Grayscale)")
+            ax.set_xlabel("Press (Y) to keep, (N) to remove")
+            plt.imshow(img, cmap='gray')
+        else:
             blue = src.read(1)
             green = src.read(2)
             red = src.read(3)
-
             img = np.dstack((blue, green, red))
             fig, ax = plt.subplots()
             fig.canvas.mpl_connect('key_press_event', on_press)
             ax.set_title(file)
             ax.set_xlabel("Press (Y) to keep, (N) to remove")
             plt.imshow(img)
-            plt.show()
+
+        plt.show()
     answer = input("Are you sure you want to remove " + str(len(files_to_remove)) + " files? (Y/N): ")
     if answer == 'y' or answer == 'Y':
         for file in files_to_remove:
