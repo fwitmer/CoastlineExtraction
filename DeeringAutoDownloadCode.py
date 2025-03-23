@@ -245,11 +245,19 @@ def get_images_ids(search_filter, item_type):
         auth=HTTPBasicAuth(API_KEY, ''),
         json=search_request)
     
+    if search_result.status_code != 200:
+        print(f"Error: {search_result.status_code} - {search_result.text}")
+        return []
+
     geojson = search_result.json()
+
+    if 'features' not in geojson or not geojson['features']:
+        print("Warning: No matching imagery found for the given filter.")
+        return []
+
     image_ids = [feature['id'] for feature in geojson['features']]
-    
-    print(f"Number of images available is {len(image_ids)}")
-    
+    print(f"Number of images available: {len(image_ids)}")
+
     return image_ids
 
 
