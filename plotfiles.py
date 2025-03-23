@@ -7,7 +7,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-
 def main(args):
     files_to_remove = []
     # handler for keypress events while plot is open
@@ -28,8 +27,19 @@ def main(args):
     for file in files:
         if "udm" in file:
             continue
-        with rio.open(file, driver="GTiff") as src:
-               band_count = src.count
+
+        # Check if file is empty:
+        if os.path.getsize(file) == 0:
+            print("Skipping empty file:", file)
+            continue
+
+        # Check if file is corrupted/unreadable:
+        try:
+            with rio.open(file, driver="GTiff") as src:
+                band_count = src.count
+        except rio.errors.RasterioIOError:
+            print("Skipping corrupted file:", file)
+            continue
 
         if band_count < 3:
             # fallback to first band (grayscale)
@@ -51,11 +61,16 @@ def main(args):
             plt.imshow(img)
 
         plt.show()
-    answer = input("Are you sure you want to remove " + str(len(files_to_remove)) + " files? (Y/N): ")
-    if answer == 'y' or answer == 'Y':
+        
+    while True:
+        answer = input("Are you sure you want to remove " + str(len(files_to_remove)) + " files? (Y/N): ")
+        if answer.lower() in ['y', 'n']:
+            break
+        print("Invalid input. Please enter Y or N.")
+    if answer.lower() == 'y':
         for file in files_to_remove:
             os.remove(file)
-        print(len(files_to_remove), " files successfully removed.")
+        print(len(files_to_remove), "files successfully removed.")
     else:
         print("Files will not be removed.")
 
