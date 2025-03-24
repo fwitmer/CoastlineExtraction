@@ -15,7 +15,7 @@ def main(args):
         if event.key == 'y':
             print("Keeping file:", file)
             plt.close(fig)
-        if event.key == 'n':
+        elif event.key == 'n':
             print("Removing file:", file)
             files_to_remove.append(file)
             plt.close(fig)
@@ -23,7 +23,7 @@ def main(args):
             pass
     
     input_dir = args.input_dir
-    files = glob.glob(input_dir + "/**/*.tif", recursive = True)
+    files = glob.glob(os.path.join(input_dir, '**', '*.tif'), recursive=True)
     for file in files:
         if "udm" in file:
             continue
@@ -62,17 +62,16 @@ def main(args):
 
         plt.show()
         
-    while True:
-        answer = input("Are you sure you want to remove " + str(len(files_to_remove)) + " files? (Y/N): ")
-        if answer.lower() in ['y', 'n']:
-            break
-        print("Invalid input. Please enter Y or N.")
+    # Single check for confirmation
+    answer = input("Are you sure you want to remove " + str(len(files_to_remove)) + " files? (Y/N): ")
     if answer.lower() == 'y':
         for file in files_to_remove:
             os.remove(file)
         print(len(files_to_remove), "files successfully removed.")
-    else:
+    elif answer.lower() == 'n':
         print("Files will not be removed.")
+    else:
+        print("Invalid input. Exiting without removing files.")
 
 
 
