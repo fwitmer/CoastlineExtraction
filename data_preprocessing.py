@@ -82,7 +82,27 @@ def augment_tiles(tile_path):
             _augment_and_write(flipped_bands, path_flip_270, meta, 3) # flipped & 270°
 
 
-        
+
+def split_raster(input_raster_path, tile_size):
+    """
+    Splits an input raster into multiple windows (tiles) with a given tile_size. 
+    Returns a list of (window, transform) tuples. Raises ValueError if file is empty.
+    """
+    if os.path.getsize(input_raster_path) == 0:
+        raise ValueError(f"Skipping empty raster: {input_raster_path}")
+
+    with rio.open(input_raster_path) as src:
+        width, height = src.width, src.height
+        windows_list = []
+
+        for row_start in range(0, height, tile_size):
+            for col_start in range(0, width, tile_size):
+                window = windows.Window(col_start, row_start, tile_size, tile_size)
+                transform = src.window_transform(window)
+                windows_list.append((window, transform))
+
+    return windows_list
+
 # example usage
 if __name__ == '__main__':
     files = glob.glob("data/labeled_inputs/*.tif")
