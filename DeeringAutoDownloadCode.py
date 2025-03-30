@@ -280,7 +280,7 @@ def get_image_date(image_id, date_format, date_length):
     
 # Remove winter image ids :
 # - Removes images taken during winter months specified by day of the year range.
-def rem_winter(ids, date_format, date_length, winter_start, winter_end):
+def rem_winter(ids, date_format, date_length, exclude_ranges):
     """
     * Args:
     - ids (list of str): List of image IDs.
@@ -291,17 +291,26 @@ def rem_winter(ids, date_format, date_length, winter_start, winter_end):
 
     * Returns:
     - list of str: List of image IDs that are not taken during the specified winter period.
+    
+    Exclude images taken during any date ranges specified in 'exclude_ranges'.
+    Each element in exclude_ranges is a tuple (start_day, end_day), where
+    'start_day' and 'end_day' are day-of-year integers (1-365 or 1-366).
     """
-    
     clear_ids = []
-    
     for image_id in ids:
         try:
-            date = get_image_date(image_id, date_format, date_length)
-            day_of_year = date.timetuple().tm_yday  # Get the day of the year from the datetime object
+            date_str = image_id[:date_length]
+            date_obj = datetime.strptime(date_str, date_format)
+            day_of_year = date_obj.timetuple().tm_yday
             
-            # Keep the image if the day is outside the winter period
-            if not (winter_start <= day_of_year or day_of_year <= winter_end):
+            # Skip this image if its day-of-year falls within any of the excluded ranges
+            skip_image = False
+            for (start_doy, end_doy) in exclude_ranges:
+                if start_doy <= day_of_year <= end_doy:
+                    skip_image = True
+                    break
+            
+            if not skip_image:
                 clear_ids.append(image_id)
         except ValueError as e:
             print(e)  # Print error if the date format does not match
@@ -424,8 +433,7 @@ date_format_dict = {
 start_date_input = "2023-08-01"
 end_date_input = "2023-08-10"
 
-winter_start_day = 290
-winter_end_day = 136
+exclude_ranges = [(290, 365), (1, 136)]
 
 date_format = date_format_dict[item_type] # Date format in ID string
 date_length = 15                # image_id example: "20240529_213419_83_24b2"
@@ -459,7 +467,7 @@ if date_valid :
     images_ids = get_images_ids(search_filter, item_type)
 
     if len(images_ids) > 0:
-        images_ids = rem_winter(images_ids, date_format, date_length, winter_start_day, winter_end_day)
+        images_ids = rem_winter(images_ids, date_format, date_length, exclude_ranges)
         order_url = place_order(item_type, product_bundle, images_ids, coordinates, session.auth)
 
         state = poll_for_success(order_url, session.auth)
