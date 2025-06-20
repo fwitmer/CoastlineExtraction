@@ -1,0 +1,18 @@
+{
+    "data_dir": "data",
+    "image_folder": "sample_data/PlanetLabs",
+    "image_files": [
+      "20160909_213424_0e26_3B_AnalyticMS_SR_clip.tif",
+      "20160909_213103_0e19_3B_AnalyticMS_SR_clip.tif",
+      "20160909_213104_0e19_3B_AnalyticMS_SR_clip.tif",
+      "20160909_213333_0e0e_3B_AnalyticMS_SR_clip.tif"
+    ],
+    "shapefile_folder": "USGS_Coastlines",
+    "shapefiles": [
+      "Deering_transect_points_2016_fw.shp",
+      "Deering_shorelines_2016.shp",
+      "WestChukchi_Baselines/WestChukchi_Baselines.shp",
+      "WestChukchi_exposed_STepr_rates/WestChukchi_exposed_STepr_rates.shp",
+      "WestChukchi_shorelines/WestChukchi_shorelines.shp"
+    ]
+  } 
