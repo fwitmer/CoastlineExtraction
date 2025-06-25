@@ -2,6 +2,7 @@
     "data_dir": "data",
     "image_folder": "sample_data/PlanetLabs",
     "image_files": [
+      "268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif",
       "20160909_213424_0e26_3B_AnalyticMS_SR_clip.tif",
       "20160909_213103_0e19_3B_AnalyticMS_SR_clip.tif",
       "20160909_213104_0e19_3B_AnalyticMS_SR_clip.tif",

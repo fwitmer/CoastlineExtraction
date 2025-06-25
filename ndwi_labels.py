@@ -12,6 +12,10 @@ from matplotlib import pyplot as plt
 import numpy as np
 import cv2
 
+# Add import for config loading
+from load_config import load_config, get_image_path, get_shapefile_path
+
+
 def create_transect_points(transect_path, line_path, out_path):
     transects = gpd.read_file(transect_path)
     coastline = gpd.read_file(line_path)
@@ -222,7 +226,15 @@ boundary = {'type': 'Polygon',
                              [-162.8235626220703, 66.05622435812153]]]}
 
 
-# To Run script , you need only to change image and points path to yours.
-image_path = "D:/GSoC2024/data/input/268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif" 
-points_path = "D:/GSoC2024/data/Deering2016/Deering_transect_points_2016.shp"
+
+
+"""
+To run this script:
+Change the index number (the second argument in get_image_path and get_shapefile_path) 
+according to the file you want to process, as specified in your config_template.json.
+"""
+config = load_config()
+image_path = get_image_path(config, 0)  # 268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif
+points_path = get_shapefile_path(config, 0)  # Deering_transect_points_2016_fw.shp
+
 get_ndwi_label(image_path, points_path)
