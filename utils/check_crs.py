@@ -4,8 +4,8 @@ This script checks and displays the coordinate reference system of geospatial fi
 It supports raster files (.tif, .tiff) and vector files (.shp, .geojson, .gpkg).
 
 How to use:
-1. Command line: python check_crs.py your_file.tif
-2. In Python: from check_crs import check_crs; check_crs("your_file.tif")
+1. Command line: python CoastlineExtraction/utils/check_crs.py your_file.tif
+2. In Python: from CoastlineExtraction.utils.check_crs import check_crs; check_crs("your_file.tif")
 """
 
 import sys
