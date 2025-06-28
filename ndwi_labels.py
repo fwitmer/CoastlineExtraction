@@ -15,6 +15,8 @@ import cv2
 # Add import for config loading
 from load_config import load_config, get_image_path, get_shapefile_path
 
+# Add import for check_crs
+from utils.check_crs import check_crs
 
 def create_transect_points(transect_path, line_path, out_path):
     transects = gpd.read_file(transect_path)
@@ -80,6 +82,15 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
     10. Apply majority rule on the number of windows to segment pixels as water.
     11. Concatenate the remaining sliding window images (unlabeled parts) from NDWI classified.
     """
+
+
+    
+    # Check CRS of input files
+    check_crs(image_path, verbose=True)
+    check_crs(points_path, verbose=True)
+
+
+
     # Establish the NDWI calculation and copy metadata
     with rio.open(image_path, driver='GTiff') as src_raster:
         green = src_raster.read(2).astype(np.float32)  # Get the green band
