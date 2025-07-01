@@ -60,6 +60,7 @@ def crs_match(file1, file2, verbose=True):
         If you reproject a file in memory, you must save it to disk and pass the path to the new file.
         Do NOT pass the original file path after in-memory CRS conversion, as it will not reflect the updated CRS.
     """
+  
     crs1 = check_crs(file1, verbose=verbose)
     crs2 = check_crs(file2, verbose=verbose)
 
