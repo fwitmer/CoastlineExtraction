@@ -16,7 +16,7 @@ import cv2
 from load_config import load_config, get_image_path, get_shapefile_path
 
 # Add import for check_crs
-from utils.check_crs import check_crs
+from utils.check_crs import check_crs, crs_match
 
 def create_transect_points(transect_path, line_path, out_path):
     transects = gpd.read_file(transect_path)
@@ -125,6 +125,20 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
     points_geom = points_shp.geometry
     points_geom = points_geom.set_crs(epsg=4326)  # Set CRS to WGS84
     points_geom = points_geom.to_crs(src_CRS)  # Convert CRS to match the raster
+
+    # Before saving the file
+    output_dir = "result_ndwi_labels"
+    os.makedirs(output_dir, exist_ok=True)  # This will create the directory if it doesn't exist
+    
+    # Define the path for saving the reprojected vector (shapefile) after CRS alignment
+    reprojected_points_path = os.path.join(output_dir, "reprojected_points.shp")
+    # Save the reprojected point geometries into a new shapefile
+    gpd.GeoDataFrame(geometry=points_geom).to_file(reprojected_points_path)
+
+    # Use crs_match to check CRS of the raster and the reprojected vector file
+    # IMPORTANT: Pass the path to the reprojected file, NOT the original file, to crs_match.
+    if not crs_match(image_path, reprojected_points_path):
+        raise ValueError("CRS mismatch after conversion! Check your input files and CRS conversion steps.")
 
     otsu_thresholds_clipped = []  # Creating a holder for Otsu's threshold values for clipped images
     skipped = 0  # Counter for skipped windows (less than 201*201)
