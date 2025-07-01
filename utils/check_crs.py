@@ -44,7 +44,8 @@ def check_crs(file_path, verbose=True):
 
 
 
-"""
+def crs_match(file1, file2, verbose=True):
+    """
     Checks if two geospatial files have the same Coordinate Reference System (CRS).
 
     Args:
@@ -59,7 +60,6 @@ def check_crs(file_path, verbose=True):
         If you reproject a file in memory, you must save it to disk and pass the path to the new file.
         Do NOT pass the original file path after in-memory CRS conversion, as it will not reflect the updated CRS.
     """
-def crs_match(file1, file2, verbose=True):
     crs1 = check_crs(file1, verbose=verbose)
     crs2 = check_crs(file2, verbose=verbose)
 
