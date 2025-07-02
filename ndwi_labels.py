@@ -18,6 +18,9 @@ from load_config import load_config, get_image_path, get_shapefile_path
 # Add import for check_crs
 from utils.check_crs import check_crs, crs_match
 
+# Add import for spatial analysis
+from utils.spatial_analysis import log_spatial_info
+
 def create_transect_points(transect_path, line_path, out_path):
     transects = gpd.read_file(transect_path)
     coastline = gpd.read_file(line_path)
@@ -119,6 +122,9 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
         # Getting pixel size for correct calculation of buffer.
         # This value expresses spatial resolution.
         pixel_size = abs(src_raster.transform[0])
+
+        # Fix: retrieve bounds while raster file is open
+        raster_bounds = src_raster.bounds 
         
     # Preparing points for creating label masks
     points_shp = gpd.read_file(points_path)
@@ -139,6 +145,10 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
     # IMPORTANT: Pass the path to the reprojected file, NOT the original file, to crs_match.
     if not crs_match(image_path, reprojected_points_path):
         raise ValueError("CRS mismatch after conversion! Check your input files and CRS conversion steps.")
+    
+
+    # Log spatial info once, outside the main loop
+    log_spatial_info(raster_bounds, points_geom)
 
     otsu_thresholds_clipped = []  # Creating a holder for Otsu's threshold values for clipped images
     skipped = 0  # Counter for skipped windows (less than 201*201)
