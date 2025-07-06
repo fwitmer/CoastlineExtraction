@@ -5,7 +5,7 @@ from rasterio.plot import show
 from rasterio.mask import mask
 from rasterio.io import MemoryFile
 import shapely
-from shapely.geometry import Polygon, shape
+from shapely.geometry import Polygon, shape ,box
 import geopandas as gpd
 import os
 from matplotlib import pyplot as plt
@@ -166,35 +166,48 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
                 with memfile.open(**ndwi_profile) as mem_data:
                     mem_data.write_band(1, ndwi)
                 with memfile.open() as dataset:
-                    out_image, out_transform = mask(dataset, shapes=[buffer], nodata=-1, crop=False)
-                    out_image = out_image[0]
-                    out_image = (out_image * 127) + 128
-                    out_image = out_image.astype(np.uint8)
                     
-                    out_image_clipped, out_transform_clipped = mask(dataset, shapes=[buffer], nodata=-1, crop=True)
-                    out_image_clipped = out_image_clipped[0]
-                    out_image_clipped = (out_image_clipped * 127) + 128
-                    out_image_clipped = out_image_clipped.astype(np.uint8)
+                    # Get raster bounds as a shapely geometry
+                    raster_bounds_geom = box(*dataset.bounds)
                     
-                    # Mask array: mask pixels within the sliding window with 1, else 0
-                    mask_array = np.copy(out_image)
-                    mask_value = 1
-                    mask_array = np.where(mask_array == mask_value, 0, 1)
+                    # Check if the point's buffer intersects with the raster's bounds before masking - Added intersection()
+                    if buffer.intersects(raster_bounds_geom):
+                        out_image, out_transform = mask(dataset, shapes=[buffer], nodata=-1, crop=False)
+                        out_image = out_image[0]
+                        out_image = (out_image * 127) + 128
+                        out_image = out_image.astype(np.uint8)
+                        
+                        out_image_clipped, out_transform_clipped = mask(dataset, shapes=[buffer], nodata=-1, crop=True)
+                        out_image_clipped = out_image_clipped[0]
+                        out_image_clipped = (out_image_clipped * 127) + 128
+                        out_image_clipped = out_image_clipped.astype(np.uint8)
+                        
+                        # Mask array: mask pixels within the sliding window with 1, else 0
+                        mask_array = np.copy(out_image)
+                        mask_value = 1
+                        mask_array = np.where(mask_array == mask_value, 0, 1)
+                    
+                        # Skip buffering windows that are partly or wholly out of the NDWI image
+                        if out_image_clipped.shape[0] < 200 or out_image_clipped.shape[1] < 200:
+                            skipped += 1
+                            continue
+                        
+                        else:
+                            # Calculate Otsu's threshold based on the clipped image
+                            threshold_clipped, image_result_clipped = cv2.threshold(out_image_clipped, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                            otsu_thresholds_clipped.append(threshold_clipped)
+                            threshold_window = np.where(out_image >= threshold_clipped, 1, 0).astype(np.uint8)
+                            label = label | threshold_window.astype(np.uint8)  # Labelled image with sliding windows 
+                            
+                            water_count = water_count + threshold_window
+                            buffer_numbers = buffer_numbers + mask_array
+                    
+                    else:
+                        # If the buffer does not intersect, skip to the next point
+                        skipped += 1
+                        continue
+
                 
-                # Skip buffering windows that are partly or wholly out of the NDWI image
-                if out_image_clipped.shape[0] < 200 or out_image_clipped.shape[1] < 200:
-                    skipped += 1
-                    continue
-                
-                else:
-                    # Calculate Otsu's threshold based on the clipped image
-                    threshold_clipped, image_result_clipped = cv2.threshold(out_image_clipped, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                    otsu_thresholds_clipped.append(threshold_clipped)
-                    threshold_window = np.where(out_image >= threshold_clipped, 1, 0).astype(np.uint8)
-                    label = label | threshold_window.astype(np.uint8)  # Labelled image with sliding windows 
-                    
-                    water_count = water_count + threshold_window
-                    buffer_numbers = buffer_numbers + mask_array
     
     # Labelled images based on majority sliding windows
     label_majority = np.where(water_count > (buffer_numbers * MAJORITY_THRESHOLD), 1, 0)
