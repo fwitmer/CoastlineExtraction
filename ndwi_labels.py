@@ -234,15 +234,44 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
 
     print(f"Label min: {np.nanmin(label)} , max: {np.nanmax(label)}")
     
-    # Plot ndwi before segmentation
+
+    
+    save_ndwi_plots(ndwi, ndwi_classified, label, label_majority, ndwi_concatenated)
+
+
+
+
+
+def save_ndwi_plots(ndwi, ndwi_classified, label, label_majority, ndwi_concatenated, out_dir="result_ndwi_labels"):
+    """
+    Saves and visualizes the results of NDWI classification and labeling.
+
+    This function generates and saves plots for different NDWI-based classification outputs:
+      - The raw NDWI image.
+      - The NDWI image classified using a mean threshold.
+      - The NDWI image labeled using a sliding window approach.
+      - The NDWI image labeled using a majority rule on sliding windows.
+      - A concatenated image combining sliding window and mean threshold results.
+    All plots are saved as PNG files in the specified output directory.
+
+    Args:
+        ndwi: The computed NDWI image (2D numpy array).
+        ndwi_classified: Binary NDWI image classified by mean threshold (2D numpy array).
+        label: Binary NDWI image labeled by sliding window (2D numpy array).
+        label_majority: Binary NDWI image labeled by majority rule (2D numpy array).
+        ndwi_concatenated: Combined NDWI classification result (2D numpy array).
+        out_dir: Directory to save the output plots (default: 'result_ndwi_labels').
+    """
+    os.makedirs(out_dir, exist_ok=True)
+
     plt.imshow(ndwi)
-    plt.title('NDWI image')
-    plt.show()
-    
-    # Plotting images side by side
-    fig, axs = plt.subplots(2, 2, figsize=(20, 20))
-    
-    # Plot NDWI classified image (based on one mean threshold)
+    plt.title("NDWI Image")
+    plt.axis("off")
+    plt.savefig(os.path.join(out_dir, "ndwi_image.png"))
+    plt.close()
+
+    fig, axs = plt.subplots(2, 2, figsize=(18, 14))
+
     axs[0, 0].imshow(ndwi_classified)
     axs[0, 0].set_title('NDWI Classified with mean threshold')
     axs[0, 0].axis('off')
@@ -262,7 +291,17 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
     axs[1, 1].set_title('NDWI Concatenated')
     axs[1, 1].axis('off')
 
-    plt.show()
+    # Save NDWI concatenated as a separate PNG
+    plt.figure(figsize=(10, 8))
+    plt.imshow(ndwi_concatenated)
+    plt.axis('off')
+    plt.savefig(os.path.join(out_dir, "ndwi_concatenated.png"), bbox_inches='tight', pad_inches=0)
+    plt.close()
+
+    plt.tight_layout()
+    fig.savefig(os.path.join(out_dir, "ndwi_outputs_summary.png"))
+    plt.close()
+
 
 
 
