@@ -21,6 +21,9 @@ from utils.check_crs import check_crs, crs_match
 # Add import for spatial analysis
 from utils.spatial_analysis import log_spatial_info
 
+# Add import for shapefile generation
+from utils.shapefile_generator import coastline_shp_from_raster, save_and_process, save_concatenated_ndwi_with_shapefile
+
 def create_transect_points(transect_path, line_path, out_path):
     transects = gpd.read_file(transect_path)
     coastline = gpd.read_file(line_path)
@@ -233,7 +236,10 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
     print(f"Average threshold value (-1 to 1 NDWI range): {(np.mean(otsu_thresholds_clipped) - 128) / 127}")
 
     print(f"Label min: {np.nanmin(label)} , max: {np.nanmax(label)}")
-    
+
+
+    # Save concatenated NDWI as TIFF and generate shapefile
+    save_concatenated_ndwi_with_shapefile(ndwi_concatenated, ndwi_profile, image_path)
 
     
     save_ndwi_plots(ndwi, ndwi_classified, label, label_majority, ndwi_concatenated)

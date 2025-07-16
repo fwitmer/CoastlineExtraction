@@ -557,6 +557,7 @@ def fill_nodata(file_to_fill, mask_file = None, plot=False):
         dst.nodata = 0
         dst.write_band(1, filled.astype(rasterio.float32))
 
+# NOTE: The function get_snake has been renamed to coastline_shp_from_raster in utils/shapefile_generator.py
 def get_snake(file, plot=False):
     """
     6 May 2022
