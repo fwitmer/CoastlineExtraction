@@ -24,38 +24,6 @@ from utils.spatial_analysis import log_spatial_info
 # Add import for shapefile generation
 from utils.shapefile_generator import coastline_shp_from_raster, save_and_process, save_concatenated_ndwi_with_shapefile
 
-def create_transect_points(transect_path, line_path, out_path):
-    transects = gpd.read_file(transect_path)
-    coastline = gpd.read_file(line_path)
-    points = coastline.unary_union.intersection(transects.unary_union)
-    fig, ax = plt.subplots(figsize=(14,14))
-    plot_points = gpd.GeoSeries(points)
-    plot_points.plot(ax=ax, color='green')
-    transects.plot(ax=ax, color='red')
-    coastline.plot(ax=ax, color='blue')
-
-    plt.show()
-
-    plot_points.to_file(out_path)
-
-
-def clip_shp(path_to_shp, boundary_geojson):
-    path_name = os.path.dirname(path_to_shp) + "/"
-    shp_name = os.path.basename(path_to_shp)
-    shp_base, shp_extension = os.path.splitext(shp_name)
-    shp_data = gpd.read_file(path_to_shp)
-
-    poly_boundary = Polygon(shape(boundary_geojson))
-
-    shp_clipped = gpd.clip(shp_data, poly_boundary)
-    fig, ax = plt.subplots(figsize=(12,8))
-    shp_data.plot(ax=ax, color='red')
-    plot_shp = gpd.GeoSeries(poly_boundary)
-    plot_shp.plot(ax=ax, color='green')
-    plt.show()
-
-    out_path = path_name + shp_base + "_clipped.shp"
-    shp_clipped.to_file(out_path)
 
 
 # Gaussian blur parameters
