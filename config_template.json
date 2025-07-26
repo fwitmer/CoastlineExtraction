@@ -15,5 +15,9 @@
       "WestChukchi_Baselines/WestChukchi_Baselines.shp",
       "WestChukchi_exposed_STepr_rates/WestChukchi_exposed_STepr_rates.shp",
       "WestChukchi_shorelines/WestChukchi_shorelines.shp"
+    ],
+    "ground_truth_folder": "ground_truth",
+    "ground_truth_files": [
+      "2016_HiRes_Final_Coastline.shp"
     ]
   } 

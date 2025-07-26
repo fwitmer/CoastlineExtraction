@@ -35,6 +35,10 @@ def get_shapefile_path(config, index=0):
     """Get the full path to a shapefile by index."""
     return os.path.join(os.path.dirname(__file__), config['shapefile_folder'], config['shapefiles'][index])
 
+def get_ground_truth_path(config, index=0):
+    """Get the full path to a ground truth file by index."""
+    return os.path.join(os.path.dirname(__file__), config['ground_truth_folder'], config['ground_truth_files'][index])
+
 
 
 # Example:
