@@ -8,6 +8,41 @@
       "20160909_213104_0e19_3B_AnalyticMS_SR_clip.tif",
       "20160909_213333_0e0e_3B_AnalyticMS_SR_clip.tif"
     ],
+    "raw_data_folder": "raw_data",
+    "raw_data_files": [
+      "568197_0369619_2017-06-21_1006_BGRN_SR_clip.tif",
+      "606358_0369619_2017-07-07_1002_BGRN_SR_clip.tif",
+      "720177_0369619_2017-08-29_1006_BGRN_SR_clip.tif",
+      "639352_0369619_2017-07-22_0e16_BGRN_SR_clip.tif",
+      "675525_0369619_2017-08-07_100b_BGRN_SR_clip.tif",
+      "708760_0369619_2017-08-24_0f4e_BGRN_SR_clip.tif",
+      "713122_0369619_2017-08-26_0e14_BGRN_SR_clip.tif",
+      "715383_0369619_2017-08-27_102a_BGRN_SR_clip.tif",
+      "735622_0369619_2017-09-05_102a_BGRN_SR_clip.tif",
+      "797447_0369619_2017-09-24_1036_BGRN_SR_clip.tif",
+      "369619_2018-06-15_RE1_3A_Analytic_SR_clip.tif",
+      "369619_2018-07-23_RE1_3A_Analytic_SR_clip.tif",
+      "369619_2018-08-14_RE4_3A_Analytic_SR_clip.tif",
+      "369619_2018-08-18_RE3_3A_Analytic_SR_clip.tif",
+      "1474782_0369619_2018-06-02_0f51_BGRN_SR_clip.tif",
+      "1483219_0369619_2018-06-05_1034_BGRN_SR_clip.tif",
+      "1483240_0369619_2018-06-05_103f_BGRN_SR_clip.tif",
+      "1487598_0369619_2018-06-07_1008_BGRN_SR_clip.tif",
+      "1498253_0369619_2018-06-11_0f12_BGRN_SR_clip.tif",
+      "1527296_0369619_2018-06-26_101e_BGRN_SR_clip.tif",
+      "1530943_0369619_2018-06-28_0f15_BGRN_SR_clip.tif",
+      "1531852_0369619_2018-06-28_0f12_BGRN_SR_clip.tif",
+      "1536041_0369619_2018-06-30_0f4e_BGRN_SR_clip.tif",
+      "1545397_0369619_2018-07-04_103e_BGRN_SR_clip.tif",
+      "1563872_0369619_2018-07-13_101e_BGRN_SR_clip.tif",
+      "792718_0369619_2017-09-27_0f2b_BGRN_SR_clip.tif",
+      "794552_0369619_2017-09-26_0f51_BGRN_SR_clip.tif",
+      "797937_0369619_2017-09-29_0e3a_BGRN_SR_clip.tif",
+      "369619_2016-06-16_RE4_3A_Analytic_SR_clip.tif",
+      "369619_2016-06-25_RE3_3A_Analytic_SR_clip.tif",
+      "369619_2016-08-04_RE5_3A_Analytic_SR_clip.tif",
+      "268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif"
+    ],
     "shapefile_folder": "USGS_Coastlines",
     "shapefiles": [
       "Deering_transect_points_2016_fw.shp",
@@ -18,6 +53,9 @@
     ],
     "ground_truth_folder": "ground_truth",
     "ground_truth_files": [
-      "2016_HiRes_Final_Coastline.shp"
-    ]
+      "2016_HiRes_Final_Coastline.shp",
+      "2016_HiRes_Final_Coastline.tif",
+      "2016_HiRes_Final_Coastline_UTM3N.tif"
+   ],
+   "processed_data_folder": "processed_data"
   } 

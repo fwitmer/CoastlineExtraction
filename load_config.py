@@ -31,6 +31,10 @@ def get_image_path(config, index=0):
     """Get the full path to an image file by index."""
     return os.path.join(os.path.dirname(__file__), config['image_folder'], config['image_files'][index])
 
+def get_raw_data_path(config, index=0):
+    """Get the full path to a raw data file by index."""
+    return os.path.join(os.path.dirname(__file__), config['raw_data_folder'], config['raw_data_files'][index])
+
 def get_shapefile_path(config, index=0):
     """Get the full path to a shapefile by index."""
     return os.path.join(os.path.dirname(__file__), config['shapefile_folder'], config['shapefiles'][index])
