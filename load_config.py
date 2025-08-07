@@ -43,10 +43,23 @@ def get_ground_truth_path(config, index=0):
     """Get the full path to a ground truth file by index."""
     return os.path.join(os.path.dirname(__file__), config['ground_truth_folder'], config['ground_truth_files'][index])
 
+def get_aligned_data_path(config, index=0):
+    """Get the full path to an aligned data file by index."""
+    return os.path.join(os.path.dirname(__file__), config['aligned_data_folder'], config['aligned_data_files'][index])
 
+def get_aligned_data_folder(config):
+    """Get the full path to the aligned data folder."""
+    return os.path.join(os.path.dirname(__file__), config['aligned_data_folder'])
+
+def get_georeference_output_folder(config):
+    """Get the full path to the georeference output folder."""
+    return os.path.join(os.path.dirname(__file__), config['georeference_output_folder'])
 
 # Example:
 if __name__ == "__main__":
     config = load_config()
     print("First image path:", get_image_path(config, 0))
     print("First shapefile path:", get_shapefile_path(config, 0)) 
+    print("First aligned data path:", get_aligned_data_path(config, 0))
+    print("Aligned data folder:", get_aligned_data_folder(config))
+    print("Georeference output folder:", get_georeference_output_folder(config))
