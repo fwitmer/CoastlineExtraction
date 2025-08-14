@@ -5,6 +5,7 @@ This script aligns a set of satellite images to a reference base image using spa
 It is useful when images are slightly misaligned after reprojection.
 
 Main Features:
+
 - Uses the AROSICS library for fine-tuning image alignment (coregistration)
 - Works with already aligned images and applies small adjustments if needed
 - Automatically saves the output to a results folder

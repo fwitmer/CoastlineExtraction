@@ -93,5 +93,6 @@
         "797447_0369619_2017-09-24_1036_BGRN_SR_clip_aligned.tif",
         "797937_0369619_2017-09-29_0e3a_BGRN_SR_clip_aligned.tif"
     ],
-    "georeference_output_folder": "processed_data/results_georeference"
+    "georeference_output_folder": "processed_data/results_georeference",
+    "tile_images_output_folder": "processed_data/results_tile_images"
 }
