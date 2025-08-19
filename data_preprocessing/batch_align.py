@@ -2,14 +2,14 @@
 Batch Alignment Script for Satellite Imagery
 
 This script batch-aligns all satellite images in the `raw_data/` directory to match a reference
-coastline raster (2016_HiRes_Final_Coastline_UTM3N.tif) using GDAL warp.
+coastline raster (9-5-2016_Ortho_4Band_NDWI.tif) using GDAL warp.
 
 Aligned images are saved to `processed_data/results_batch_align/` with a '_aligned.tif' suffix.
 
 Key Parameters:
 - Target CRS: UTM Zone 3N (EPSG:32603)
-- Pixel size: 5.53 meters
-- Extent: [598472.146, 7327174.321, 605731.152, 7333144.190]
+- Pixel size: 0.5 meters (high resolution)
+- Extent: [598355.000000, 7326619.000000, 605849.500000, 7334628.500000]
 
 Dependencies:
 - GDAL CLI tools (`gdalwarp`)
@@ -35,8 +35,8 @@ config = load_config()
 # The raw data directory path
 raw_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), config['raw_data_folder'])
 
-# The base image path (ground truth TIFF file)
-base_img = get_ground_truth_path(config, 2)  # Index 2 for the TIFF file
+# The base image path (9-5-2016_Ortho_4Band_NDWI.tif)
+base_img = get_ground_truth_path(config, 3)  # Index 3 for 9-5-2016_Ortho_4Band_NDWI.tif
 
 # Output directory
 aligned_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), config['processed_data_folder'], 'results_batch_align')
@@ -45,9 +45,14 @@ aligned_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), conf
 os.makedirs(aligned_data_dir, exist_ok=True)
 
 # Alignment parameters from your base image
+# target_srs = "EPSG:32603"
+# pixel_size = 5.532779396951528
+# te = [598472.146, 7327174.321, 605731.152, 7333144.190]  # [minX, minY, maxX, maxY]
+
 target_srs = "EPSG:32603"
-pixel_size = 5.532779396951528
-te = [598472.146, 7327174.321, 605731.152, 7333144.190]  # [minX, minY, maxX, maxY]
+# pixel_size = 3.125000 
+pixel_size = 0.5  # Match base image resolution (0.5m)
+te = [598355.000000, 7326619.000000, 605849.500000, 7334628.500000]  # [minX, minY, maxX, maxY]
 
 # Process all .tif files in the raw_data directory
 for fname in os.listdir(raw_data_dir):

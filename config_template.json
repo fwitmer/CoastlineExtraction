@@ -55,7 +55,8 @@
     "ground_truth_files": [
         "2016_HiRes_Final_Coastline.shp",
         "2016_HiRes_Final_Coastline.tif",
-        "2016_HiRes_Final_Coastline_UTM3N.tif"
+        "2016_HiRes_Final_Coastline_UTM3N.tif",
+        "9-5-2016_Ortho_4Band_NDWI.tif"
     ],
     "processed_data_folder": "processed_data",
     "aligned_data_folder": "processed_data/results_batch_align",
