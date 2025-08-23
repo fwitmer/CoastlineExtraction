@@ -10,7 +10,7 @@
 
 
 # Ignore processed data and big raster files
-processed_data/
-results_*/
-ground_truth/*.tif
-*.tif
+# processed_data/
+# results_*/
+# ground_truth/*.tif
+# *.tif

@@ -35,8 +35,8 @@ config = load_config()
 # The raw data directory path
 raw_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), config['raw_data_folder'])
 
-# The base image path (9-5-2016_Ortho_4Band_NDWI.tif)
-base_img = get_ground_truth_path(config, 3)  # Index 3 for 9-5-2016_Ortho_4Band_NDWI.tif
+# The base image path (9-5-2016_Ortho_4Band_NDWI_3.125m.tif)
+base_img = get_ground_truth_path(config, 4)  # Index 4 for 9-5-2016_Ortho_4Band_NDWI.tif
 
 # Output directory
 aligned_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), config['processed_data_folder'], 'results_batch_align')
@@ -47,11 +47,11 @@ os.makedirs(aligned_data_dir, exist_ok=True)
 # Alignment parameters from your base image
 # target_srs = "EPSG:32603"
 # pixel_size = 5.532779396951528
+# pixel_size = 0.5  # Match base image resolution (0.5m)
 # te = [598472.146, 7327174.321, 605731.152, 7333144.190]  # [minX, minY, maxX, maxY]
 
 target_srs = "EPSG:32603"
-# pixel_size = 3.125000 
-pixel_size = 0.5  # Match base image resolution (0.5m)
+pixel_size = 3.125000 
 te = [598355.000000, 7326619.000000, 605849.500000, 7334628.500000]  # [minX, minY, maxX, maxY]
 
 # Process all .tif files in the raw_data directory

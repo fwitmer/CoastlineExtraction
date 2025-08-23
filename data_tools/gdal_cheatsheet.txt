@@ -1,0 +1,63 @@
+===============================
+ GDAL Cheatsheet
+===============================
+
+This file documents common GDAL commands for raster preprocessing:
+- Resampling (change resolution / pixel size)
+- Reprojection (change CRS)
+
+----------------------------------------
+1. Check Image Metadata
+----------------------------------------
+# Use gdalinfo to inspect resolution, CRS, extent
+gdalinfo input.tif
+
+# Look for:
+#   Pixel Size = (Xres, Yres)
+#   Coordinate System (EPSG)
+#   Corner coordinates
+
+----------------------------------------
+2. Change Resolution (Resampling)
+----------------------------------------
+# Command:
+gdalwarp -tr <x_res> <y_res> -r <resampling_method> input.tif output_resampled.tif
+
+# Example: Downsample to 10m resolution
+gdalwarp -tr 10 10 -r bilinear input.tif output_10m.tif
+
+# Example: Upsample to 0.5m resolution
+gdalwarp -tr 0.5 0.5 -r cubic input.tif output_05m.tif
+
+# Resampling methods:
+#   near      → Nearest neighbor (preserves pixel values, best for classification)
+#   bilinear  → Bilinear interpolation (smooth results, good for continuous data)
+#   cubic     → Cubic convolution (sharper, can alter pixel values)
+
+----------------------------------------
+3. Change CRS (Reprojection)
+----------------------------------------
+# Command:
+gdalwarp -t_srs <target_EPSG> input.tif output_reprojected.tif
+
+# Example: Reproject to WGS84 (EPSG:4326)
+gdalwarp -t_srs EPSG:4326 input.tif output_wgs84.tif
+
+# Example: Reproject to UTM Zone 3N (EPSG:32603)
+gdalwarp -t_srs EPSG:32603 input.tif output_utm3n.tif
+
+----------------------------------------
+4. Change Both Resolution and CRS
+----------------------------------------
+# Combine -tr and -t_srs
+gdalwarp -t_srs EPSG:32603 -tr 3.125 3.125 -r bilinear input.tif output_aligned.tif
+
+----------------------------------------
+5. Notes
+----------------------------------------
+- Always inspect output with gdalinfo to confirm pixel size and CRS.
+- Use nearest neighbor (-r near) when preserving exact DN values is critical
+  (e.g., land/water classification).
+- Use bilinear/cubic for imagery where smooth transitions are acceptable.
+
+===============================

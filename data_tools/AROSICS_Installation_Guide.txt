@@ -1,0 +1,49 @@
+===============================
+ AROSICS Installation Guide
+===============================
+
+This file documents how to install AROSICS and its dependencies 
+using Conda. GDAL will be installed automatically via conda-forge.
+
+----------------------------------------
+1. Install Miniconda (if not installed)
+----------------------------------------
+Download Miniconda:
+https://docs.conda.io/en/latest/miniconda.html
+
+Follow the instructions for your operating system.
+
+----------------------------------------
+2. Create a Conda Environment
+----------------------------------------
+# Example: Create environment named "arosics_env" with Python 3.10
+conda create -n arosics_env python=3.10
+
+----------------------------------------
+3. Activate the Environment
+----------------------------------------
+conda activate arosics_env
+
+----------------------------------------
+4. Install AROSICS (with GDAL & dependencies)
+----------------------------------------
+# Install from conda-forge channel
+conda install -c conda-forge arosics
+
+----------------------------------------
+5. Verify the Installation
+----------------------------------------
+# Test in Python
+python -c "from arosics import COREG; print('AROSICS is working!')"
+
+Expected Output:
+AROSICS is working!
+
+----------------------------------------
+6. Notes
+----------------------------------------
+- Conda automatically installs GDAL, GeoArray, and other required packages.
+- Avoid using pip to install GDAL or AROSICS (may cause conflicts).
+- Keep the environment isolated for geospatial work.
+
+===============================
