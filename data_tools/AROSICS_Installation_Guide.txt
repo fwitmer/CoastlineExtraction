@@ -37,7 +37,7 @@ conda install -c conda-forge arosics
 python -c "from arosics import COREG; print('AROSICS is working!')"
 
 Expected Output:
-AROSICS is working!
+AROSICS is working!!
 
 ----------------------------------------
 6. Notes

@@ -10,6 +10,7 @@ This file documents common GDAL commands for raster preprocessing:
 1. Check Image Metadata
 ----------------------------------------
 # Use gdalinfo to inspect resolution, CRS, extent
+
 gdalinfo input.tif
 
 # Look for:

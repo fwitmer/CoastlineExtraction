@@ -51,7 +51,7 @@ os.makedirs(aligned_data_dir, exist_ok=True)
 # te = [598472.146, 7327174.321, 605731.152, 7333144.190]  # [minX, minY, maxX, maxY]
 
 target_srs = "EPSG:32603"
-pixel_size = 3.125000 
+pixel_size = 3.125000
 te = [598355.000000, 7326619.000000, 605849.500000, 7334628.500000]  # [minX, minY, maxX, maxY]
 
 # Process all .tif files in the raw_data directory
@@ -77,8 +77,3 @@ print("Batch alignment complete! Aligned files are in:", aligned_data_dir)
 
 
 
-
-
-
-# gdl command for to reproject it to UTM Zone 3N coordinate system.
-# gdalwarp -t_srs EPSG:32603 2016_HiRes_Final_Coastline.tif 2016_HiRes_Final_Coastline_UTM3N.tif
