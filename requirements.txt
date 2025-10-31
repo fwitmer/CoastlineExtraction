@@ -1,0 +1,21 @@
+# Requirements for CoastlineExtraction project
+
+# Core dependencies
+requests>=2.25.1
+numpy>=1.21.0
+rasterio>=1.2.6
+opencv-python>=4.5.1.48
+scikit-image>=0.18.1
+matplotlib>=3.3.4
+shapely>=1.7.1
+fiona>=1.8.18
+geopandas>=0.9.0
+planet>=1.4.3
+arosics>=1.5.0
+flopy>=3.3.5
+scipy>=1.7.0
+
+# For GSW monthly labels (if needed)
+earthengine-api>=0.1.284
+geemap>=0.8.11
+geetools>=1.0.0
