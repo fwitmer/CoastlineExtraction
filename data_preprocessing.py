@@ -6,9 +6,11 @@ from matplotlib import pyplot as plt
 import numpy as np
 import os
 import glob
+import argparse
+import sys
 
 # adapted from https://gis.stackexchange.com/questions/285499/how-to-split-multiband-image-into-image-tiles-using-rasterio
-def make_tiles(image, tile_height=512, tile_width=512, skip_no_data=False):
+def make_tiles(image, tile_height=512, tile_width=512, skip_no_data=False, output_dir="data/tiles"):
     with rio.open(image) as src:
         filepath, filename = os.path.split(image)
         file_base, file_extension = os.path.splitext(filename)
@@ -32,7 +34,9 @@ def make_tiles(image, tile_height=512, tile_width=512, skip_no_data=False):
                 if 0 in window_data[..., :-1]:
                     continue
             out_name = file_base + "_" + str(i + 1).zfill(2) + "-of-" + str(len(tiles)) + file_extension
-            out_path = os.path.join("data/tiles/", out_name)
+            out_path = os.path.join(output_dir, out_name)
+            # Create output directory if it doesn't exist
+            os.makedirs(output_dir, exist_ok=True)
             with rio.open(out_path, 'w', **meta) as dst:
                 dst.write(src.read(window=window))
 
@@ -48,20 +52,26 @@ def _flip_bands(bands):
 # takes the path to all image tiles and creates tiles that are rotated 90°, 180° and 270° as well as their flipped counterparts
 # this results in 8 tiles for every input tile (including the input tile)
 def augment_tiles(tile_path):
-    files = glob.glob(tile_path + "*.tif")
-    files = set(files) - set(glob.glob(tile_path + "*rot*"))
-    files = set(files) - set(glob.glob(tile_path + "*flip*")) 
+    # Normalize tile_path and ensure it's a directory path
+    tile_path = os.path.normpath(tile_path)
+    if not os.path.isdir(tile_path):
+        raise ValueError(f"Tile path is not a valid directory: {tile_path}")
+    
+    # Use os.path.join for glob patterns (works cross-platform)
+    files = glob.glob(os.path.join(tile_path, "*.tif"))
+    files = set(files) - set(glob.glob(os.path.join(tile_path, "*rot*")))
+    files = set(files) - set(glob.glob(os.path.join(tile_path, "*flip*"))) 
     for file in files:
         filename = os.path.basename(file)
         file_base, file_extension = os.path.splitext(filename)
         # generating filepaths for new tiles
-        path_90 = tile_path + file_base + "_rot90" + file_extension
-        path_180 = tile_path + file_base + "_rot180" + file_extension
-        path_270 = tile_path + file_base + "_rot270" + file_extension
-        path_flip_name = tile_path + file_base + "_flip" + file_extension
-        path_flip_90 = tile_path + file_base + "_rot90_flip" + file_extension
-        path_flip_180 = tile_path + file_base + "_rot180_flip" + file_extension
-        path_flip_270 = tile_path + file_base + "_rot270_flip" + file_extension
+        path_90 = os.path.join(tile_path, file_base + "_rot90" + file_extension)
+        path_180 = os.path.join(tile_path, file_base + "_rot180" + file_extension)
+        path_270 = os.path.join(tile_path, file_base + "_rot270" + file_extension)
+        path_flip_name = os.path.join(tile_path, file_base + "_flip" + file_extension)
+        path_flip_90 = os.path.join(tile_path, file_base + "_rot90_flip" + file_extension)
+        path_flip_180 = os.path.join(tile_path, file_base + "_rot180_flip" + file_extension)
+        path_flip_270 = os.path.join(tile_path, file_base + "_rot270_flip" + file_extension)
          
         with rio.open(file, driver="GTiff") as src:
             # band_1 = src.read(1)
@@ -85,10 +95,98 @@ def augment_tiles(tile_path):
         
 # example usage
 if __name__ == '__main__':
-    files = glob.glob("data/labeled_inputs/*.tif")
-
+    parser = argparse.ArgumentParser(
+        description='Preprocess images by creating tiles and augmenting them',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Examples:
+  python data_preprocessing.py --input_dir data/labeled_inputs --output_dir data/tiles
+  
+  python data_preprocessing.py --input_dir ./images --output_dir ./tiles --augment
+        '''
+    )
+    parser.add_argument(
+        '--input_dir',
+        type=str,
+        default='data/labeled_inputs',
+        help='Directory containing input images to tile. Default: data/labeled_inputs'
+    )
+    parser.add_argument(
+        '--output_dir',
+        type=str,
+        default='data/tiles',
+        help='Directory for output tiles. Default: data/tiles'
+    )
+    parser.add_argument(
+        '--augment',
+        action='store_true',
+        help='Run tile augmentation after creating tiles'
+    )
+    parser.add_argument(
+        '--tile_height',
+        type=int,
+        default=512,
+        help='Height of tiles in pixels. Default: 512'
+    )
+    parser.add_argument(
+        '--tile_width',
+        type=int,
+        default=512,
+        help='Width of tiles in pixels. Default: 512'
+    )
+    parser.add_argument(
+        '--skip_no_data',
+        action='store_true',
+        help='Skip tiles with no data values'
+    )
+    parser.add_argument(
+        '--max_workers',
+        type=int,
+        default=6,
+        help='Maximum number of worker threads. Default: 6'
+    )
+    
+    args = parser.parse_args()
+    
+    # Check if input directory exists
+    if not os.path.isdir(args.input_dir):
+        print(f"ERROR: Input directory does not exist: {args.input_dir}", file=sys.stderr)
+        print("Please specify a valid directory using --input_dir argument.", file=sys.stderr)
+        sys.exit(1)
+    
+    # Create output directory if it doesn't exist
+    os.makedirs(args.output_dir, exist_ok=True)
+    
+    # Find all .tif files in input directory
+    input_pattern = os.path.join(args.input_dir, "*.tif")
+    files = glob.glob(input_pattern)
+    
+    if not files:
+        print(f"No .tif files found in {args.input_dir}", file=sys.stderr)
+        sys.exit(1)
+    
+    print(f"Found {len(files)} files to process")
+    print(f"Output directory: {args.output_dir}")
+    
     from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=6) as p:
-        p.map(make_tiles, files)
-
-# augment_tiles("data/tiles/")
+    
+    # Create tiles
+    def process_file(file):
+        make_tiles(
+            file,
+            tile_height=args.tile_height,
+            tile_width=args.tile_width,
+            skip_no_data=args.skip_no_data,
+            output_dir=args.output_dir
+        )
+    
+    with ThreadPoolExecutor(max_workers=args.max_workers) as p:
+        p.map(process_file, files)
+    
+    print("Tile creation complete!")
+    
+    # Augment tiles if requested
+    if args.augment:
+        print("Starting tile augmentation...")
+        augment_tiles(args.output_dir)
+        print("Tile augmentation complete!")
