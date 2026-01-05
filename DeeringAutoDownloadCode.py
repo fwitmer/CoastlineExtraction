@@ -119,46 +119,43 @@ def p(data):
 #     2. Year is before 2009.
 
 # Note: Make sure of months that 30 days not 31 days. Also Leap Years. 
-def validate_and_compare_dates(start_date, end_date): #(*NEW*)
+def validate_and_compare_dates(start_date, end_date):
     """
-    * Args:
-    - start_date: The start date as a string in the format "yyyy-mm-dd".
-    - end_date: The end date as a string in the format "yyyy-mm-dd".
+    Args:
+        start_date (str): The start date as a string in the format "YYYY-MM-DD".
+        end_date (str): The end date as a string in the format "YYYY-MM-DD".
 
-    * Returns:
-    - A tuple (date_valid, start_date_str, end_date_str):
-        1. date_valid (bool): True if both dates are valid and start_date is before end_date, otherwise False.
-        2. start_date_str (str): The validated start date in the format "yyyy-mm-dd" if valid, otherwise None.
-        3. end_date_str (str): The validated end date in the format "yyyy-mm-dd" if valid, otherwise None.
+    Returns:
+        tuple: (date_valid, start_date_str, end_date_str)
+            - date_valid (bool): True if both dates are valid and start_date is before end_date, otherwise False.
+            - start_date_str (str): The validated start date in the format "YYYY-MM-DD" if valid, otherwise None.
+            - end_date_str (str): The validated end date in the format "YYYY-MM-DD" if valid, otherwise None.
     """
-    
     try:
-        # Attempt to parse the input strings as dates in the format "yyyy-mm-dd"
-        start_date = datetime.strptime(start_date, '%Y-%m-%d')
-        end_date = datetime.strptime(end_date, '%Y-%m-%d')
-        
-        # Attempt to parse the input strings as dates in the format "yyyy-mm-dd"
-        start_date = datetime.strptime(start_date_input, '%Y-%m-%d')
-        end_date = datetime.strptime(end_date_input, '%Y-%m-%d')
+        # Parse the input strings as dates in the format "YYYY-MM-DD"
+        start_date_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_date_dt = datetime.strptime(end_date, '%Y-%m-%d')
+
         print("Valid date format.")
-        
+
         date_valid = True
+
         # Check if start and end years are 2009 or later
-        if start_date.year < 2009 or end_date.year < 2009:
+        if start_date_dt.year < 2009 or end_date_dt.year < 2009:
             print("Invalid: Start and End year must be 2009 or later.")
             date_valid = False
-        
-        # Check if start date is before end date
-        if start_date >= end_date:
+
+        # Check if start date is strictly before end date
+        if start_date_dt >= end_date_dt:
             print("Invalid: Start date must be before end date.")
             date_valid = False
-        
-        # Convert start_date and end_date to strings in "YYYY-MM-DD" format
-        start_date_str = start_date.strftime('%Y-%m-%d')
-        end_date_str = end_date.strftime('%Y-%m-%d')
-        
+
+        # Convert dates back to strings in "YYYY-MM-DD" format
+        start_date_str = start_date_dt.strftime('%Y-%m-%d')
+        end_date_str = end_date_dt.strftime('%Y-%m-%d')
+
         return date_valid, start_date_str, end_date_str
-    
+
     except ValueError:
         print("Invalid date format. Please write the date correctly (YYYY-MM-DD).")
         return False, None, None
