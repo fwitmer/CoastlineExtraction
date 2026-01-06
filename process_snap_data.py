@@ -28,6 +28,8 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 import time
 import math
+import argparse
+import sys
 
 # WKT Used to convert Lat/Lon to projection used in snap data
 CRS_WKT = 'PROJCS["unnamed",GEOGCS["unnamed ellipse",DATUM["unknown",SPHEROID["unnamed",6370000,0]],PRIMEM["Greenwich",' \
@@ -38,19 +40,6 @@ CRS_WKT = 'PROJCS["unnamed",GEOGCS["unnamed ellipse",DATUM["unknown",SPHEROID["u
 
 # Center of region in lat/lon
 REGION_CENTER = (66.0756, -162.7172)
-
-# Filepaths for SNAP data
-
-TSK_FILEPATH = '/usr/local/coastal/snap_processing/snap_data/tsk'
-U10_FILEPATH = '/usr/local/coastal/snap_processing/snap_data/u10'
-V10_FILEPATH = '/usr/local/coastal/snap_processing/snap_data/v10'
-SEAICE_FILEPATH = '/usr/local/coastal/snap_processing/snap_data/seaice'
-PSFC_FILEPATH = '/usr/local/coastal/snap_processing/snap_data/psfc'
-T2_FILEPATH = '/usr/local/coastal/snap_processing/snap_data/t2'
-TRANSECT_FILEPATH = '/usr/local/coastal/snap_processing/transect_data/WestChukchi_exposed_STepr_rates.shp'
-
-# Filepath for I/O csv data
-OUTPUT_FILEPATH = '/usr/local/coastal/snap_processing/snap_output/SNAP_daily_by_transect'
 
 # Create global variables
 global transformer_to_snap_proj
@@ -112,7 +101,7 @@ def read_data(filepath):
     if os.path.isdir(filepath):
         for filename in os.scandir(filepath):
             try:
-                data.append(nc.Dataset(filepath + '/' + filename.name))
+                data.append(nc.Dataset(os.path.join(filepath, filename.name)))
             except OSError:
                 pass
 
@@ -288,6 +277,91 @@ def calculate_wind_data(dataframe):
 
 if __name__ == '__main__':
 
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description='Process SNAP climate data for coastline extraction',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Examples:
+  python process_snap_data.py --snap_data_dir ./data/snap_data --transect_file ./data/transects/WestChukchi_exposed_STepr_rates.shp --output_dir ./data/output
+  
+  python process_snap_data.py --snap_data_dir /usr/local/coastal/snap_processing/snap_data --transect_file /usr/local/coastal/snap_processing/transect_data/WestChukchi_exposed_STepr_rates.shp --output_dir /usr/local/coastal/snap_processing/snap_output
+        '''
+    )
+    parser.add_argument(
+        '--snap_data_dir',
+        type=str,
+        default='./data/snap_data',
+        help='Base directory containing SNAP data subdirectories (tsk, u10, v10, seaice, psfc, t2). Default: ./data/snap_data'
+    )
+    parser.add_argument(
+        '--transect_file',
+        type=str,
+        default='./data/transect_data/WestChukchi_exposed_STepr_rates.shp',
+        help='Path to transect shapefile. Default: ./data/transect_data/WestChukchi_exposed_STepr_rates.shp'
+    )
+    parser.add_argument(
+        '--output_dir',
+        type=str,
+        default='./data/snap_output',
+        help='Directory for output CSV files. Default: ./data/snap_output'
+    )
+    parser.add_argument(
+        '--output_prefix',
+        type=str,
+        default='SNAP_daily_by_transect',
+        help='Prefix for output CSV filenames. Default: SNAP_daily_by_transect'
+    )
+    
+    args = parser.parse_args()
+    
+    # Construct filepaths from arguments
+    SNAP_DATA_DIR = args.snap_data_dir
+    TRANSECT_FILEPATH = args.transect_file
+    OUTPUT_DIR = args.output_dir
+    OUTPUT_PREFIX = args.output_prefix
+    
+    # Construct individual data filepaths
+    TSK_FILEPATH = os.path.join(SNAP_DATA_DIR, 'tsk')
+    U10_FILEPATH = os.path.join(SNAP_DATA_DIR, 'u10')
+    V10_FILEPATH = os.path.join(SNAP_DATA_DIR, 'v10')
+    SEAICE_FILEPATH = os.path.join(SNAP_DATA_DIR, 'seaice')
+    PSFC_FILEPATH = os.path.join(SNAP_DATA_DIR, 'psfc')
+    T2_FILEPATH = os.path.join(SNAP_DATA_DIR, 't2')
+    
+    # Check if directories exist
+    data_dirs = {
+        'tsk': TSK_FILEPATH,
+        'u10': U10_FILEPATH,
+        'v10': V10_FILEPATH,
+        'seaice': SEAICE_FILEPATH,
+        'psfc': PSFC_FILEPATH,
+        't2': T2_FILEPATH
+    }
+    
+    missing_dirs = []
+    for name, path in data_dirs.items():
+        if not os.path.exists(path):
+            missing_dirs.append(f"  {name}: {path}")
+    
+    if missing_dirs:
+        print("ERROR: The following SNAP data directories do not exist:", file=sys.stderr)
+        for dir_info in missing_dirs:
+            print(dir_info, file=sys.stderr)
+        print("\nPlease specify the correct path using --snap_data_dir argument.", file=sys.stderr)
+        print("Example: --snap_data_dir /path/to/snap_data", file=sys.stderr)
+        sys.exit(1)
+    
+    if not os.path.exists(TRANSECT_FILEPATH):
+        print(f"ERROR: Transect file does not exist: {TRANSECT_FILEPATH}", file=sys.stderr)
+        print("Please specify the correct path using --transect_file argument.", file=sys.stderr)
+        sys.exit(1)
+    
+    # Create output directory if it doesn't exist
+    if not os.path.exists(OUTPUT_DIR):
+        print(f"Creating output directory: {OUTPUT_DIR}")
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
     # Import Transects and extract points
     transect_points, transects = get_transect_points(TRANSECT_FILEPATH)
 
@@ -415,4 +489,6 @@ if __name__ == '__main__':
             print(f'Unable to perform wind calculations for year {y}. Please check dataframe for missing data.')
         print(f'{y} Wind data processed. Writing final dataframe')
 
-        df.to_csv(OUTPUT_FILEPATH + f'_{y}.csv')
+        output_filename = f'{OUTPUT_PREFIX}_{y}.csv'
+        output_filepath = os.path.join(OUTPUT_DIR, output_filename)
+        df.to_csv(output_filepath)

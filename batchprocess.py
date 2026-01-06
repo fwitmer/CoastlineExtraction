@@ -14,7 +14,7 @@ rootdir = os.getcwd()
 # TODO: Add method to determine if files have already been processed to prevent reprocessing
 # TODO: Add optional flag to reprocess all images
 files_to_be_processed = []
-for root, subdirs, files in os.walk(rootdir + "/data"):
+for root, subdirs, files in os.walk(os.path.join(rootdir, "data")):
     # skip any files found in the output directory
     if root.find("output") != -1:
         continue
@@ -22,13 +22,14 @@ for root, subdirs, files in os.walk(rootdir + "/data"):
     if files:
         for f in files:
             if f.endswith(".tif") and f.find("_SR_") != -1:
-                pathname = root + "/" + f
+                pathname = os.path.join(root, f)
                 files_to_be_processed.append((pathname, f)) # appending (path, filename)
 
 # if we have files, check output directory structure
 if files_to_be_processed:
-    if not os.path.isdir("data/output"):
-        os.mkdir("data/output")
+    output_dir = os.path.join("data", "output")
+    if not os.path.isdir(output_dir):
+        os.mkdir(output_dir)
     
     file_groups = {}
 
@@ -52,10 +53,12 @@ if files_to_be_processed:
 
 
         # process directory structure if not already made
-        if not os.path.isdir("data/output/{}".format(file_year)):
-            os.mkdir("data/output/{}".format(file_year))
-        if not os.path.isdir("data/output/{}/{}".format(file_year, file_month)):
-            os.mkdir("data/output/{}/{}".format(file_year, file_month))
+        year_dir = os.path.join("data", "output", file_year)
+        if not os.path.isdir(year_dir):
+            os.mkdir(year_dir)
+        month_dir = os.path.join("data", "output", file_year, file_month)
+        if not os.path.isdir(month_dir):
+            os.mkdir(month_dir)
 
         # outfile_base = f[1][:15] + "_AnalyticMS_SR"
         
@@ -78,19 +81,21 @@ if files_to_be_processed:
                                  "height": mosaic.shape[1],
                                  "width": mosaic.shape[2],
                                  "transform": out_transform})
-                out_fp = "data/output/{year}/{month}/{year}{month}{day}_AnalyticMS_SR_merged.tif".format(year=year, month=month, day=day)
+                out_filename = "{year}{month}{day}_AnalyticMS_SR_merged.tif".format(year=year, month=month, day=day)
+                out_fp = os.path.join("data", "output", year, month, out_filename)
                 with rasterio.open(out_fp, "w", **out_meta) as dst:
                     dst.write(mosaic)
 
 # process the merged files
-for root, subdirs, files in os.walk(rootdir + "/data/output"):
+for root, subdirs, files in os.walk(os.path.join(rootdir, "data", "output")):
     if files:
         for f in files:
             if f.find("NDWI") != -1:
                 continue
-            pathname = root + "/"
+            pathname = root
             outfile_base = f.split(sep=".")[0]
-            ndwi_outfile = pathname + outfile_base + "_NDWI.tif"
-            ndwi_class_outfile = pathname + outfile_base + "_NDWI_classified.tif"
-            ndwi = rt.calculate_ndwi(pathname + f, ndwi_outfile, plot=False)
+            ndwi_outfile = os.path.join(pathname, outfile_base + "_NDWI.tif")
+            ndwi_class_outfile = os.path.join(pathname, outfile_base + "_NDWI_classified.tif")
+            input_file = os.path.join(pathname, f)
+            ndwi = rt.calculate_ndwi(input_file, ndwi_outfile, plot=False)
             ndwi_class = rt.ndwi_classify(ndwi_outfile, ndwi_class_outfile, plot=False)
