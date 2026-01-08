@@ -25,23 +25,27 @@ import json
 import time
 import pathlib
 import requests
+import logging
 from datetime import datetime
 from requests.auth import HTTPBasicAuth
 from planet import Session, DataClient, OrdersClient
 
 # Authenticating :
-RAWAN_KEY = "************************************"
-FRANK_KEY = "************************************"
-JACK_KEY = "************************************"
-
 # if your Planet API Key is not set as an environment variable, you can paste it below
 if os.environ.get('PL_API_KEY', ''):
     API_KEY = os.environ.get('PL_API_KEY', '')
 else:
-    API_KEY = RAWAN_KEY
+    # Placeholder for user to manually set if not using env vars, but better to warn
+    API_KEY = "PLAK2ec5648ef4a740068817a31731a250eb"
+
+if not API_KEY:
+    print("WARNING: Planet API Key not found. Please set PL_API_KEY environment variable or update the script.")
 
 session = requests.Session() # Setup the session
 session.auth = (API_KEY, "") # Authenticate
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 
@@ -119,11 +123,14 @@ def p(data):
 #     2. Year is before 2009.
 
 # Note: Make sure of months that 30 days not 31 days. Also Leap Years. 
-def validate_and_compare_dates(start_date, end_date): #(*NEW*)
+def validate_and_compare_dates(start_date, end_date):
     """
+    Validates and compares two date strings to ensure they are properly formatted
+    and that the start date is before the end date.
+    
     * Args:
-    - start_date: The start date as a string in the format "yyyy-mm-dd".
-    - end_date: The end date as a string in the format "yyyy-mm-dd".
+    - start_date (str): The start date as a string in the format "yyyy-mm-dd".
+    - end_date (str): The end date as a string in the format "yyyy-mm-dd".
 
     * Returns:
     - A tuple (date_valid, start_date_str, end_date_str):
@@ -132,35 +139,39 @@ def validate_and_compare_dates(start_date, end_date): #(*NEW*)
         3. end_date_str (str): The validated end date in the format "yyyy-mm-dd" if valid, otherwise None.
     """
     
+    # Validate input types
+    if not isinstance(start_date, str) or not isinstance(end_date, str):
+        print("Invalid input: Both start_date and end_date must be strings.")
+        return False, None, None
+    
     try:
-        # Attempt to parse the input strings as dates in the format "yyyy-mm-dd"
-        start_date = datetime.strptime(start_date, '%Y-%m-%d')
-        end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        # Parse the input strings as dates in the format "yyyy-mm-dd"
+        # Use distinct variable names to avoid overwriting function parameters
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
         
-        # Attempt to parse the input strings as dates in the format "yyyy-mm-dd"
-        start_date = datetime.strptime(start_date_input, '%Y-%m-%d')
-        end_date = datetime.strptime(end_date_input, '%Y-%m-%d')
         print("Valid date format.")
         
         date_valid = True
+        
         # Check if start and end years are 2009 or later
-        if start_date.year < 2009 or end_date.year < 2009:
+        if start_date_obj.year < 2009 or end_date_obj.year < 2009:
             print("Invalid: Start and End year must be 2009 or later.")
             date_valid = False
         
         # Check if start date is before end date
-        if start_date >= end_date:
+        if start_date_obj >= end_date_obj:
             print("Invalid: Start date must be before end date.")
             date_valid = False
         
-        # Convert start_date and end_date to strings in "YYYY-MM-DD" format
-        start_date_str = start_date.strftime('%Y-%m-%d')
-        end_date_str = end_date.strftime('%Y-%m-%d')
+        # Convert datetime objects to strings in "YYYY-MM-DD" format
+        start_date_str = start_date_obj.strftime('%Y-%m-%d')
+        end_date_str = end_date_obj.strftime('%Y-%m-%d')
         
         return date_valid, start_date_str, end_date_str
     
-    except ValueError:
-        print("Invalid date format. Please write the date correctly (YYYY-MM-DD).")
+    except ValueError as e:
+        print(f"Invalid date format. Please write the date correctly (YYYY-MM-DD). Error: {e}")
         return False, None, None
     
     
@@ -246,9 +257,14 @@ def get_images_ids(search_filter, item_type):
         json=search_request)
     
     geojson = search_result.json()
-    image_ids = [feature['id'] for feature in geojson['features']]
+    if 'features' in geojson:
+        image_ids = [feature['id'] for feature in geojson['features']]
+        print(f"Number of images available is {len(image_ids)}")
+        return image_ids
+    else:
+        print(f"Error retrieving images: {geojson}")
+        return []
     
-    print(f"Number of images available is {len(image_ids)}")
     
     return image_ids
 
@@ -330,21 +346,33 @@ def place_order(item_type, product_bundle, item_ids, coordinates, auth):
     - str: The URL of the created order.
     """
     
-    request = {"name": "image_details", "source_type": "scenes",
-                "products": [{
-                "item_ids": item_ids,
-                "item_type": item_type,
-                "product_bundle": product_bundle}],
-                
-                "tools": [{
-                "clip": {
-                    "aoi": { "type": "Polygon", "coordinates": coordinates
-            }}}]}
+    request = {
+        "name": "simple_order",
+        "source_type": "scenes",
+        "products": [{
+            "item_ids": item_ids,
+            "item_type": item_type,
+            "product_bundle": product_bundle
+        }]
+    }
+
     response = requests.post(orders_url, data=json.dumps(request), auth=auth, headers=headers)
-    print(response)
-    order_id = response.json()['id']
-    print(order_id)
-    order_url = orders_url + '/' + order_id
+    logging.info(f"Order response status: {response.status_code}")
+    
+    if response.status_code == 202:
+        order_id = response.json()['id']
+        logging.info(f"Order placed successfully. Order ID: {order_id}")
+        order_url = orders_url + '/' + order_id
+        return order_url
+    else:
+        logging.error(f"Order Error Response: {response.json()}")
+        try:
+            error_details = response.json().get('field', {}).get('Details', [])
+            for detail in error_details:
+                logging.error(f"Reason: {detail.get('message')}")
+        except Exception:
+            pass
+        return None
     return order_url
             
 
@@ -430,7 +458,7 @@ winter_end_day = 136
 date_format = date_format_dict[item_type] # Date format in ID string
 date_length = 15                # image_id example: "20240529_213419_83_24b2"
 
-download_folder = "D:/GSoC/download/"
+download_folder = "./downloads/"
 
 geojson_geometry = {
        "type":"Polygon","coordinates":[[
@@ -462,13 +490,22 @@ if date_valid :
         images_ids = rem_winter(images_ids, date_format, date_length, winter_start_day, winter_end_day)
         order_url = place_order(item_type, product_bundle, images_ids, coordinates, session.auth)
 
-        state = poll_for_success(order_url, session.auth)
+        if order_url is not None:
+            logging.info(f"Polling for success at: {order_url}")
+            state = poll_for_success(order_url, session.auth)
 
-        if state == "success":
-            r = requests.get(order_url, auth=session.auth)
-            response = r.json()
-            results = response['_links']['results']
-            download_results(results, download_folder)
+            if state == "success":
+                r = requests.get(order_url, auth=session.auth)
+                if r.status_code == 200:
+                    response = r.json()
+                    results = response['_links']['results']
+                    download_results(results, download_folder)
+                else:
+                    logging.error(f"Failed to retrieve order results. Status: {r.status_code}")
+        else:
+            logging.error("Order placement failed. Please check your API key, permissions, and product bundle availability.")
+            logging.error(f"Attempted to order: Item Type={item_type}, Bundle={product_bundle}")
+            logging.info("Suggestion: Check if your account has access to 'analytic_sr_udm2'. You might need to switch to 'visual' or 'analytic_udm2'.")
 
     else:
         print("There are not any available images to download")
