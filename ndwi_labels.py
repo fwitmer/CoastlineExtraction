@@ -69,17 +69,18 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
         green = src_raster.read(2).astype(np.float32)  # Get the green band
         nir_num = src_raster.count  # Adjusting NIR band to 4 or 5 band images
         nir = src_raster.read(nir_num).astype(np.float32)  # Get NIR band
-        
+        ndwi_profile =src_raster.profile
         np.seterr(divide='ignore', invalid='ignore')
-        
-        ndwi = (green - nir) / (green + nir)  # NDWI equation
-        ndwi[np.isnan(ndwi)] = 0  # Sets any NaN values in the NDWI array to 0. (Dividing by zero => NaN pixels)
-        ndwi_profile = src_raster.profile  # Copies the image profile (metadata).
+        with np.errstate(divide= 'ignore', invalid='ignore'):
+          ndwi = (green - nir) / (green + nir)  # NDWI equation(Calculation with scientific robustness)
+        nodata_mask = np.isnan(ndwi) | (green== 0 ) # Identifying NoData areas (where band are 0 or NDWI is NaN )
+        ndwi= np.nan_to_num(ndwi, nan=0.0) # Clean the NaN values Before blurring.
         
         # Apply Gaussian blur
         if blurring:
-            print("Gaussian Filtering Applied")
+            print("Gaussian Filtering Applied with Edge Protecto")
             ndwi = cv2.GaussianBlur(ndwi, KSIZE_BLUR, SIGMA_X, SIGMA_Y)
+            ndwi[nodata_mask] = -1.0 #Set NoData to -1 (distinct from 0/water)
         
         # Blank label layer
         label = np.zeros((src_raster.height, src_raster.width)).astype(np.uint8)
