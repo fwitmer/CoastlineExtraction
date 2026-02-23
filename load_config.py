@@ -29,23 +29,38 @@ def load_config(config_path=CONFIG_PATH):
 
 def get_image_path(config, index=0):
     """Get the full path to an image file by index."""
-    return os.path.join(os.path.dirname(__file__), config['image_folder'], config['image_files'][index])
+    files = config['image_files']
+    if index < 0 or index >= len(files):
+        raise IndexError(f"Index {index} out of range for image_files (0-{len(files)-1})")
+    return os.path.join(os.path.dirname(__file__), config['image_folder'], files[index])
 
 def get_raw_data_path(config, index=0):
     """Get the full path to a raw data file by index."""
-    return os.path.join(os.path.dirname(__file__), config['raw_data_folder'], config['raw_data_files'][index])
+    files = config['raw_data_files']
+    if index < 0 or index >= len(files):
+        raise IndexError(f"Index {index} out of range for raw_data_files (0-{len(files)-1})")
+    return os.path.join(os.path.dirname(__file__), config['raw_data_folder'], files[index])
 
 def get_shapefile_path(config, index=0):
     """Get the full path to a shapefile by index."""
-    return os.path.join(os.path.dirname(__file__), config['shapefile_folder'], config['shapefiles'][index])
+    files = config['shapefiles']
+    if index < 0 or index >= len(files):
+        raise IndexError(f"Index {index} out of range for shapefiles (0-{len(files)-1})")
+    return os.path.join(os.path.dirname(__file__), config['shapefile_folder'], files[index])
 
 def get_ground_truth_path(config, index=0):
     """Get the full path to a ground truth file by index."""
-    return os.path.join(os.path.dirname(__file__), config['ground_truth_folder'], config['ground_truth_files'][index])
+    files = config['ground_truth_files']
+    if index < 0 or index >= len(files):
+        raise IndexError(f"Index {index} out of range for ground_truth_files (0-{len(files)-1})")
+    return os.path.join(os.path.dirname(__file__), config['ground_truth_folder'], files[index])
 
 def get_aligned_data_path(config, index=0):
     """Get the full path to an aligned data file by index."""
-    return os.path.join(os.path.dirname(__file__), config['aligned_data_folder'], config['aligned_data_files'][index])
+    files = config['aligned_data_files']
+    if index < 0 or index >= len(files):
+        raise IndexError(f"Index {index} out of range for aligned_data_files (0-{len(files)-1})")
+    return os.path.join(os.path.dirname(__file__), config['aligned_data_folder'], files[index])
 
 def get_aligned_data_folder(config):
     """Get the full path to the aligned data folder."""
