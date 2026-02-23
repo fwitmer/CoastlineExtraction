@@ -28,12 +28,14 @@ Before installing this project, ensure you have the following requirements:
 
 ### Clone the Repository
 
-Clone the project using the `dev` branch (this branch contains the latest development features):
+Clone the project using the default `master` branch:
 
 ```bash
-git clone -b dev https://github.com/your-username/coastline-extraction.git
-cd coastline-extraction
+git clone https://github.com/fwitmer/CoastlineExtraction.git
+cd CoastlineExtraction
 ```
+
+> ⚠️ Note: The repository currently contains only the `master` branch. Earlier versions of this README referenced a non-existent `dev` branch and an incorrect repository URL (`coastline-extraction.git`), which caused cloning to fail for new users.
 
 ---
 
@@ -124,20 +126,22 @@ shapefile_path = get_shapefile_path(config, 0) # First shapefile
 
 ## Contributing
 
-### Working with the Dev Branch
+### Contribution Workflow
 
-This project uses the `dev` branch for active development. When contributing:
+This project currently uses the `master` branch as the primary development branch.
+
+When contributing:
 
 1. **Fork the repository on GitHub**
 
-2. **Clone your fork using the `dev` branch**:
+2. **Clone your fork**:
 
 ```bash
-git clone -b dev https://github.com/your-username/coastline-extraction.git
-cd coastline-extraction
+git clone https://github.com/your-username/CoastlineExtraction.git
+cd CoastlineExtraction
 ```
 
-3. **Create a feature branch from `dev`**:
+3. **Create a feature branch from `master`**:
 
 ```bash
 git checkout -b feature/your-feature-name
