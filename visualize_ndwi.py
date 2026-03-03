@@ -97,7 +97,8 @@ def compute_ndwi(green, nir, blur_kernel=None, blur_sigma_x=None, blur_sigma_y=N
 
 def sliding_window_otsu(ndwi, window_size=64):
     """
-    Simplified sliding-window Otsu thresholding (pixel-grid, majority voting).
+    Simplified sliding-window Otsu thresholding (pixel-grid, majority voting)
+    with global mean-threshold fallback for uncovered areas.
 
     NOTE: This is a simplified approximation of the geometry-based sliding
     window in ndwi_labels.py, which uses shapefile transect points as window
@@ -116,31 +117,55 @@ def sliding_window_otsu(ndwi, window_size=64):
     vote_map  = np.zeros((h, w), dtype=np.int32)
     count_map = np.zeros((h, w), dtype=np.int32)
 
-    # Convert NDWI to uint8 for cv2.threshold
-    ndwi_8bit = np.clip((ndwi + 1) * 127.5, 0, 255).astype(np.uint8)
+    # Convert NDWI [-1,1] to uint8 matching ndwi_labels.py: (ndwi * 127) + 128
+    # NDWI = 0 maps to 128; water (positive NDWI) > 128; land (negative) < 128
+    ndwi_8bit = np.clip((ndwi * 127) + 128, 0, 255).astype(np.uint8)
 
+    otsu_thresholds = []   # collect valid thresholds for global fallback
     step = window_size // 2
     for y in range(0, h, step):
         for x in range(0, w, step):
             window = ndwi_8bit[y:y + window_size, x:x + window_size]
             if window.size == 0:
                 continue
-            # Skip windows that are mostly nodata / uniform
-            if window.std() < 1e-3:
+            # Skip nearly-uniform windows — Otsu on single-class data
+            # (e.g. all-land) produces a meaningless threshold that splits
+            # land texture noise as "water", causing scattered white pixels.
+            # A std of 10 in uint8 space filters out windows that contain
+            # only one class (pure land ≈ std 3–8, pure water ≈ std 5–10).
+            if window.std() < 10:
                 continue
             thresh, _ = cv2.threshold(
                 window, 0, 1,
                 cv2.THRESH_BINARY + cv2.THRESH_OTSU
             )
+            otsu_thresholds.append(thresh)
             classified = (window >= thresh).astype(np.int32)
             vote_map[y:y + window_size, x:x + window_size]  += classified
             count_map[y:y + window_size, x:x + window_size] += 1
 
-    # Majority vote → 1 = water, 0 = land
+    # Majority vote for pixels covered by valid sliding windows
     # Threshold matches ndwi_labels.py MAJORITY_THRESHOLD (0.55)
     safe_count = np.where(count_map == 0, 1, count_map)
-    binary_mask = (vote_map / safe_count >= MAJORITY_THRESHOLD).astype(np.uint8)
-    return binary_mask
+    mask = (vote_map / safe_count >= MAJORITY_THRESHOLD).astype(np.uint8)
+
+    # For uncovered pixels, fall back to a global mean threshold.
+    # This matches ndwi_labels.py's concatenation logic: sliding-window
+    # labels where windows exist, single mean-threshold classification
+    # elsewhere.  The +10 offset biases toward land, matching ndwi_labels.py.
+    if otsu_thresholds:
+        mean_thresh = np.mean(otsu_thresholds) + 10
+        global_mask = (ndwi_8bit >= mean_thresh).astype(np.uint8)
+        covered = count_map > 0
+        mask = np.where(covered, mask, global_mask)
+    else:
+        # No valid windows — use a single global Otsu threshold
+        global_thresh, _ = cv2.threshold(
+            ndwi_8bit, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
+        mask = (ndwi_8bit >= global_thresh).astype(np.uint8)
+
+    return mask
 
 
 def normalize_for_display(arr):
