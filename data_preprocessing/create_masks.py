@@ -1,13 +1,16 @@
 # import libraries
 import rasterio as rio
-from rasterio import mask
-from rasterio.plot import show
 from rasterio.mask import mask
+from rasterio.plot import show
 from rasterio.io import MemoryFile
+
 import shapely
-from shapely.geometry import Polygon, shape, box # added box
+from shapely.geometry import Polygon, shape, box
 import geopandas as gpd
+
+import sys
 import os
+
 from matplotlib import pyplot as plt
 import numpy as np
 import cv2
@@ -78,8 +81,8 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="r
         
         np.seterr(divide='ignore', invalid='ignore')
         
-        ndwi = (green - nir) / (green + nir)  # NDWI equation
-        ndwi[np.isnan(ndwi)] = 0  # Sets any NaN values in the NDWI array to 0. (Dividing by zero => NaN pixels)
+        ndwi = (green - nir) / (green + nir + 1e-8)  # NDWI equation
+        # ndwi[np.isnan(ndwi)] = 0  # Sets any NaN values in the NDWI array to 0. (Dividing by zero => NaN pixels)
         ndwi_profile = src_raster.profile  # Copies the image profile (metadata).
         
         # Apply Gaussian blur
@@ -152,7 +155,7 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="r
                     if buffer.intersects(raster_bounds_geom):
                         out_image, out_transform = mask(dataset, shapes=[buffer], nodata=-1, crop=False)
                         out_image = out_image[0]
-                        out_image = (out_image * 127) + 128
+                        out_image = ((out_image + 1) * 127.5).astype(np.uint8)
                         out_image = out_image.astype(np.uint8)
                         
                         out_image_clipped, out_transform_clipped = mask(dataset, shapes=[buffer], nodata=-1, crop=True)
