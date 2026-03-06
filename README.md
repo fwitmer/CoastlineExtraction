@@ -35,7 +35,7 @@ git clone https://github.com/fwitmer/CoastlineExtraction.git
 cd CoastlineExtraction
 ```
 
-> ⚠️ Note: The repository currently contains only the `master` branch. Earlier versions of this README referenced a non-existent `dev` branch and an incorrect repository URL (`coastline-extraction.git`), which caused cloning to fail for new users.
+> ⚠️ Note: The repository currently contains only the `master` branch. Earlier versions of this README referenced a non-existent `dev` branch and an incorrect repository URL (`coastlineExtraction.git`), which caused cloning to fail for new users.
 
 ---
 
