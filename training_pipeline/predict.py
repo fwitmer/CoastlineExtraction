@@ -92,7 +92,7 @@ def predict_batch(model, image_paths, device="cuda", threshold=0.5, checkpoint_p
             processed_images.append(image_path)
             
             # Save checkpoint every 10 images
-            if checkpoint_path and (i + 1) % 10 == 0:
+            if checkpoint_path and newly_processed % 10 == 0:
                 metadata = {
                     'device': device,
                     'threshold': threshold,
