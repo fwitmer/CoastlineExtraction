@@ -20,12 +20,20 @@ Example:
 import json
 import os
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config_template.json')
+TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), 'config_template.json')
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.json')
 
 def load_config(config_path=CONFIG_PATH):
     """Load the configuration JSON file."""
+
+    #Fallback to template if config.json doesn't exist
+    if not os.path.exists(config_path):
+        config_path = TEMPLATE_PATH
+    
     with open(config_path, 'r') as f:
-        return json.load(f)
+        config = json.load(f)
+
+    return config
 
 def get_image_path(config, index=0):
     """Get the full path to an image file by index."""
