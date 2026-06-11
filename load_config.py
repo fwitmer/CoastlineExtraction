@@ -20,7 +20,10 @@ Example:
 import json
 import os
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config_template.json')
+# Try loading config.json first, fall back to config_template.json if not present
+template_path = os.path.join(os.path.dirname(__file__), 'config_template.json')
+config_path_default = os.path.join(os.path.dirname(__file__), 'config.json')
+CONFIG_PATH = config_path_default if os.path.exists(config_path_default) else template_path
 
 def load_config(config_path=CONFIG_PATH):
     """Load the configuration JSON file."""
@@ -58,6 +61,10 @@ def get_georeference_output_folder(config):
 def get_tile_images_output_folder(config):
     """Get the full path to the tile images output folder."""
     return os.path.join(os.path.dirname(__file__), config['tile_images_output_folder'])
+
+def get_create_mask_output_folder(config):
+    """Get the full path to the create mask output folder."""
+    return os.path.join(os.path.dirname(__file__), config.get('create_mask_output_folder', 'processed_data/results_create_mask'))
 
 
 # Example:
