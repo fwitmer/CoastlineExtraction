@@ -57,14 +57,7 @@ if files_to_be_processed:
         if not os.path.isdir("data/output/{}/{}".format(file_year, file_month)):
             os.mkdir("data/output/{}/{}".format(file_year, file_month))
 
-        # outfile_base = f[1][:15] + "_AnalyticMS_SR"
-        
-        # ndwi_outfile = "data/output/{}/{}/{}".format(file_year, file_month, outfile_base + "_NDWI.tif")
-        # ndwi_class_outfile = "data/output/{}/{}/{}".format(file_year, file_month, outfile_base + "_NDWI_classified.tif")
-
-        # ndwi = rt.calculate_ndwi(f[0], ndwi_outfile, plot=False)
-        # ndwi_class = rt.ndwi_classify(f[0], ndwi_class_outfile, plot=False)
-    
+      
     for year, month_grp in file_groups.items():
         for month, day_grp in file_groups[year].items():
             for day, files in file_groups[year][month].items():
