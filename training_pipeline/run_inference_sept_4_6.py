@@ -15,13 +15,31 @@ import scipy.ndimage as ndimage
 import matplotlib.colors as mcolors
 from matplotlib.patches import Patch
 
-# Path resolution relative to repo root
+# Dynamic path resolution to find CoastlineExtraction root and training_pipeline
 script_dir = os.path.dirname(os.path.abspath(__file__))
-repo_root = os.path.abspath(os.path.join(script_dir, ".."))
-if repo_root not in sys.path:
-    sys.path.append(repo_root)
-if script_dir not in sys.path:
-    sys.path.append(script_dir)
+candidate_roots = [
+    os.path.abspath(os.path.join(script_dir, "..")),
+    os.path.abspath(os.path.join(script_dir, "..", "CoastlineExtraction")),
+    script_dir,
+]
+
+repo_root = None
+for candidate in candidate_roots:
+    if os.path.exists(os.path.join(candidate, "training_pipeline")) or os.path.exists(os.path.join(candidate, "test_data_4_6_sept")):
+        repo_root = candidate
+        break
+
+if repo_root is None:
+    repo_root = candidate_roots[0]
+
+sys_paths = [
+    os.path.join(repo_root, "training_pipeline"),
+    script_dir,
+    repo_root,
+]
+for p in sys_paths:
+    if p not in sys.path and os.path.exists(p):
+        sys.path.append(p)
 
 from train_and_eval_pipeline import UNet, AttentionUNet
 
