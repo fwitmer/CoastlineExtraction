@@ -154,6 +154,28 @@ class DeepWaterMapPyTorch(nn.Module):
 # ----------------------------
 # Helper & Inference Functions
 # ----------------------------
+def smooth_linestring(line, sigma=2.0, min_length=30.0):
+    """
+    Smooths a Shapely LineString using a 1D Gaussian rolling mean filter along X and Y coordinates.
+    Filters out short noisy fragments shorter than min_length (meters).
+    """
+    if line is None or line.is_empty or line.length < min_length:
+        return None
+        
+    coords = np.array(line.coords)
+    if len(coords) < 4:
+        return line
+        
+    xs, ys = coords[:, 0], coords[:, 1]
+    smoothed_xs = ndimage.gaussian_filter1d(xs, sigma=sigma, mode='nearest')
+    smoothed_ys = ndimage.gaussian_filter1d(ys, sigma=sigma, mode='nearest')
+    
+    # Preserve exact line endpoints to avoid shrinking
+    smoothed_xs[0], smoothed_xs[-1] = xs[0], xs[-1]
+    smoothed_ys[0], smoothed_ys[-1] = ys[0], ys[-1]
+    
+    return LineString(np.column_stack([smoothed_xs, smoothed_ys]))
+
 def stretch_rgb_image(image_data, dataset_mask=None):
     """
     Applies a 2%-98% percentile contrast stretch on valid non-zero satellite pixels
@@ -189,13 +211,16 @@ def extract_model_coastline(model, image_path, transform, device):
     
     with torch.no_grad():
         output = torch.sigmoid(model(img_tensor)).squeeze().cpu().numpy()
-        pred_mask = (output > 0.5).astype("uint8")
         
-    pred_mask_resized = Image.fromarray(pred_mask * 255).resize((w_orig, h_orig), Image.NEAREST)
-    pred_mask_np = (np.array(pred_mask_resized) > 0) & dataset_mask
+    output_resized = Image.fromarray((output * 255).astype(np.uint8)).resize((w_orig, h_orig), Image.BILINEAR)
+    prob_map = np.array(output_resized, dtype=np.float32) / 255.0
+    
+    # Smooth spatial probability map with Gaussian filter before contouring
+    smoothed_prob = ndimage.gaussian_filter(prob_map, sigma=1.5)
+    pred_mask_np = (smoothed_prob > 0.5) & dataset_mask
     
     eroded_mask = ndimage.binary_erosion(dataset_mask, iterations=4)
-    contours = skimage.measure.find_contours(pred_mask_np.astype(np.float32), 0.5)
+    contours = skimage.measure.find_contours(smoothed_prob, 0.5)
     
     lines = []
     for contour in contours:
@@ -210,12 +235,15 @@ def extract_model_coastline(model, image_path, transform, device):
                                         np.clip(np.round(seg[:, 1]).astype(int), 0, w_orig - 1)]]
             if len(seg_clean) >= 2:
                 xs, ys = rio.transform.xy(transform, seg_clean[:, 0], seg_clean[:, 1])
-                lines.append(LineString(list(zip(xs, ys))))
+                raw_line = LineString(list(zip(xs, ys)))
+                smoothed_line = smooth_linestring(raw_line, sigma=2.5, min_length=40.0)
+                if smoothed_line is not None:
+                    lines.append(smoothed_line)
     return lines, pred_mask_np
 
 def extract_ndwi_coastline(image_path, transform):
     """
-    Computes NDWI = (Green - NIR) / (Green + NIR) and extracts the resulting coastline contour.
+    Computes NDWI = (Green - NIR) / (Green + NIR) and extracts the resulting smoothed coastline contour.
     """
     with rio.open(image_path) as src:
         green = src.read(2).astype(np.float32)  # Band 2: Green
@@ -227,9 +255,11 @@ def extract_ndwi_coastline(image_path, transform):
     denom[denom == 0] = 1e-5
     ndwi = (green - nir) / denom
 
-    ndwi_mask = (ndwi > 0.0) & dataset_mask
+    # Spatial Gaussian smoothing on NDWI array to reduce pixel noise
+    ndwi_smoothed = ndimage.gaussian_filter(ndwi, sigma=1.5)
+    ndwi_mask = (ndwi_smoothed > 0.0) & dataset_mask
     eroded_mask = ndimage.binary_erosion(dataset_mask, iterations=4)
-    contours = skimage.measure.find_contours(ndwi_mask.astype(np.float32), 0.5)
+    contours = skimage.measure.find_contours(ndwi_smoothed, 0.0)
 
     lines = []
     for contour in contours:
@@ -244,7 +274,10 @@ def extract_ndwi_coastline(image_path, transform):
                                         np.clip(np.round(seg[:, 1]).astype(int), 0, w_orig - 1)]]
             if len(seg_clean) >= 2:
                 xs, ys = rio.transform.xy(transform, seg_clean[:, 0], seg_clean[:, 1])
-                lines.append(LineString(list(zip(xs, ys))))
+                raw_line = LineString(list(zip(xs, ys)))
+                smoothed_line = smooth_linestring(raw_line, sigma=2.5, min_length=40.0)
+                if smoothed_line is not None:
+                    lines.append(smoothed_line)
     return lines, ndwi_mask
 
 def extract_dwm_coastline(dwm_model, image_path, transform, device):
@@ -284,10 +317,11 @@ def extract_dwm_coastline(dwm_model, image_path, transform, device):
     soft_pred = 1.0 / (1.0 + np.exp(-(16.0 * (raw_pred - 0.5))))
     soft_pred = np.clip(soft_pred, 0, 1)
 
-    dwm_mask = (soft_pred > 0.5) & dataset_mask
+    smoothed_dwm = ndimage.gaussian_filter(soft_pred, sigma=1.0)
+    dwm_mask = (smoothed_dwm > 0.5) & dataset_mask
 
     eroded_mask = ndimage.binary_erosion(dataset_mask, iterations=4)
-    contours = skimage.measure.find_contours(dwm_mask.astype(np.float32), 0.5)
+    contours = skimage.measure.find_contours(smoothed_dwm, 0.5)
 
     lines = []
     for contour in contours:
@@ -302,7 +336,10 @@ def extract_dwm_coastline(dwm_model, image_path, transform, device):
                                         np.clip(np.round(seg[:, 1]).astype(int), 0, w_orig - 1)]]
             if len(seg_clean) >= 2:
                 xs, ys = rio.transform.xy(transform, seg_clean[:, 0], seg_clean[:, 1])
-                lines.append(LineString(list(zip(xs, ys))))
+                raw_line = LineString(list(zip(xs, ys)))
+                smoothed_line = smooth_linestring(raw_line, sigma=2.0, min_length=15.0)
+                if smoothed_line is not None:
+                    lines.append(smoothed_line)
     return lines, dwm_mask
 
 def plot_water_land_prediction(t_path, pred_mask_np, pred_lines, plot_out_path):
