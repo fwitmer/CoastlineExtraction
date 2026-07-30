@@ -5,6 +5,7 @@ import geopandas as gpd
 import rasterio as rio
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchvision import transforms
 from PIL import Image
 import skimage.measure
@@ -25,6 +26,112 @@ if script_dir not in sys.path:
 from train_and_eval_pipeline import UNet, AttentionUNet
 
 UTM_ZONE_3N = 'EPSG:32603'
+
+# ---------------------------------------------
+# DeepWaterMap PyTorch Architecture Definition
+# ---------------------------------------------
+class ConvBlockDWM(nn.Module):
+    def __init__(self, in_c, out_c, k_size, stride=1, use_relu=True):
+        super().__init__()
+        padding = k_size // 2
+        self.conv = nn.Conv2d(in_c, out_c, kernel_size=k_size, stride=stride, padding=padding, bias=False)
+        self.bn = nn.BatchNorm2d(out_c, eps=1e-3, momentum=0.01)
+        self.use_relu = use_relu
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        if self.use_relu:
+            x = F.relu(x)
+        return x
+
+class DownscalingUnitDWM(nn.Module):
+    def __init__(self, in_c, out_c):
+        super().__init__()
+        self.c1 = ConvBlockDWM(in_c, out_c, k_size=5, stride=2, use_relu=True)
+        self.c2 = ConvBlockDWM(out_c, out_c, k_size=3, stride=1, use_relu=True)
+
+    def forward(self, x):
+        x1 = self.c1(x)
+        x2 = self.c2(x1)
+        return x1 + x2
+
+class UpscalingUnitDWM(nn.Module):
+    def __init__(self, in_c, out_c):
+        super().__init__()
+        self.pixel_shuffle = nn.PixelShuffle(2)
+        self.c1 = ConvBlockDWM(in_c // 4, out_c, k_size=3, stride=1, use_relu=True)
+        self.c2 = ConvBlockDWM(out_c, out_c, k_size=3, stride=1, use_relu=True)
+
+    def forward(self, x):
+        x = self.pixel_shuffle(x)
+        x1 = self.c1(x)
+        x2 = self.c2(x1)
+        return x1 + x2
+
+class BottleneckUnitDWM(nn.Module):
+    def __init__(self, c):
+        super().__init__()
+        self.c1 = ConvBlockDWM(c, c, k_size=3, stride=1, use_relu=True)
+        self.c2 = ConvBlockDWM(c, c, k_size=3, stride=1, use_relu=True)
+
+    def forward(self, x):
+        x1 = self.c1(x)
+        x2 = self.c2(x1)
+        return x1 + x2
+
+class DeepWaterMapPyTorch(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.first_layer = ConvBlockDWM(6, 4, k_size=1, stride=1, use_relu=False)
+        self.down1 = DownscalingUnitDWM(4, 16)
+        self.down2 = DownscalingUnitDWM(16, 64)
+        self.down3 = DownscalingUnitDWM(64, 256)
+        self.down4 = DownscalingUnitDWM(256, 1024)
+        
+        self.bottleneck = BottleneckUnitDWM(1024)
+        
+        self.up1 = UpscalingUnitDWM(1024, 256)
+        self.up2 = UpscalingUnitDWM(256, 64)
+        self.up3 = UpscalingUnitDWM(64, 16)
+        self.up4 = UpscalingUnitDWM(16, 4)
+        
+        self.last_layer = ConvBlockDWM(4, 1, k_size=1, stride=1, use_relu=False)
+
+    def forward(self, x):
+        skips = []
+        x0 = self.first_layer(x)
+        skips.append(x0)
+        
+        x1 = self.down1(x0)
+        skips.append(x1)
+        
+        x2 = self.down2(x1)
+        skips.append(x2)
+        
+        x3 = self.down3(x2)
+        skips.append(x3)
+        
+        x4 = self.down4(x3)
+        skips.append(x4)
+        
+        b = self.bottleneck(x4)
+        
+        d1 = b + skips.pop()
+        u1 = self.up1(d1)
+        
+        d2 = u1 + skips.pop()
+        u2 = self.up2(d2)
+        
+        d3 = u2 + skips.pop()
+        u3 = self.up3(d3)
+        
+        d4 = u3 + skips.pop()
+        u4 = self.up4(d4)
+        
+        d_last = u4 + skips.pop()
+        out = self.last_layer(d_last)
+        return torch.sigmoid(out)
 
 # ----------------------------
 # Helper & Inference Functions
@@ -66,13 +173,10 @@ def extract_model_coastline(model, image_path, transform, device):
         output = torch.sigmoid(model(img_tensor)).squeeze().cpu().numpy()
         pred_mask = (output > 0.5).astype("uint8")
         
-    # Resize back to original dimensions & mask out NoData regions
     pred_mask_resized = Image.fromarray(pred_mask * 255).resize((w_orig, h_orig), Image.NEAREST)
     pred_mask_np = (np.array(pred_mask_resized) > 0) & dataset_mask
     
-    # Eroded dataset mask (points must be strictly inside satellite coverage, excluding artificial image borders)
     eroded_mask = ndimage.binary_erosion(dataset_mask, iterations=4)
-    
     contours = skimage.measure.find_contours(pred_mask_np.astype(np.float32), 0.5)
     
     lines = []
@@ -91,13 +195,99 @@ def extract_model_coastline(model, image_path, transform, device):
                 lines.append(LineString(list(zip(xs, ys))))
     return lines, pred_mask_np
 
+def extract_ndwi_coastline(image_path, transform):
+    """
+    Computes NDWI = (Green - NIR) / (Green + NIR) and extracts the resulting coastline contour.
+    """
+    with rio.open(image_path) as src:
+        green = src.read(2).astype(np.float32)  # Band 2: Green
+        nir = src.read(src.count).astype(np.float32)  # Band 4: NIR
+        dataset_mask = src.dataset_mask() > 0
+        h_orig, w_orig = green.shape
+
+    denom = green + nir
+    denom[denom == 0] = 1e-5
+    ndwi = (green - nir) / denom
+
+    ndwi_mask = (ndwi > 0.0) & dataset_mask
+    eroded_mask = ndimage.binary_erosion(dataset_mask, iterations=4)
+    contours = skimage.measure.find_contours(ndwi_mask.astype(np.float32), 0.5)
+
+    lines = []
+    for contour in contours:
+        rows = np.clip(np.round(contour[:, 0]).astype(int), 0, h_orig - 1)
+        cols = np.clip(np.round(contour[:, 1]).astype(int), 0, w_orig - 1)
+
+        in_bounds = eroded_mask[rows, cols]
+        split_indices = np.where(~in_bounds)[0]
+        segments = np.split(contour, split_indices)
+        for seg in segments:
+            seg_clean = seg[eroded_mask[np.clip(np.round(seg[:, 0]).astype(int), 0, h_orig - 1),
+                                        np.clip(np.round(seg[:, 1]).astype(int), 0, w_orig - 1)]]
+            if len(seg_clean) >= 2:
+                xs, ys = rio.transform.xy(transform, seg_clean[:, 0], seg_clean[:, 1])
+                lines.append(LineString(list(zip(xs, ys))))
+    return lines, ndwi_mask
+
+def extract_dwm_coastline(dwm_model, image_path, transform, device):
+    """
+    Runs DeepWaterMap model inference to extract surface water coastline contour.
+    """
+    dwm_model.eval()
+    with rio.open(image_path) as src:
+        data = src.read()  # (4, H, W)
+        dataset_mask = src.dataset_mask() > 0
+        h_orig, w_orig = data.shape[1], data.shape[2]
+
+    pad_r = (32 - h_orig % 32) % 32
+    pad_c = (32 - w_orig % 32) % 32
+
+    data_6b = np.zeros((6, h_orig, w_orig), dtype=np.float32)
+    data_6b[0] = data[0]  # Blue
+    data_6b[1] = data[1]  # Green
+    data_6b[2] = data[2]  # Red
+    data_6b[3] = data[3]  # NIR
+    data_6b[4] = data[3]  # SWIR1 approx
+    data_6b[5] = data[3]  # SWIR2 approx
+
+    data_padded = np.pad(data_6b, ((0, 0), (0, pad_r), (0, pad_c)), 'reflect')
+    data_padded = np.nan_to_num(data_padded, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
+    min_v = np.min(data_padded)
+    max_v = np.maximum(np.max(data_padded), 1.0)
+    data_padded = (data_padded - min_v) / max_v
+
+    inp_t = torch.from_numpy(data_padded).unsqueeze(0).to(device)
+    with torch.no_grad():
+        raw_pred = dwm_model(inp_t).squeeze().cpu().numpy()
+
+    if pad_r > 0: raw_pred = raw_pred[:-pad_r, :]
+    if pad_c > 0: raw_pred = raw_pred[:, :-pad_c]
+
+    soft_pred = 1.0 / (1.0 + np.exp(-(16.0 * (raw_pred - 0.5))))
+    soft_pred = np.clip(soft_pred, 0, 1)
+
+    dwm_mask = (soft_pred > 0.5) & dataset_mask
+
+    eroded_mask = ndimage.binary_erosion(dataset_mask, iterations=4)
+    contours = skimage.measure.find_contours(dwm_mask.astype(np.float32), 0.5)
+
+    lines = []
+    for contour in contours:
+        rows = np.clip(np.round(contour[:, 0]).astype(int), 0, h_orig - 1)
+        cols = np.clip(np.round(contour[:, 1]).astype(int), 0, w_orig - 1)
+
+        in_bounds = eroded_mask[rows, cols]
+        split_indices = np.where(~in_bounds)[0]
+        segments = np.split(contour, split_indices)
+        for seg in segments:
+            seg_clean = seg[eroded_mask[np.clip(np.round(seg[:, 0]).astype(int), 0, h_orig - 1),
+                                        np.clip(np.round(seg[:, 1]).astype(int), 0, w_orig - 1)]]
+            if len(seg_clean) >= 2:
+                xs, ys = rio.transform.xy(transform, seg_clean[:, 0], seg_clean[:, 1])
+                lines.append(LineString(list(zip(xs, ys))))
+    return lines, dwm_mask
+
 def plot_water_land_prediction(t_path, pred_mask_np, pred_lines, plot_out_path):
-    """
-    Plots a 3-panel visualization of:
-    1. Stretched RGB Satellite Image (matching QGIS brightness)
-    2. Binary Classification (Land vs Water vs NoData)
-    3. Stretched RGB Image with Translucent Water Mask Overlay & Clean Coastline Boundary
-    """
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     tile_name = os.path.basename(t_path)
     
@@ -110,17 +300,15 @@ def plot_water_land_prediction(t_path, pred_mask_np, pred_lines, plot_out_path):
 
     rgb_stretched = stretch_rgb_image(image_data, dataset_mask)
 
-    # Panel 1: RGB Satellite Image
     axes[0].imshow(rgb_stretched, extent=extent)
     axes[0].set_title("RGB Satellite Image (QGIS Stretch)", fontsize=12, fontweight="bold")
     axes[0].axis("off")
 
-    # Panel 2: Binary Classification (Land=0, Water=1, NoData=2)
     class_map = np.zeros(pred_mask_np.shape, dtype=np.uint8)
     class_map[pred_mask_np] = 1
     class_map[~dataset_mask] = 2
 
-    cmap_water_land = mcolors.ListedColormap(['#8B5A2B', '#1E88E5', '#FFFFFF'])  # Land (Brown), Water (Blue), NoData (White)
+    cmap_water_land = mcolors.ListedColormap(['#8B5A2B', '#1E88E5', '#FFFFFF'])
     axes[1].imshow(class_map, extent=extent, cmap=cmap_water_land)
     axes[1].set_title("Binary Classification (Water vs Land)", fontsize=12, fontweight="bold")
     axes[1].axis("off")
@@ -132,15 +320,14 @@ def plot_water_land_prediction(t_path, pred_mask_np, pred_lines, plot_out_path):
     ]
     axes[1].legend(handles=legend_elements, loc="upper right")
 
-    # Panel 3: Satellite Overlay with Water Mask & Coastline Contour
     axes[2].imshow(rgb_stretched, extent=extent)
     water_overlay = np.zeros((*pred_mask_np.shape, 4), dtype=np.float32)
-    water_overlay[pred_mask_np] = [0.12, 0.53, 0.90, 0.45]  # Semi-transparent blue for water
+    water_overlay[pred_mask_np] = [0.12, 0.53, 0.90, 0.45]
     axes[2].imshow(water_overlay, extent=extent)
     
     for idx, line in enumerate(pred_lines):
-        lbl = "Extracted Coastline" if idx == 0 else ""
-        axes[2].plot(*line.xy, color="cyan", linewidth=2.0, linestyle="--", label=lbl)
+        lbl = "Extracted Coastline (U-Net)" if idx == 0 else ""
+        axes[2].plot(*line.xy, color="cyan", linewidth=1.2, linestyle="-", label=lbl)
     if pred_lines:
         axes[2].legend(loc="upper right")
         
@@ -212,9 +399,9 @@ def calculate_rmse_on_transects(predicted_lines, trans_deering, ref_distances, u
     
     return rmse_planet, rmse_usgs, rmse_hires, regional_rmse
 
-def plot_predictions_comparison(t_path, u_lines, planet_union, hires_union, usgs_union, transform, plot_out_path):
+def plot_predictions_comparison(t_path, u_lines, ndwi_lines, dwm_lines, planet_union, hires_union, usgs_union, transform, plot_out_path):
     fig, ax = plt.subplots(figsize=(10, 10))
-    ax.set_title(f"U-Net Predicted vs. Ground Truth Coastline\n(Tile: {os.path.basename(t_path)})", fontsize=14, fontweight="bold")
+    ax.set_title(f"Predicted Coastlines vs. Ground Truth\n(Tile: {os.path.basename(t_path)})", fontsize=14, fontweight="bold")
     
     with rio.open(t_path) as src:
         image_data = src.read([3, 2, 1])
@@ -244,14 +431,22 @@ def plot_predictions_comparison(t_path, u_lines, planet_union, hires_union, usgs
             for sub_geom in geom.geoms:
                 plot_geom(sub_geom, color, linewidth, label, linestyle)
                 
-    plot_geom(p_cropped, color="orange", linewidth=2.5, label="Planet Labs Reference")
-    plot_geom(h_cropped, color="red", linewidth=2.5, label="Manual Hi-Res GT")
-    plot_geom(u_cropped, color="green", linewidth=2.5, label="USGS Coastline")
+    plot_geom(p_cropped, color="orange", linewidth=2.0, label="Planet Labs Reference", linestyle="-")
+    plot_geom(h_cropped, color="red", linewidth=2.0, label="Manual Hi-Res GT", linestyle="-")
+    plot_geom(u_cropped, color="green", linewidth=2.0, label="USGS Coastline", linestyle="-")
     
-    # Plot predicted coastline
+    # Plot predicted coastlines (solid thin lines)
     for idx, line in enumerate(u_lines):
         lbl = "Predicted Coastline (U-Net)" if idx == 0 else ""
-        ax.plot(*line.xy, color="cyan", linewidth=2.0, linestyle="--", label=lbl)
+        ax.plot(*line.xy, color="cyan", linewidth=1.2, linestyle="-", label=lbl)
+
+    for idx, line in enumerate(ndwi_lines):
+        lbl = "NDWI Coastline" if idx == 0 else ""
+        ax.plot(*line.xy, color="magenta", linewidth=1.2, linestyle="-", label=lbl)
+
+    for idx, line in enumerate(dwm_lines):
+        lbl = "DeepWaterMap Coastline" if idx == 0 else ""
+        ax.plot(*line.xy, color="yellow", linewidth=1.2, linestyle="-", label=lbl)
         
     handles, labels = ax.get_legend_handles_labels()
     by_label = {}
@@ -267,7 +462,7 @@ def plot_predictions_comparison(t_path, u_lines, planet_union, hires_union, usgs
 
 def main():
     print("==================================================")
-    print("RUNNING MODEL INFERENCE ON SEPT 4 & 6")
+    print("RUNNING MODEL INFERENCE (U-NET, NDWI & DEEPWATERMAP)")
     print("==================================================")
     
     device = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
@@ -277,6 +472,7 @@ def main():
     attn_model_path = os.path.join(output_dir, "best_deep_attn_unet_8epochs.pth")
     unet_model_path = os.path.join(output_dir, "best_deep_unet_8epochs.pth")
     legacy_model_path = os.path.join(output_dir, "best_unet_8epochs.pth")
+    dwm_model_path = os.path.join(output_dir, "deepwatermap_pytorch.pth")
     
     if os.path.exists(attn_model_path):
         model_path = attn_model_path
@@ -298,8 +494,16 @@ def main():
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.to(device)
     model.eval()
-    print("Model loaded successfully.")
     
+    dwm_model = None
+    if os.path.exists(dwm_model_path):
+        print(f"Loading [DeepWaterMap] weights from: {dwm_model_path}")
+        dwm_model = DeepWaterMapPyTorch().to(device)
+        dwm_model.load_state_dict(torch.load(dwm_model_path, map_location=device))
+        dwm_model.eval()
+    else:
+        print(f"Warning: DeepWaterMap weights not found at {dwm_model_path}.")
+
     p_transects = os.path.join(repo_root, "USGS_Coastlines", "WestChukchi_exposed_STepr_rates", "WestChukchi_exposed_STepr_rates.shp")
     p_usgs = os.path.join(repo_root, "USGS_Coastlines", "Deering_shorelines_2016.shp")
     p_hires = os.path.join(repo_root, "ground_truth", "2016_HiRes_Final_Coastline.shp")
@@ -321,7 +525,6 @@ def main():
     hires_union = hires.union_all() if hasattr(hires, 'union_all') else hires.unary_union
     planet_union = planet.union_all() if hasattr(planet, 'union_all') else planet.unary_union
     
-    # Precompute reference intersection distances
     planet_distances = {}
     usgs_distances = {}
     hires_distances = {}
@@ -329,7 +532,6 @@ def main():
         oid = int(row['TransOrder'])
         t_geom = row.geometry
         
-        # Planet Labs Reference
         p_int = t_geom.intersection(planet_union)
         if not p_int.is_empty:
             if isinstance(p_int, Point):
@@ -341,7 +543,6 @@ def main():
                 if pts:
                     planet_distances[oid] = min([t_geom.project(pt) for pt in pts])
                     
-        # USGS
         u_int = t_geom.intersection(usgs_union)
         if not u_int.is_empty:
             if isinstance(u_int, Point):
@@ -353,7 +554,6 @@ def main():
                 if pts:
                     usgs_distances[oid] = min([t_geom.project(pt) for pt in pts])
                     
-        # HiRes
         h_int = t_geom.intersection(hires_union)
         if not h_int.is_empty:
             if isinstance(h_int, Point):
@@ -365,7 +565,6 @@ def main():
                 if pts:
                     hires_distances[oid] = min([t_geom.project(pt) for pt in pts])
                     
-    # Test tile paths
     test_tiles = [
         os.path.join(repo_root, "test_data_4_6_sept", "sept_4", "files", "369619_2016-09-04_RE2_3A_Analytic_SR_clip.tif"),
         os.path.join(repo_root, "test_data_4_6_sept", "sept_6", "files", "369619_2016-09-06_RE5_3A_Analytic_SR_clip.tif")
@@ -374,6 +573,14 @@ def main():
     vis_dir = os.path.join(repo_root, "inference_outputs")
     os.makedirs(vis_dir, exist_ok=True)
     
+    region_names = {
+        1: "Western Region",
+        2: "Northern Region",
+        3: "Central Region",
+        4: "Town Region",
+        5: "East Region"
+    }
+
     for t_path in test_tiles:
         print(f"\nProcessing test tile: {os.path.basename(t_path)}")
         if not os.path.exists(t_path):
@@ -384,43 +591,51 @@ def main():
             transform = src.transform
             
         pred_lines, pred_mask_np = extract_model_coastline(model, t_path, transform, device)
+        ndwi_lines, ndwi_mask_np = extract_ndwi_coastline(t_path, transform)
         
-        # Save predicted coastline contours as shapefile
+        dwm_lines, dwm_mask_np = [], np.zeros_like(pred_mask_np)
+        if dwm_model is not None:
+            dwm_lines, dwm_mask_np = extract_dwm_coastline(dwm_model, t_path, transform, device)
+        
         tile_name = os.path.splitext(os.path.basename(t_path))[0]
         shp_out_path = os.path.join(vis_dir, f"{tile_name}_model_predicted_coastline.shp")
         if pred_lines:
             gdf_pred = gpd.GeoDataFrame(geometry=pred_lines, crs=UTM_ZONE_3N)
             gdf_pred.to_file(shp_out_path)
             print(f"Saved predicted coastline shapefile to: {shp_out_path}")
-        else:
-            print("No coastline contours detected for this tile.")
             
         # Calculate RMSE scores
         rmse_p, rmse_u, rmse_h, regional_rmse = calculate_rmse_on_transects(pred_lines, trans_deering, planet_distances, usgs_distances, hires_distances)
-        
-        region_names = {
-            1: "Western Region",
-            2: "Northern Region",
-            3: "Central Region",
-            4: "Town Region",
-            5: "East Region"
-        }
-        
+        ndwi_p, ndwi_u, ndwi_h, ndwi_regional = calculate_rmse_on_transects(ndwi_lines, trans_deering, planet_distances, usgs_distances, hires_distances)
+        dwm_p, dwm_u, dwm_h, dwm_regional = calculate_rmse_on_transects(dwm_lines, trans_deering, planet_distances, usgs_distances, hires_distances)
+
         print(f"\nRESULTS FOR TILE: {os.path.basename(t_path)}")
-        print(f"  Overall RMSE vs Planet Labs Ref: {rmse_p:.2f} m")
-        print(f"  Overall RMSE vs USGS Coastlines: {rmse_u:.2f} m")
-        print(f"  Overall RMSE vs Manual Hi-Res GT: {rmse_h:.2f} m")
-        print("  Regional RMSE Breakdown (vs Planet Labs Ref):")
+        print("  [U-Net Model]")
+        print(f"    RMSE vs Planet Labs Ref: {rmse_p:.2f} m")
+        print(f"    RMSE vs USGS Coastlines: {rmse_u:.2f} m")
+        print(f"    RMSE vs Manual Hi-Res GT: {rmse_h:.2f} m")
+        
+        print("  [NDWI Threshold]")
+        print(f"    RMSE vs Planet Labs Ref: {ndwi_p:.2f} m")
+        print(f"    RMSE vs USGS Coastlines: {ndwi_u:.2f} m")
+        print(f"    RMSE vs Manual Hi-Res GT: {ndwi_h:.2f} m")
+
+        if dwm_model is not None:
+            print("  [DeepWaterMap Model]")
+            print(f"    RMSE vs Planet Labs Ref: {dwm_p:.2f} m")
+            print(f"    RMSE vs USGS Coastlines: {dwm_u:.2f} m")
+            print(f"    RMSE vs Manual Hi-Res GT: {dwm_h:.2f} m")
+
+        print("\n  Regional RMSE Breakdown vs Planet Labs Ref (U-Net vs NDWI vs DeepWaterMap):")
         for r_id in range(1, 6):
-            r_val = regional_rmse.get(r_id, float('nan'))
-            r_str = f"{r_val:.2f} m" if not np.isnan(r_val) else "N/A (No transect intersections)"
-            print(f"    - {region_names[r_id]} (R{r_id}): {r_str}")
+            r_unet = f"{regional_rmse.get(r_id, float('nan')):.2f} m" if not np.isnan(regional_rmse.get(r_id, float('nan'))) else "N/A"
+            r_ndwi = f"{ndwi_regional.get(r_id, float('nan')):.2f} m" if not np.isnan(ndwi_regional.get(r_id, float('nan'))) else "N/A"
+            r_dwm = f"{dwm_regional.get(r_id, float('nan')):.2f} m" if not np.isnan(dwm_regional.get(r_id, float('nan'))) else "N/A"
+            print(f"    - {region_names[r_id]} (R{r_id}): U-Net={r_unet} | NDWI={r_ndwi} | DeepWaterMap={r_dwm}")
         
-        # Save visualization plots
         plot_out_path = os.path.join(vis_dir, f"{tile_name}_model_predicted_vs_gt_comparison.png")
-        plot_predictions_comparison(t_path, pred_lines, planet_union, hires_union, usgs_union, transform, plot_out_path)
+        plot_predictions_comparison(t_path, pred_lines, ndwi_lines, dwm_lines, planet_union, hires_union, usgs_union, transform, plot_out_path)
         
-        # Save binary water/land prediction visualization plot
         water_land_out_path = os.path.join(vis_dir, f"{tile_name}_model_water_land_prediction.png")
         plot_water_land_prediction(t_path, pred_mask_np, pred_lines, water_land_out_path)
 
