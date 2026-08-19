@@ -1,10 +1,10 @@
 """
-U-Net Model Evaluation & Sept 4 / Sept 6 Coastline Analysis Script
+U-Net & DeepWaterMap Model Evaluation & Sept 4 / Sept 6 Coastline Analysis Script
 
-Evaluates trained U-Net / Attention U-Net models on:
+Evaluates trained U-Net and 4-Channel DeepWaterMap models on:
 1. September 4 and September 6 test tiles (test_data_4_6_sept folder).
 2. Computes spatial RMSE metrics vs ground truth coastlines (ground_truth folder).
-3. Computes regional RMSE breakdown across 5 coastal regions.
+3. Computes regional RMSE breakdown across 5 coastal regions (U-Net vs NDWI vs DeepWaterMap).
 4. Computes pixel-level metrics (Pixel Accuracy, Precision, Recall, F1-Score, IoU) on validation set.
 
 Usage: python evaluate_unet.py
@@ -36,6 +36,7 @@ if repo_root not in sys.path:
 
 from load_config import load_config, get_training_config, get_augment_tiles_output_folder, get_model_save_path
 from train_unet import UNet, AttentionUNet, ClassicUNet, SegmentationDataset
+from deepwatermap_model import DeepWaterMap4Chan
 
 UTM_ZONE_3N = 'EPSG:32603'
 EPSILON = 2 ** -16
@@ -43,10 +44,34 @@ EPSILON = 2 ** -16
 # ----------------------------
 # Line & Raster Smoothing
 # ----------------------------
+def find_padding(v, divisor=16):
+    """
+    Calculates symmetric padding required to make a dimension integer-divisible by a given divisor.
+
+    Args:
+        v (int): Input height or width dimension.
+        divisor (int, optional): Divisor value (e.g., 16 for standard CNN downsampling). Defaults to 16.
+
+    Returns:
+        tuple: (pad_start, pad_end) integer tuple representing padding amounts for both sides.
+    """
+    v_divisible = max(divisor, int(divisor * np.ceil(v / divisor)))
+    total_pad = v_divisible - v
+    pad_1 = total_pad // 2
+    pad_2 = total_pad - pad_1
+    return pad_1, pad_2
+
 def smooth_linestring(line, sigma=2.0, min_length=30.0):
     """
-    Applies 1D Gaussian rolling mean smoothing on LineString coordinates.
-    Preserves endpoints and filters out short noisy fragments.
+    Applies 1D Gaussian rolling mean smoothing on LineString coordinates while preserving endpoints.
+
+    Args:
+        line (shapely.geometry.LineString): Input raw coastline LineString geometry.
+        sigma (float, optional): Gaussian kernel standard deviation for coordinate smoothing. Defaults to 2.0.
+        min_length (float, optional): Minimum geometric length threshold (in meters) to retain valid line segments. Defaults to 30.0.
+
+    Returns:
+        shapely.geometry.LineString or None: Smoothed LineString geometry or None if line is empty or too short.
     """
     if line is None or line.is_empty or line.length < min_length:
         return None
@@ -66,12 +91,22 @@ def smooth_linestring(line, sigma=2.0, min_length=30.0):
 
 def extract_model_coastline(model, image_path, transform, device, img_size=(256, 256)):
     """
-    Runs model inference on full resolution tile using sliding/tiled window or resized pass.
-    Extracts smoothed binary water mask & coastline LineStrings.
+    Runs U-Net model inference on a full-resolution satellite tile and extracts smoothed coastline LineStrings.
+
+    Args:
+        model (torch.nn.Module): Trained PyTorch U-Net segmentation model.
+        image_path (str): Path to input satellite GeoTIFF file.
+        transform (torchvision.transforms.Compose): Image preprocessing transform pipeline.
+        device (str or torch.device): Computation device ('cuda' or 'cpu').
+        img_size (tuple, optional): Target spatial dimensions (H, W) for model input. Defaults to (256, 256).
+
+    Returns:
+        tuple: (lines, water_mask, geo_transform) containing list of smoothed Shapely LineString geometries,
+               binary water mask array, and Rasterio GeoTransform affine matrix.
     """
     model.eval()
     with rio.open(image_path) as src:
-        data = src.read()  # (4, H, W)
+        data = src.read()  # (C, H, W)
         dataset_mask = src.dataset_mask() > 0
         h_orig, w_orig = data.shape[1], data.shape[2]
         geo_transform = src.transform
@@ -122,8 +157,89 @@ def extract_model_coastline(model, image_path, transform, device, img_size=(256,
 
     return lines, water_mask, geo_transform
 
+def extract_deepwatermap_coastline(dwm_model, image_path, device):
+    """
+    Runs 4-channel DeepWaterMap model inference on full-resolution satellite tile using RGB + NIR bands.
+
+    Args:
+        dwm_model (torch.nn.Module): Pretrained 4-channel DeepWaterMap neural network.
+        image_path (str): Path to input 4-band satellite GeoTIFF raster file.
+        device (str or torch.device): Computation device ('cuda' or 'cpu').
+
+    Returns:
+        tuple: (lines, smoothed_prob) containing list of extracted Shapely LineString geometries
+               and 2D floating-point probability map array.
+    """
+    dwm_model.eval()
+    with rio.open(image_path) as src:
+        data = src.read()  # (C, H, W)
+        dataset_mask = src.dataset_mask() > 0
+        h_orig, w_orig = data.shape[1], data.shape[2]
+        geo_transform = src.transform
+
+    if data.shape[0] > 4:
+        data = data[:4]
+    elif data.shape[0] < 4:
+        pad = data[2:3]
+        data = np.concatenate([data, pad], axis=0)
+
+    image_data = data.astype(np.float32)
+    image_data = np.nan_to_num(image_data, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
+    img_min = np.min(image_data)
+    image_data = image_data - img_min
+    img_max = np.max(image_data)
+    if img_max > 0:
+        image_data = image_data / img_max
+
+    pad_r = find_padding(h_orig, divisor=16)
+    pad_c = find_padding(w_orig, divisor=16)
+
+    image_data_padded = np.pad(image_data, ((0, 0), (pad_r[0], pad_r[1]), (pad_c[0], pad_c[1])), mode='reflect')
+    input_t = torch.from_numpy(image_data_padded).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        raw_output = dwm_model(input_t)
+        prob_map_padded = torch.sigmoid(raw_output).squeeze().cpu().numpy()
+
+    # Crop back to original dimensions
+    prob_map_full = prob_map_padded[pad_r[0]:pad_r[0]+h_orig, pad_c[0]:pad_c[0]+w_orig]
+
+    smoothed_prob = ndimage.gaussian_filter(prob_map_full, sigma=1.5)
+    eroded_mask = ndimage.binary_erosion(dataset_mask, iterations=4)
+    contours = skimage.measure.find_contours(smoothed_prob, 0.5)
+
+    lines = []
+    for contour in contours:
+        rows = np.clip(np.round(contour[:, 0]).astype(int), 0, h_orig - 1)
+        cols = np.clip(np.round(contour[:, 1]).astype(int), 0, w_orig - 1)
+
+        in_bounds = eroded_mask[rows, cols]
+        split_indices = np.where(~in_bounds)[0]
+        segments = np.split(contour, split_indices)
+
+        for seg in segments:
+            seg_clean = seg[eroded_mask[np.clip(np.round(seg[:, 0]).astype(int), 0, h_orig - 1),
+                                        np.clip(np.round(seg[:, 1]).astype(int), 0, w_orig - 1)]]
+            if len(seg_clean) >= 2:
+                xs, ys = rio.transform.xy(geo_transform, seg_clean[:, 0], seg_clean[:, 1])
+                raw_line = LineString(list(zip(xs, ys)))
+                smoothed_line = smooth_linestring(raw_line, sigma=2.0, min_length=30.0)
+                if smoothed_line is not None:
+                    lines.append(smoothed_line)
+
+    return lines, smoothed_prob
+
 def extract_ndwi_coastline(image_path, transform):
-    """Extracts baseline NDWI threshold coastline."""
+    """
+    Extracts baseline NDWI (Normalized Difference Water Index) thresholded coastline LineStrings from Green and NIR bands.
+
+    Args:
+        image_path (str): Path to input multi-band satellite GeoTIFF raster file containing Green (band 2) and NIR (band 4).
+        transform (torchvision.transforms.Compose): Image transformation pipeline (reserved for interface consistency).
+
+    Returns:
+        tuple: (lines, ndwi_mask) containing list of extracted Shapely LineString geometries and binary NDWI mask array.
+    """
     with rio.open(image_path) as src:
         green = src.read(2).astype(np.float32)
         nir = src.read(4).astype(np.float32)
@@ -163,12 +279,32 @@ def extract_ndwi_coastline(image_path, transform):
 # RMSE Computation Utilities
 # ----------------------------
 def calc_rmse(errs):
+    """
+    Calculates Root Mean Squared Error (RMSE) for an array or list of distance error values.
+
+    Args:
+        errs (list or numpy.ndarray): Input distance error values.
+
+    Returns:
+        float: Calculated RMSE value, or np.nan if input list is empty.
+    """
     errs = np.array(errs)
     if len(errs) == 0:
         return np.nan
     return np.sqrt(np.square(errs).mean())
 
 def find_distances(transects, fst, snd):
+    """
+    Measures spatial Euclidean distance along orthogonal coastal transect lines between two geometry collections.
+
+    Args:
+        transects (geopandas.GeoDataFrame): Transect lines crossing the coastal boundary.
+        fst (shapely.geometry.base.BaseGeometry): First geometric feature set (e.g. Ground Truth points/lines).
+        snd (shapely.geometry.base.BaseGeometry): Second geometric feature set (e.g. Predicted model coastline points/lines).
+
+    Returns:
+        list of float: Measured point-to-point distances along valid transect intersections (in meters).
+    """
     distances = []
     for transect in transects.itertuples():
         t_geom = transect.geometry
@@ -181,19 +317,31 @@ def find_distances(transects, fst, snd):
     return distances
 
 def compute_transect_rmse(transects, true_gdf, pred_lines_gdf, river_removal=True):
+    """
+    Calculates overall transect-based coastline distance RMSE between ground truth and predicted vector lines.
+
+    Args:
+        transects (geopandas.GeoDataFrame): Orthogonal transect lines layer.
+        true_gdf (geopandas.GeoDataFrame): Ground truth reference coastline GeoDataFrame.
+        pred_lines_gdf (geopandas.GeoDataFrame): Predicted model coastline GeoDataFrame.
+        river_removal (bool, optional): Whether to filter out complex river inlet transects. Defaults to True.
+
+    Returns:
+        tuple: (rmse_val, dists) containing overall RMSE scalar value (in meters) and list of individual transect distance errors.
+    """
     if pred_lines_gdf is None or len(pred_lines_gdf) == 0 or true_gdf is None or len(true_gdf) == 0:
         return np.nan, []
 
     if river_removal:
-        removal_ids = [17336, 17335, 17334, 17333, 17332]
+        removal_ids = [17336, 17335, 17334, 17332]
         transects = transects[~(transects['TransOrder'].isin(removal_ids))]
 
     transects = transects.to_crs(UTM_ZONE_3N)
     true_gdf = true_gdf.to_crs(UTM_ZONE_3N)
     pred_lines_gdf = pred_lines_gdf.to_crs(UTM_ZONE_3N)
 
-    geom_true = true_gdf.unary_union.intersection(transects.unary_union)
-    geom_pred = pred_lines_gdf.unary_union.intersection(transects.unary_union)
+    geom_true = true_gdf.union_all().intersection(transects.union_all())
+    geom_pred = pred_lines_gdf.union_all().intersection(transects.union_all())
 
     if geom_true.is_empty or geom_pred.is_empty:
         return np.nan, []
@@ -208,6 +356,17 @@ def compute_transect_rmse(transects, true_gdf, pred_lines_gdf, river_removal=Tru
     return rmse_val, dists
 
 def compute_regional_rmse(transects, true_gdf, pred_lines_gdf):
+    """
+    Calculates regional transect-based RMSE breakdown across 5 predefined geographical coastal zones (R1 to R5).
+
+    Args:
+        transects (geopandas.GeoDataFrame): Orthogonal coastal transect lines layer.
+        true_gdf (geopandas.GeoDataFrame): Reference ground truth coastline GeoDataFrame.
+        pred_lines_gdf (geopandas.GeoDataFrame): Predicted coastline vector GeoDataFrame.
+
+    Returns:
+        dict: Mapping of region name strings to calculated RMSE distance error values (in meters).
+    """
     regions = {
         "Western Region (R1)": transects[transects['TransOrder'] >= 17443],
         "Northern Region (R2)": transects[(transects['TransOrder'] < 17443) & (transects['TransOrder'] >= 17394)],
@@ -226,6 +385,17 @@ def compute_regional_rmse(transects, true_gdf, pred_lines_gdf):
 # Validation Dataset Evaluation
 # ----------------------------
 def evaluate_validation_metrics(model, dataloader, device):
+    """
+    Computes pixel-level evaluation metrics (Accuracy, Precision, Recall, F1-Score, IoU) on validation DataLoader.
+
+    Args:
+        model (torch.nn.Module): Trained U-Net segmentation model.
+        dataloader (torch.utils.data.DataLoader): PyTorch DataLoader providing validation image-mask pairs.
+        device (str or torch.device): Computation device ('cuda' or 'cpu').
+
+    Returns:
+        dict: Evaluation metric dictionary containing pixel_accuracy, precision, recall, f1_score, iou, and confusion matrix counts.
+    """
     model.eval()
     tp_total, fp_total, fn_total, tn_total = 0, 0, 0, 0
     pixel_correct, pixel_total = 0, 0
@@ -267,7 +437,20 @@ def evaluate_validation_metrics(model, dataloader, device):
 # ----------------------------
 # Plotting & Visualization
 # ----------------------------
-def save_evaluation_plot(t_path, model_lines, ndwi_lines, planet_ref_gdf, usgs_gdf, hires_gt_gdf, out_plot_path):
+def save_evaluation_plot(t_path, model_lines, ndwi_lines, dwm_lines, planet_ref_gdf, usgs_shoreline_gdf, hires_gt_gdf, out_plot_path):
+    """
+    Generates and saves a high-resolution 2D map figure overlaying predicted coastlines against reference ground truth shapefiles.
+
+    Args:
+        t_path (str): Path to underlying satellite GeoTIFF raster tile.
+        model_lines (list of LineString): Predicted U-Net coastline lines.
+        ndwi_lines (list of LineString): Baseline NDWI coastline lines.
+        dwm_lines (list of LineString): Predicted DeepWaterMap coastline lines.
+        planet_ref_gdf (geopandas.GeoDataFrame): Planet Labs reference coastline GeoDataFrame.
+        usgs_shoreline_gdf (geopandas.GeoDataFrame): USGS shoreline reference GeoDataFrame.
+        hires_gt_gdf (geopandas.GeoDataFrame): Hi-Res ground truth reference GeoDataFrame.
+        out_plot_path (str): File destination path for saving PNG comparison plot.
+    """
     with rio.open(t_path) as src:
         rgb = src.read([3, 2, 1])
         bounds = src.bounds
@@ -289,8 +472,8 @@ def save_evaluation_plot(t_path, model_lines, ndwi_lines, planet_ref_gdf, usgs_g
         planet_ref_gdf.to_crs(UTM_ZONE_3N).plot(ax=ax, color='orange', linewidth=2.5, label='Planet Labs Reference (9/9)')
     if hires_gt_gdf is not None:
         hires_gt_gdf.to_crs(UTM_ZONE_3N).plot(ax=ax, color='red', linewidth=2.0, label='Manual Hi-Res GT')
-    if usgs_gdf is not None:
-        usgs_gdf.to_crs(UTM_ZONE_3N).plot(ax=ax, color='green', linewidth=2.0, label='USGS Coastline')
+    if usgs_shoreline_gdf is not None:
+        usgs_shoreline_gdf.to_crs(UTM_ZONE_3N).plot(ax=ax, color='green', linewidth=2.0, label='USGS Coastline')
 
     if model_lines:
         model_gdf = gpd.GeoDataFrame(geometry=model_lines, crs=UTM_ZONE_3N)
@@ -299,6 +482,10 @@ def save_evaluation_plot(t_path, model_lines, ndwi_lines, planet_ref_gdf, usgs_g
     if ndwi_lines:
         ndwi_gdf = gpd.GeoDataFrame(geometry=ndwi_lines, crs=UTM_ZONE_3N)
         ndwi_gdf.plot(ax=ax, color='magenta', linewidth=1.5, label='NDWI Coastline')
+
+    if dwm_lines:
+        dwm_gdf = gpd.GeoDataFrame(geometry=dwm_lines, crs=UTM_ZONE_3N)
+        dwm_gdf.plot(ax=ax, color='yellow', linewidth=1.8, label='DeepWaterMap (4-Chan Trained)')
 
     ax.set_title(f"Predicted Coastlines vs Ground Truth\n({os.path.basename(t_path)})", fontsize=14, fontweight='bold')
     ax.set_xlim([bounds.left, bounds.right])
@@ -315,159 +502,120 @@ def save_evaluation_plot(t_path, model_lines, ndwi_lines, planet_ref_gdf, usgs_g
 # Main Evaluation Function
 # ----------------------------
 def main():
+    """
+    Main execution pipeline for evaluating U-Net, NDWI, and DeepWaterMap models on test satellite tiles.
+    """
     config = load_config()
     training_config = get_training_config(config)
 
-    # Set device
     device = training_config.get('device', 'auto')
     if device == 'auto' or 'cuda' in device:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
-    # Paths to Ground Truth files (ground_truth directory)
     gt_dir = os.path.join(repo_root, "ground_truth")
     planet_ref_path = os.path.join(gt_dir, "9_9_16_PlanetCoastline.shp")
     hires_gt_path = os.path.join(gt_dir, "2016_HiRes_Final_Coastline.shp")
-
-    # Transects & USGS Coastlines
     transects_path = os.path.join(repo_root, "USGS_Coastlines", "WestChukchi_exposed_STepr_rates", "WestChukchi_exposed_STepr_rates.shp")
+    usgs_shoreline_path = os.path.join(repo_root, "USGS_Coastlines", "WestChukchi_shorelines", "WestChukchi_shorelines.shp")
 
-    # Load Ground Truth shapefiles if available
     planet_ref_gdf = gpd.read_file(planet_ref_path) if os.path.exists(planet_ref_path) else None
     hires_gt_gdf = gpd.read_file(hires_gt_path) if os.path.exists(hires_gt_path) else None
-    usgs_gdf = gpd.read_file(transects_path) if os.path.exists(transects_path) else None
-
-    if usgs_gdf is not None:
-        transects_gdf = usgs_gdf[usgs_gdf['BaselineID'] == 117]
-    else:
-        transects_gdf = None
+    usgs_transects_raw = gpd.read_file(transects_path) if os.path.exists(transects_path) else None
+    usgs_shoreline_gdf = gpd.read_file(usgs_shoreline_path) if os.path.exists(usgs_shoreline_path) else None
+    
+    transects_gdf = usgs_transects_raw[usgs_transects_raw['BaselineID'] == 117] if usgs_transects_raw is not None else None
 
     # Load Trained U-Net Model
-    model_paths = [
+    unet_model_paths = [
         os.path.join(repo_root, "output_models", "best_deep_attn_unet_8epochs.pth"),
         os.path.join(repo_root, "output_models", "best_deep_unet_8epochs.pth"),
         get_model_save_path(config)
     ]
-
-    model_path = None
-    for p in model_paths:
-        if os.path.exists(p):
-            model_path = p
-            break
-
-    if model_path is None:
-        print("Warning: No pre-trained model weights found. Skipping spatial inference evaluation.")
-    else:
-        print(f"Loading model weights from: {model_path}")
-        state_dict = torch.load(model_path, map_location=device)
+    unet_path = next((p for p in unet_model_paths if os.path.exists(p)), None)
+    
+    model = None
+    if unet_path:
+        print(f"Loading U-Net model weights from: {unet_path}")
+        state_dict = torch.load(unet_path, map_location=device)
         if isinstance(state_dict, dict) and 'model_state_dict' in state_dict:
             state_dict = state_dict['model_state_dict']
 
         is_attn = any("attn" in key for key in state_dict.keys())
-        if is_attn:
-            model = AttentionUNet(n_channels=3, n_classes=1)
-            print("Loaded Attention U-Net architecture.")
-        else:
-            model = UNet(n_channels=3, n_classes=1)
-            print("Loaded Deep U-Net architecture.")
-
+        model = AttentionUNet(n_channels=3, n_classes=1) if is_attn else UNet(n_channels=3, n_classes=1)
         model.load_state_dict(state_dict)
         model.to(device)
 
-        # Image preprocessing transform
-        image_size = training_config.get('image_size', [256, 256])
-        transform = transforms.Compose([
-            transforms.Resize(image_size),
-            transforms.ToTensor(),
-        ])
+    # Load Trained 4-Channel DeepWaterMap Model
+    dwm_path = os.path.join(repo_root, "output_models", "deepwatermap_planetlabs_best.pth")
+    dwm_model = None
+    if os.path.exists(dwm_path):
+        print(f"Loading 4-channel DeepWaterMap weights from: {dwm_path}")
+        dwm_model = DeepWaterMap4Chan(in_channels=4).to(device)
+        dwm_model.load_state_dict(torch.load(dwm_path, map_location=device))
 
-        # Evaluate on September 4 and September 6 test tiles
-        test_dir = os.path.join(repo_root, "test_data_4_6_sept")
-        test_tiles = [
-            os.path.join(test_dir, "sept_4", "files", "369619_2016-09-04_RE2_3A_Analytic_SR_clip.tif"),
-            os.path.join(test_dir, "sept_6", "files", "369619_2016-09-06_RE5_3A_Analytic_SR_clip.tif")
-        ]
+    image_size = training_config.get('image_size', [256, 256])
+    transform = transforms.Compose([
+        transforms.Resize(image_size),
+        transforms.ToTensor(),
+    ])
 
-        out_dir = os.path.join(repo_root, "inference_outputs")
-        os.makedirs(out_dir, exist_ok=True)
+    test_dir = os.path.join(repo_root, "test_data_4_6_sept")
+    test_tiles = [
+        os.path.join(test_dir, "sept_4", "files", "369619_2016-09-04_RE2_3A_Analytic_SR_clip.tif"),
+        os.path.join(test_dir, "sept_6", "files", "369619_2016-09-06_RE5_3A_Analytic_SR_clip.tif")
+    ]
 
-        for tile_path in test_tiles:
-            if not os.path.exists(tile_path):
-                print(f"Test tile not found: {tile_path}")
-                continue
+    out_dir = os.path.join(repo_root, "inference_outputs")
+    os.makedirs(out_dir, exist_ok=True)
 
-            tile_name = os.path.basename(tile_path)
-            print(f"\n==================================================")
-            print(f"EVALUATING TEST TILE: {tile_name}")
-            print(f"==================================================")
+    for tile_path in test_tiles:
+        if not os.path.exists(tile_path):
+            print(f"Test tile not found: {tile_path}")
+            continue
 
-            # Model inference & line extraction
-            model_lines, model_mask, geo_transform = extract_model_coastline(model, tile_path, transform, device)
-            ndwi_lines, ndwi_mask = extract_ndwi_coastline(tile_path, transform)
+        tile_name = os.path.basename(tile_path)
+        print(f"\n==================================================")
+        print(f"EVALUATING TEST TILE: {tile_name}")
+        print(f"==================================================")
 
-            model_gdf = gpd.GeoDataFrame(geometry=model_lines, crs=UTM_ZONE_3N) if model_lines else None
-            ndwi_gdf = gpd.GeoDataFrame(geometry=ndwi_lines, crs=UTM_ZONE_3N) if ndwi_lines else None
+        model_lines, _, _ = extract_model_coastline(model, tile_path, transform, device) if model else ([], None, None)
+        ndwi_lines, _ = extract_ndwi_coastline(tile_path, transform)
+        dwm_lines, _ = extract_deepwatermap_coastline(dwm_model, tile_path, device) if dwm_model else ([], None)
 
-            # Save predicted shapefile
-            if model_gdf is not None:
-                shp_out = os.path.join(out_dir, f"{tile_name}_eval_predicted_coastline.shp")
-                model_gdf.to_file(shp_out)
-                print(f"Saved predicted coastline shapefile to: {shp_out}")
+        model_gdf = gpd.GeoDataFrame(geometry=model_lines, crs=UTM_ZONE_3N) if model_lines else None
+        ndwi_gdf = gpd.GeoDataFrame(geometry=ndwi_lines, crs=UTM_ZONE_3N) if ndwi_lines else None
+        dwm_gdf = gpd.GeoDataFrame(geometry=dwm_lines, crs=UTM_ZONE_3N) if dwm_lines else None
 
-            # Compute Spatial RMSE Metrics
-            if transects_gdf is not None:
-                rmse_planet, _ = compute_transect_rmse(transects_gdf, planet_ref_gdf, model_gdf)
-                rmse_usgs, _ = compute_transect_rmse(transects_gdf, usgs_gdf, model_gdf)
-                rmse_hires, _ = compute_transect_rmse(transects_gdf, hires_gt_gdf, model_gdf)
+        if dwm_gdf is not None:
+            shp_out = os.path.join(out_dir, f"{tile_name}_dwm_predicted_coastline.shp")
+            dwm_gdf.to_file(shp_out)
+            print(f"Saved DeepWaterMap predicted coastline shapefile to: {shp_out}")
 
-                rmse_ndwi_planet, _ = compute_transect_rmse(transects_gdf, planet_ref_gdf, ndwi_gdf)
+        if transects_gdf is not None:
+            rmse_planet, _ = compute_transect_rmse(transects_gdf, planet_ref_gdf, model_gdf)
+            rmse_ndwi_planet, _ = compute_transect_rmse(transects_gdf, planet_ref_gdf, ndwi_gdf)
+            rmse_dwm_planet, _ = compute_transect_rmse(transects_gdf, planet_ref_gdf, dwm_gdf)
 
-                print(f"\n[U-Net Model RMSE Results]")
-                print(f"  RMSE vs Planet Labs Ref (9/9): {rmse_planet:.2f} m" if not np.isnan(rmse_planet) else "  RMSE vs Planet Labs Ref: N/A")
-                print(f"  RMSE vs USGS Coastlines:      {rmse_usgs:.2f} m" if not np.isnan(rmse_usgs) else "  RMSE vs USGS Coastlines: N/A")
-                print(f"  RMSE vs Manual Hi-Res GT:      {rmse_hires:.2f} m" if not np.isnan(rmse_hires) else "  RMSE vs Manual Hi-Res GT: N/A")
+            print(f"\n[Overall RMSE vs Planet Labs Ref (9/9)]")
+            print(f"  - U-Net Model:       {rmse_planet:.2f} m" if not np.isnan(rmse_planet) else "  - U-Net Model: N/A")
+            print(f"  - NDWI Baseline:     {rmse_ndwi_planet:.2f} m" if not np.isnan(rmse_ndwi_planet) else "  - NDWI Baseline: N/A")
+            print(f"  - DeepWaterMap (4ch): {rmse_dwm_planet:.2f} m" if not np.isnan(rmse_dwm_planet) else "  - DeepWaterMap (4ch): N/A")
 
-                print(f"\n[NDWI Baseline RMSE Results]")
-                print(f"  RMSE vs Planet Labs Ref (9/9): {rmse_ndwi_planet:.2f} m" if not np.isnan(rmse_ndwi_planet) else "  RMSE vs Planet Labs Ref: N/A")
+            if planet_ref_gdf is not None:
+                reg_unet = compute_regional_rmse(transects_gdf, planet_ref_gdf, model_gdf)
+                reg_ndwi = compute_regional_rmse(transects_gdf, planet_ref_gdf, ndwi_gdf)
+                reg_dwm = compute_regional_rmse(transects_gdf, planet_ref_gdf, dwm_gdf)
 
-                # Regional Breakdown
-                if planet_ref_gdf is not None:
-                    reg_unet = compute_regional_rmse(transects_gdf, planet_ref_gdf, model_gdf)
-                    reg_ndwi = compute_regional_rmse(transects_gdf, planet_ref_gdf, ndwi_gdf)
+                print(f"\n[Regional RMSE Breakdown vs Planet Labs Ref (U-Net vs NDWI vs DeepWaterMap)]")
+                for r_name in reg_unet.keys():
+                    u_v = f"{reg_unet[r_name]:.2f} m" if not np.isnan(reg_unet[r_name]) else "N/A"
+                    n_v = f"{reg_ndwi[r_name]:.2f} m" if not np.isnan(reg_ndwi[r_name]) else "N/A"
+                    d_v = f"{reg_dwm[r_name]:.2f} m" if not np.isnan(reg_dwm[r_name]) else "N/A"
+                    print(f"  - {r_name}: U-Net={u_v} | NDWI={n_v} | DeepWaterMap={d_v}")
 
-                    print(f"\n[Regional RMSE Breakdown vs Planet Labs Ref]")
-                    for r_name in reg_unet.keys():
-                        u_v = f"{reg_unet[r_name]:.2f} m" if not np.isnan(reg_unet[r_name]) else "N/A"
-                        n_v = f"{reg_ndwi[r_name]:.2f} m" if not np.isnan(reg_ndwi[r_name]) else "N/A"
-                        print(f"  - {r_name}: U-Net={u_v} | NDWI={n_v}")
-
-            # Plot comparison map
-            plot_out_path = os.path.join(out_dir, f"{tile_name}_eval_comparison_plot.png")
-            save_evaluation_plot(tile_path, model_lines, ndwi_lines, planet_ref_gdf, usgs_gdf, hires_gt_gdf, plot_out_path)
-
-    # Optional: Evaluate dataset split pixel metrics if augment_tiles folder exists
-    aug_data_dir = get_augment_tiles_output_folder(config)
-    if os.path.exists(aug_data_dir):
-        print(f"\n==========================================")
-        print(f"EVALUATING VALIDATION DATASET PIXEL METRICS")
-        print(f"==========================================")
-        val_dataset = SegmentationDataset(aug_data_dir, transform=transform)
-        if len(val_dataset) > 0:
-            train_split = training_config.get('train_split', 0.8)
-            total_sz = len(val_dataset)
-            train_sz = int(train_split * total_sz)
-            val_sz = total_sz - train_sz
-
-            generator = torch.Generator().manual_seed(42)
-            _, val_set = random_split(val_dataset, [train_sz, val_sz], generator=generator)
-            val_loader = DataLoader(val_set, batch_size=16, num_workers=4, pin_memory=True)
-
-            val_metrics = evaluate_validation_metrics(model, val_loader, device)
-            print(f"Pixel Accuracy:       {val_metrics['pixel_accuracy']:.4%}")
-            print(f"Precision (PPV):      {val_metrics['precision']:.4%}")
-            print(f"Recall (Sensitivity): {val_metrics['recall']:.4%}")
-            print(f"F1-Score (Dice Coeff): {val_metrics['f1_score']:.4%}")
-            print(f"Mean IoU (Jaccard):   {val_metrics['iou']:.4%}")
+        plot_out_path = os.path.join(out_dir, f"{tile_name}_eval_comparison_plot.png")
+        save_evaluation_plot(tile_path, model_lines, ndwi_lines, dwm_lines, planet_ref_gdf, usgs_shoreline_gdf, hires_gt_gdf, plot_out_path)
 
 if __name__ == "__main__":
     main()
