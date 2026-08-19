@@ -17,7 +17,15 @@ from train_unet import UNet, AttentionUNet, ClassicUNet
 
 def load_trained_model(model_path, device="cuda", model_type="auto"):
     """
-    Load a trained U-Net or Attention U-Net model.
+    Loads a trained PyTorch U-Net or Attention U-Net model from a file checkpoint.
+
+    Args:
+        model_path (str): Absolute or relative path to the saved model state dictionary (.pth file).
+        device (str, optional): Target device for model loading ('cuda', 'cpu', etc.). Defaults to "cuda".
+        model_type (str, optional): Architecture type ('auto', 'attention', 'classic', 'standard'). Defaults to "auto".
+
+    Returns:
+        torch.nn.Module: Loaded PyTorch neural network model set to evaluation mode.
     """
     state_dict = torch.load(model_path, map_location=device)
     if isinstance(state_dict, dict) and 'model_state_dict' in state_dict:
@@ -42,7 +50,16 @@ def load_trained_model(model_path, device="cuda", model_type="auto"):
 
 def predict_image(model, image_path, device="cuda", threshold=0.5):
     """
-    Predict mask for a single image.
+    Generates a binary segmentation mask prediction for a single input image.
+
+    Args:
+        model (torch.nn.Module): Trained U-Net model instance.
+        image_path (str): Path to the input RGB image file.
+        device (str, optional): Computation device ('cuda' or 'cpu'). Defaults to "cuda".
+        threshold (float, optional): Probability threshold for binarizing model output. Defaults to 0.5.
+
+    Returns:
+        numpy.ndarray: Binary mask array (0 or 1) resized to original image dimensions with shape (H, W).
     """
     model.eval()
     
@@ -69,7 +86,18 @@ def predict_image(model, image_path, device="cuda", threshold=0.5):
 
 def predict_batch(model, image_paths, device="cuda", threshold=0.5, checkpoint_path=None, resume=True):
     """
-    Predict masks for multiple images.
+    Generates binary segmentation mask predictions for a batch of input images with checkpointing support.
+
+    Args:
+        model (torch.nn.Module): Trained U-Net model instance.
+        image_paths (list of str): List of paths to input RGB image files.
+        device (str, optional): Computation device ('cuda' or 'cpu'). Defaults to "cuda".
+        threshold (float, optional): Binarization probability threshold. Defaults to 0.5.
+        checkpoint_path (str, optional): File path to save/load batch progress state (.pkl file). Defaults to None.
+        resume (bool, optional): Whether to resume processing from existing checkpoint file. Defaults to True.
+
+    Returns:
+        list of numpy.ndarray: List of binary mask arrays corresponding to input images.
     """
     predictions = []
     processed_images = []
@@ -121,7 +149,12 @@ def predict_batch(model, image_paths, device="cuda", threshold=0.5, checkpoint_p
 
 def visualize_prediction(image_path, pred_mask, save_path=None):
     """
-    Visualize the original image and predicted mask side by side.
+    Displays and optionally saves a 3-panel figure showing original image, predicted binary mask, and color overlay.
+
+    Args:
+        image_path (str): Path to the input original image.
+        pred_mask (numpy.ndarray): Predicted binary mask array.
+        save_path (str, optional): Destination file path to save visualization figure. Defaults to None.
     """
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     
@@ -149,6 +182,15 @@ def visualize_prediction(image_path, pred_mask, save_path=None):
     plt.show()
 
 def save_checkpoint(checkpoint_path, processed_images, predictions, metadata):
+    """
+    Saves batch prediction state and metadata to a pickle checkpoint file.
+
+    Args:
+        checkpoint_path (str): Destination pickle file path.
+        processed_images (list of str): List of image file paths already processed.
+        predictions (list of numpy.ndarray): List of predicted masks generated so far.
+        metadata (dict): Additional execution context (device, threshold, total images, etc.).
+    """
     checkpoint_data = {
         'processed_images': processed_images,
         'predictions': predictions,
@@ -161,6 +203,15 @@ def save_checkpoint(checkpoint_path, processed_images, predictions, metadata):
     print(f"Checkpoint saved: {len(processed_images)} images processed")
 
 def load_checkpoint(checkpoint_path):
+    """
+    Loads batch prediction state and metadata from a pickle checkpoint file if it exists.
+
+    Args:
+        checkpoint_path (str): Path to pickle checkpoint file.
+
+    Returns:
+        tuple: (processed_images, predictions, metadata) if found, otherwise (None, None, None).
+    """
     if not os.path.exists(checkpoint_path):
         return None, None, None
     try:
@@ -175,10 +226,23 @@ def load_checkpoint(checkpoint_path):
         return None, None, None
 
 def get_checkpoint_path(output_dir, batch_name="prediction_batch"):
+    """
+    Constructs standardized path for batch prediction pickle checkpoint files.
+
+    Args:
+        output_dir (str): Directory where checkpoint file will be stored.
+        batch_name (str, optional): Prefix identifier for the batch run. Defaults to "prediction_batch".
+
+    Returns:
+        str: Absolute or relative file path for checkpoint pickle.
+    """
     os.makedirs(output_dir, exist_ok=True)
     return os.path.join(output_dir, f"{batch_name}_checkpoint.pkl")
 
 def main():
+    """
+    CLI entry point for running U-Net coastline prediction on single or multiple images.
+    """
     parser = argparse.ArgumentParser(description="Predict coastline masks using trained U-Net model")
     parser.add_argument("--image", type=str, help="Path to single image for prediction")
     parser.add_argument("--images", type=str, nargs="+", help="Paths to multiple images for prediction")
