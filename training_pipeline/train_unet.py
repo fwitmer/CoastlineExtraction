@@ -1,16 +1,20 @@
 """
-U-Net Training Script for Coastline Segmentation
+U-Net & Attention U-Net Training & Model Definitions for Coastline Segmentation
 
-Trains a U-Net model for coastline segmentation on satellite imagery.
-Automatically pairs images with masks and uses configurable parameters.
+This module provides dataset utilities, model definitions, checkpoint management, 
+and training routines for coastline extraction.
 
-Usage: python train_unet.py
+Supported Model Architectures:
+- ClassicUNet: Standard 4-stage U-Net with BatchNorm and 2-conv blocks.
+- UNet / DeepUNet: Deeper 5-stage U-Net with GroupNorm, 3-conv residual blocks.
+- AttentionUNet: 5-stage U-Net with Attention Gates for spatial feature filtering.
 
-Configuration: All parameters in config_template.json
-Data: Images and masks in results_augment_tiles folder
-Naming: Images (*_XX-of-YY_[aug].tif) and Masks (*_concatenated_ndwi_mask_XX-of-YY_[aug].tif)
+Usage:
+    python train_unet.py
 """
 
+import rasterio as rio
+import numpy as np
 import os
 import sys
 import torch
@@ -27,7 +31,11 @@ import pickle
 from datetime import datetime
 
 # Add parent directory to path to import load_config
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+script_dir = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.abspath(os.path.join(script_dir, ".."))
+if repo_root not in sys.path:
+    sys.path.append(repo_root)
+
 from load_config import load_config, get_augment_tiles_output_folder, get_training_config, get_model_save_path
 
 # ----------------------------
@@ -36,50 +44,45 @@ from load_config import load_config, get_augment_tiles_output_folder, get_traini
 class SegmentationDataset(Dataset):
     """
     Dataset for coastline segmentation training.
-    
-    Automatically pairs satellite images with their corresponding masks
-    based on naming convention. Handles augmented data.
-    
+    Automatically pairs GeoTIFF satellite image tiles with corresponding binary NDWI water masks.
+
     Args:
-        data_dir (str): Directory containing images and masks
-        transform (callable, optional): Transform to apply to data
+        data_dir (str): Path to directory containing tiled images and masks.
+        transform (callable, optional): PyTorch transform to apply to images and masks.
     """
     
     def __init__(self, data_dir, transform=None):
-        """Initialize dataset with data directory and optional transforms."""
         self.data_dir = data_dir
         self.transform = transform
         self.image_mask_pairs = self._find_image_mask_pairs()
 
     def _find_image_mask_pairs(self):
         """
-        Find matching image and mask pairs based on naming convention.
-        
-        Naming: Images (*_XX-of-YY_[aug].tif) -> Masks (*_concatenated_ndwi_mask_XX-of-YY_[aug].tif)
-        Returns: List of (image_path, mask_path) tuples
+        Scans data directory for matching image and mask files.
+
+        Returns:
+            list of tuple: List of (image_path, mask_path) file pairs.
         """
         pairs = []
-        
-        # Get all image files (tiles without mask in name)
         image_files = glob.glob(os.path.join(self.data_dir, "*.tif"))
         image_files = [f for f in image_files if "_concatenated_ndwi_mask_" not in os.path.basename(f)]
         
         for img_path in image_files:
             img_name = os.path.basename(img_path)
+            mask_name = img_name.replace("_clip_", "_concatenated_ndwi_mask_clip_")
+            mask_path = os.path.join(self.data_dir, mask_name)
             
-            # Extract the base name and augmentation suffix
-            # Pattern: base_name_XX-of-YY_[augmentation].tif
+            if os.path.exists(mask_path):
+                pairs.append((img_path, mask_path))
+                continue
+                
             base_match = re.match(r'(.+)_\d+-of-\d+(_[^_]+)?\.tif$', img_name)
             if base_match:
                 base_name = base_match.group(1)
-                augmentation = base_match.group(2) if base_match.group(2) else ""
-                
-                # Construct corresponding mask name
-                mask_name = f"{base_name}_concatenated_ndwi_mask_{img_name.split('_')[-2]}_{img_name.split('_')[-1]}"
-                mask_path = os.path.join(self.data_dir, mask_name)
-                
-                if os.path.exists(mask_path):
-                    pairs.append((img_path, mask_path))
+                mask_name_alt = f"{base_name}_concatenated_ndwi_mask_{img_name.split('_')[-2]}_{img_name.split('_')[-1]}"
+                mask_path_alt = os.path.join(self.data_dir, mask_name_alt)
+                if os.path.exists(mask_path_alt):
+                    pairs.append((img_path, mask_path_alt))
                 else:
                     print(f"Warning: Mask not found for {img_name}")
         
@@ -87,48 +90,69 @@ class SegmentationDataset(Dataset):
         return pairs
 
     def __len__(self):
-        """Return number of image-mask pairs in dataset."""
+        """Returns total number of paired samples in dataset."""
         return len(self.image_mask_pairs)
 
     def __getitem__(self, idx):
         """
-        Get image-mask pair by index.
-        
-        Returns: (image_tensor, mask_tensor) - RGB image and binary mask tensors
+        Loads and preprocesses image and mask at given index.
+
+        Args:
+            idx (int): Sample index.
+
+        Returns:
+            tuple: (transformed_image_tensor, binary_mask_tensor)
         """
         img_path, mask_path = self.image_mask_pairs[idx]
-        
-        # Load image and convert to RGB
-        image = Image.open(img_path).convert("RGB")
-        
-        # Load mask and convert to grayscale
-        mask = Image.open(mask_path).convert("L")
+        with rio.open(img_path) as src:
+            image_data = src.read([3, 2, 1])
+            image_data = (np.clip(image_data.astype(np.float32) / 10000.0, 0.0, 1.0) * 255.0).astype(np.uint8)
+            image_data = np.transpose(image_data, (1, 2, 0))
+            image = Image.fromarray(image_data)
+            
+        with rio.open(mask_path) as src:
+            mask_data = src.read(1)
+            mask_data = (mask_data > 0).astype(np.uint8) * 255
+            mask = Image.fromarray(mask_data, mode="L")
 
         if self.transform:
             image = self.transform(image)
             mask = self.transform(mask)
 
-        # Convert mask to binary (0 or 1)
         mask = (mask > 0).float()
         return image, mask
 
 # ----------------------------
-# U-Net Model
+# Model Components
 # ----------------------------
-class DoubleConv(nn.Module):
+def _init_weights(m):
     """
-    Double convolution block for U-Net architecture.
-    
-    Two consecutive 3x3 convolutions with batch normalization and ReLU.
-    Used in encoder and decoder paths.
-    
+    Initializes module parameters using Kaiming Normal initialization 
+    for Conv layers and constant initialization for Normalization layers.
+
     Args:
-        in_channels (int): Input channels
-        out_channels (int): Output channels
+        m (nn.Module): PyTorch module layer.
     """
-    
+    if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
+        nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
+    elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+        if m.weight is not None:
+            nn.init.constant_(m.weight, 1)
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
+
+class ClassicDoubleConv(nn.Module):
+    """
+    Classic double convolution block consisting of two 3x3 Conv2d layers,
+    each followed by BatchNorm2d and ReLU activation.
+
+    Args:
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+    """
     def __init__(self, in_channels, out_channels):
-        """Initialize double convolution block."""
         super().__init__()
         self.double_conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
@@ -140,26 +164,104 @@ class DoubleConv(nn.Module):
         )
 
     def forward(self, x):
-        """Forward pass through double convolution block."""
         return self.double_conv(x)
 
+class ClassicUNet(nn.Module):
+    """
+    Classic 4-stage U-Net architecture for semantic segmentation.
+
+    Args:
+        n_channels (int): Number of input channels (default: 3 for RGB).
+        n_classes (int): Number of output classes (default: 1 for binary water segmentation).
+    """
+    def __init__(self, n_channels=3, n_classes=1):
+        super().__init__()
+        self.down1 = ClassicDoubleConv(n_channels, 64)
+        self.pool1 = nn.MaxPool2d(2)
+        self.down2 = ClassicDoubleConv(64, 128)
+        self.pool2 = nn.MaxPool2d(2)
+        self.down3 = ClassicDoubleConv(128, 256)
+        self.pool3 = nn.MaxPool2d(2)
+        self.down4 = ClassicDoubleConv(256, 512)
+        self.pool4 = nn.MaxPool2d(2)
+
+        self.middle = ClassicDoubleConv(512, 1024)
+
+        self.up4 = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
+        self.conv4 = ClassicDoubleConv(1024, 512)
+        self.up3 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
+        self.conv3 = ClassicDoubleConv(512, 256)
+        self.up2 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
+        self.conv2 = ClassicDoubleConv(256, 128)
+        self.up1 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+        self.conv1 = ClassicDoubleConv(128, 64)
+
+        self.final = nn.Conv2d(64, n_classes, kernel_size=1)
+
+    def forward(self, x):
+        """
+        Forward pass for Classic U-Net.
+
+        Returns:
+            torch.Tensor: Raw logits tensor of shape (batch_size, n_classes, H, W).
+        """
+        d1 = self.down1(x)
+        d2 = self.down2(self.pool1(d1))
+        d3 = self.down3(self.pool2(d2))
+        d4 = self.down4(self.pool3(d3))
+        mid = self.middle(self.pool4(d4))
+
+        u4 = self.conv4(torch.cat([self.up4(mid), d4], dim=1))
+        u3 = self.conv3(torch.cat([self.up3(u4), d3], dim=1))
+        u2 = self.conv2(torch.cat([self.up2(u3), d2], dim=1))
+        u1 = self.conv1(torch.cat([self.up1(u2), d1], dim=1))
+
+        return self.final(u1)  # Return raw logits
+
+class DoubleConv(nn.Module):
+    """
+    Deeper residual convolution block featuring 3 convolutional layers, 
+    GroupNorm normalization, and residual shortcut connections.
+
+    Args:
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+    """
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        num_groups = min(32, out_channels)
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.GroupNorm(num_groups, out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.GroupNorm(num_groups, out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.GroupNorm(num_groups, out_channels),
+        )
+        if in_channels != out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
+                nn.GroupNorm(num_groups, out_channels)
+            )
+        else:
+            self.shortcut = nn.Identity()
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        return self.relu(self.conv(x) + self.shortcut(x))
 
 class UNet(nn.Module):
     """
-    U-Net architecture for semantic segmentation.
-    
-    Encoder-decoder structure with skip connections for precise segmentation.
-    Architecture: 4 downsampling blocks -> bottleneck -> 4 upsampling blocks -> final layer.
-    
+    Deep 5-stage residual U-Net architecture with GroupNorm and residual blocks.
+
     Args:
-        n_channels (int): Input channels (default: 3 for RGB)
-        n_classes (int): Output classes (default: 1 for binary segmentation)
+        n_channels (int): Input image channels (default: 3).
+        n_classes (int): Number of output segmentation classes (default: 1).
     """
-    
     def __init__(self, n_channels=3, n_classes=1):
-        """Initialize U-Net model with encoder-decoder structure."""
         super().__init__()
-        # Encoder path
         self.down1 = DoubleConv(n_channels, 64)
         self.pool1 = nn.MaxPool2d(2)
         self.down2 = DoubleConv(64, 128)
@@ -168,11 +270,13 @@ class UNet(nn.Module):
         self.pool3 = nn.MaxPool2d(2)
         self.down4 = DoubleConv(256, 512)
         self.pool4 = nn.MaxPool2d(2)
+        self.down5 = DoubleConv(512, 1024)
+        self.pool5 = nn.MaxPool2d(2)
 
-        # Bottleneck
-        self.middle = DoubleConv(512, 1024)
+        self.middle = DoubleConv(1024, 2048)
 
-        # Decoder path with skip connections
+        self.up5 = nn.ConvTranspose2d(2048, 1024, kernel_size=2, stride=2)
+        self.conv5 = DoubleConv(2048, 1024)
         self.up4 = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
         self.conv4 = DoubleConv(1024, 512)
         self.up3 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
@@ -182,26 +286,193 @@ class UNet(nn.Module):
         self.up1 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
         self.conv1 = DoubleConv(128, 64)
 
-        # Final classification layer
         self.final = nn.Conv2d(64, n_classes, kernel_size=1)
+        self.apply(_init_weights)
 
     def forward(self, x):
-        """Forward pass through U-Net with skip connections."""
-        # Encoder path
+        """
+        Forward pass for Deep U-Net.
+
+        Returns:
+            torch.Tensor: Raw logits tensor of shape (batch_size, n_classes, H, W).
+        """
         d1 = self.down1(x)
         d2 = self.down2(self.pool1(d1))
         d3 = self.down3(self.pool2(d2))
         d4 = self.down4(self.pool3(d3))
-        mid = self.middle(self.pool4(d4))
+        d5 = self.down5(self.pool4(d4))
+        mid = self.middle(self.pool5(d5))
 
-        # Decoder path with skip connections
-        u4 = self.conv4(torch.cat([self.up4(mid), d4], dim=1))
-        u3 = self.conv3(torch.cat([self.up3(u4), d3], dim=1))
-        u2 = self.conv2(torch.cat([self.up2(u3), d2], dim=1))
-        u1 = self.conv1(torch.cat([self.up1(u2), d1], dim=1))
+        u5_out = self.up5(mid)
+        if u5_out.size()[2:] != d5.size()[2:]:
+            u5_out = nn.functional.interpolate(u5_out, size=d5.size()[2:], mode='bilinear', align_corners=True)
+        u5 = self.conv5(torch.cat([u5_out, d5], dim=1))
 
-        # Final output with sigmoid activation
-        return torch.sigmoid(self.final(u1))
+        u4_out = self.up4(u5)
+        if u4_out.size()[2:] != d4.size()[2:]:
+            u4_out = nn.functional.interpolate(u4_out, size=d4.size()[2:], mode='bilinear', align_corners=True)
+        u4 = self.conv4(torch.cat([u4_out, d4], dim=1))
+
+        u3_out = self.up3(u4)
+        if u3_out.size()[2:] != d3.size()[2:]:
+            u3_out = nn.functional.interpolate(u3_out, size=d3.size()[2:], mode='bilinear', align_corners=True)
+        u3 = self.conv3(torch.cat([u3_out, d3], dim=1))
+
+        u2_out = self.up2(u3)
+        if u2_out.size()[2:] != d2.size()[2:]:
+            u2_out = nn.functional.interpolate(u2_out, size=d2.size()[2:], mode='bilinear', align_corners=True)
+        u2 = self.conv2(torch.cat([u2_out, d2], dim=1))
+
+        u1_out = self.up1(u2)
+        if u1_out.size()[2:] != d1.size()[2:]:
+            u1_out = nn.functional.interpolate(u1_out, size=d1.size()[2:], mode='bilinear', align_corners=True)
+        u1 = self.conv1(torch.cat([u1_out, d1], dim=1))
+
+        return self.final(u1)  # Return raw logits for BCEWithLogitsLoss
+
+# Alias DeepUNet
+DeepUNet = UNet
+
+class AttentionGate(nn.Module):
+    """
+    Attention Gate module to filter skip connection feature maps based on 
+    gating signals from deeper network layers.
+
+    Args:
+        F_g (int): Number of feature maps in gating signal tensor.
+        F_l (int): Number of feature maps in skip connection tensor.
+        F_int (int): Intermediate channel reduction dimension.
+    """
+    def __init__(self, F_g, F_l, F_int):
+        super().__init__()
+        g_groups = min(32, F_int)
+        x_groups = min(32, F_int)
+        self.W_g = nn.Sequential(
+            nn.Conv2d(F_g, F_int, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.GroupNorm(g_groups, F_int)
+        )
+        self.W_x = nn.Sequential(
+            nn.Conv2d(F_l, F_int, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.GroupNorm(x_groups, F_int)
+        )
+        self.psi = nn.Sequential(
+            nn.Conv2d(F_int, 1, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.GroupNorm(1, 1),
+            nn.Sigmoid()
+        )
+        self.relu = nn.ReLU(inplace=True)
+        
+    def forward(self, g, x):
+        """
+        Forward pass for Attention Gate.
+
+        Args:
+            g (torch.Tensor): Gating signal tensor from deeper layer.
+            x (torch.Tensor): Skip connection feature map tensor.
+
+        Returns:
+            torch.Tensor: Attention-weighted feature map.
+        """
+        g1 = self.W_g(g)
+        x1 = self.W_x(x)
+        if g1.size()[2:] != x1.size()[2:]:
+            g1 = nn.functional.interpolate(g1, size=x1.size()[2:], mode='bilinear', align_corners=True)
+        out = self.relu(g1 + x1)
+        out = self.psi(out)
+        return x * out
+
+class AttentionUNet(nn.Module):
+    """
+    Deep 5-stage residual Attention U-Net architecture.
+    Uses Attention Gates on skip connections for enhanced spatial feature selection.
+
+    Args:
+        n_channels (int): Input image channels (default: 3).
+        n_classes (int): Output segmentation classes (default: 1).
+    """
+    def __init__(self, n_channels=3, n_classes=1):
+        super().__init__()
+        self.down1 = DoubleConv(n_channels, 64)
+        self.pool1 = nn.MaxPool2d(2)
+        self.down2 = DoubleConv(64, 128)
+        self.pool2 = nn.MaxPool2d(2)
+        self.down3 = DoubleConv(128, 256)
+        self.pool3 = nn.MaxPool2d(2)
+        self.down4 = DoubleConv(256, 512)
+        self.pool4 = nn.MaxPool2d(2)
+        self.down5 = DoubleConv(512, 1024)
+        self.pool5 = nn.MaxPool2d(2)
+
+        self.middle = DoubleConv(1024, 2048)
+
+        self.up5 = nn.ConvTranspose2d(2048, 1024, kernel_size=2, stride=2)
+        self.attn5 = AttentionGate(F_g=1024, F_l=1024, F_int=512)
+        self.conv5 = DoubleConv(2048, 1024)
+
+        self.up4 = nn.ConvTranspose2d(1024, 512, kernel_size=2, stride=2)
+        self.attn4 = AttentionGate(F_g=512, F_l=512, F_int=256)
+        self.conv4 = DoubleConv(1024, 512)
+        
+        self.up3 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
+        self.attn3 = AttentionGate(F_g=256, F_l=256, F_int=128)
+        self.conv3 = DoubleConv(512, 256)
+        
+        self.up2 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
+        self.attn2 = AttentionGate(F_g=128, F_l=128, F_int=64)
+        self.conv2 = DoubleConv(256, 128)
+        
+        self.up1 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+        self.attn1 = AttentionGate(F_g=64, F_l=64, F_int=32)
+        self.conv1 = DoubleConv(128, 64)
+
+        self.final = nn.Conv2d(64, n_classes, kernel_size=1)
+        self.apply(_init_weights)
+
+    def forward(self, x):
+        """
+        Forward pass for Attention U-Net.
+
+        Returns:
+            torch.Tensor: Raw logits tensor of shape (batch_size, n_classes, H, W).
+        """
+        d1 = self.down1(x)
+        d2 = self.down2(self.pool1(d1))
+        d3 = self.down3(self.pool2(d2))
+        d4 = self.down4(self.pool3(d3))
+        d5 = self.down5(self.pool4(d4))
+        mid = self.middle(self.pool5(d5))
+
+        up5_out = self.up5(mid)
+        if up5_out.size()[2:] != d5.size()[2:]:
+            up5_out = nn.functional.interpolate(up5_out, size=d5.size()[2:], mode='bilinear', align_corners=True)
+        attn5_out = self.attn5(g=up5_out, x=d5)
+        u5 = self.conv5(torch.cat([up5_out, attn5_out], dim=1))
+
+        up4_out = self.up4(u5)
+        if up4_out.size()[2:] != d4.size()[2:]:
+            up4_out = nn.functional.interpolate(up4_out, size=d4.size()[2:], mode='bilinear', align_corners=True)
+        attn4_out = self.attn4(g=up4_out, x=d4)
+        u4 = self.conv4(torch.cat([up4_out, attn4_out], dim=1))
+        
+        up3_out = self.up3(u4)
+        if up3_out.size()[2:] != d3.size()[2:]:
+            up3_out = nn.functional.interpolate(up3_out, size=d3.size()[2:], mode='bilinear', align_corners=True)
+        attn3_out = self.attn3(g=up3_out, x=d3)
+        u3 = self.conv3(torch.cat([up3_out, attn3_out], dim=1))
+        
+        up2_out = self.up2(u3)
+        if up2_out.size()[2:] != d2.size()[2:]:
+            up2_out = nn.functional.interpolate(up2_out, size=d2.size()[2:], mode='bilinear', align_corners=True)
+        attn2_out = self.attn2(g=up2_out, x=d2)
+        u2 = self.conv2(torch.cat([up2_out, attn2_out], dim=1))
+        
+        up1_out = self.up1(u2)
+        if up1_out.size()[2:] != d1.size()[2:]:
+            up1_out = nn.functional.interpolate(up1_out, size=d1.size()[2:], mode='bilinear', align_corners=True)
+        attn1_out = self.attn1(g=up1_out, x=d1)
+        u1 = self.conv1(torch.cat([up1_out, attn1_out], dim=1))
+
+        return self.final(u1)  # Return raw logits for BCEWithLogitsLoss
 
 # ----------------------------
 # Checkpoint Functions
@@ -209,17 +480,17 @@ class UNet(nn.Module):
 def save_training_checkpoint(model, optimizer, epoch, train_loss, val_loss, 
                            best_val_loss, config, checkpoint_path):
     """
-    Save training checkpoint with model state and training progress.
-    
+    Saves full training checkpoint dictionary to file.
+
     Args:
-        model: U-Net model to save
-        optimizer: Optimizer state
-        epoch: Current epoch number
-        train_loss: Current training loss
-        val_loss: Current validation loss
-        best_val_loss: Best validation loss so far
-        config: Training configuration
-        checkpoint_path: Path to save checkpoint
+        model (nn.Module): Current model state.
+        optimizer (torch.optim.Optimizer): Current optimizer state.
+        epoch (int): Current training epoch index.
+        train_loss (float): Average training loss for current epoch.
+        val_loss (float): Average validation loss for current epoch.
+        best_val_loss (float): Historical best validation loss.
+        config (dict): Active configuration settings.
+        checkpoint_path (str): File path to write checkpoint file.
     """
     checkpoint_data = {
         'epoch': epoch,
@@ -231,32 +502,28 @@ def save_training_checkpoint(model, optimizer, epoch, train_loss, val_loss,
         'config': config,
         'timestamp': datetime.now().isoformat()
     }
-    
     torch.save(checkpoint_data, checkpoint_path)
     print(f"Checkpoint saved at epoch {epoch}: train_loss={train_loss:.4f}, val_loss={val_loss:.4f}")
 
 def load_training_checkpoint(checkpoint_path, model, optimizer=None):
     """
-    Load training checkpoint to resume training.
-    
+    Loads saved checkpoint weights and state into model and optimizer.
+
     Args:
-        checkpoint_path: Path to checkpoint file
-        model: U-Net model to load state into
-        optimizer: Optimizer to load state into (optional)
-    
+        checkpoint_path (str): Path to checkpoint file.
+        model (nn.Module): Target model instance.
+        optimizer (torch.optim.Optimizer, optional): Target optimizer instance.
+
     Returns:
-        tuple: (epoch, train_loss, val_loss, best_val_loss, config) or None if not found
+        tuple or None: (epoch, train_loss, val_loss, best_val_loss, config) if loaded, else None.
     """
     if not os.path.exists(checkpoint_path):
         return None
-    
     try:
         checkpoint = torch.load(checkpoint_path, map_location='cpu')
-        
         model.load_state_dict(checkpoint['model_state_dict'])
         if optimizer is not None:
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        
         print(f"Checkpoint loaded from epoch {checkpoint['epoch']}")
         return (checkpoint['epoch'], 
                 checkpoint['train_loss'], 
@@ -269,18 +536,17 @@ def load_training_checkpoint(checkpoint_path, model, optimizer=None):
 
 def get_checkpoint_path(model_save_path, epoch=None):
     """
-    Generate checkpoint file path.
-    
+    Constructs standardized checkpoint file path based on model path and epoch.
+
     Args:
-        model_save_path: Base model save path
-        epoch: Epoch number for specific checkpoint (optional)
-    
+        model_save_path (str): Base model output save path.
+        epoch (int, optional): Epoch index.
+
     Returns:
-        str: Checkpoint file path
+        str: Absolute or relative checkpoint filepath.
     """
     base_dir = os.path.dirname(model_save_path)
     base_name = os.path.splitext(os.path.basename(model_save_path))[0]
-    
     if epoch is not None:
         return os.path.join(base_dir, f"{base_name}_checkpoint_epoch_{epoch}.pth")
     else:
@@ -291,19 +557,18 @@ def get_checkpoint_path(model_save_path, epoch=None):
 # ----------------------------
 def train_model(model, train_loader, val_loader, config, model_save_path, resume_from_checkpoint=True):
     """
-    Train U-Net model for coastline segmentation with checkpoint support.
-    
-    Implements complete training loop with forward pass, loss computation,
-    backpropagation, and validation. Uses configurable parameters and progress tracking.
-    Supports resuming from checkpoints and saving best model.
-    
+    Main training loop for U-Net & Attention U-Net models.
+
+    Handles forward pass, BCEWithLogits loss computation, backpropagation,
+    validation evaluation, checkpointing, and saving the best performing model.
+
     Args:
-        model (UNet): U-Net model to train
-        train_loader (DataLoader): Training data loader
-        val_loader (DataLoader): Validation data loader
-        config (dict): Configuration with training parameters
-        model_save_path (str): Path to save trained model
-        resume_from_checkpoint (bool): Whether to resume from checkpoint if available
+        model (nn.Module): U-Net model instance.
+        train_loader (DataLoader): PyTorch training DataLoader.
+        val_loader (DataLoader): PyTorch validation DataLoader.
+        config (dict): Configuration parameters dictionary.
+        model_save_path (str): Filepath to save the best model weights.
+        resume_from_checkpoint (bool): Whether to resume training from existing checkpoint.
     """
     training_config = get_training_config(config)
     epochs = training_config.get('epochs', 30)
@@ -311,33 +576,29 @@ def train_model(model, train_loader, val_loader, config, model_save_path, resume
     device = training_config.get('device', 'auto')
     save_every_n_epochs = training_config.get('save_every_n_epochs', 5)
     
-    # Set device
     if device == 'auto':
         device = "cuda" if torch.cuda.is_available() else "cpu"
     
-    criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
     model.to(device)
     print(f"Training on device: {device}")
     
-    # Initialize training variables
     start_epoch = 0
     best_val_loss = float('inf')
     train_losses = []
     val_losses = []
     
-    # Try to load checkpoint if resume is enabled
     checkpoint_path = get_checkpoint_path(model_save_path)
     if resume_from_checkpoint:
         checkpoint_data = load_training_checkpoint(checkpoint_path, model, optimizer)
         if checkpoint_data is not None:
             start_epoch, _, _, best_val_loss, _ = checkpoint_data
-            start_epoch += 1  # Start from next epoch
+            start_epoch += 1
             print(f"Resuming training from epoch {start_epoch}")
     
     for epoch in range(start_epoch, epochs):
-        # Training phase
         model.train()
         running_loss = 0.0
         for imgs, masks in tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}"):
@@ -351,7 +612,6 @@ def train_model(model, train_loader, val_loader, config, model_save_path, resume
             optimizer.step()
             running_loss += loss.item()
 
-        # Validation phase
         val_loss = 0.0
         model.eval()
         with torch.no_grad():
@@ -361,7 +621,6 @@ def train_model(model, train_loader, val_loader, config, model_save_path, resume
                 loss = criterion(outputs, masks)
                 val_loss += loss.item()
 
-        # Calculate average losses
         avg_train_loss = running_loss / len(train_loader)
         avg_val_loss = val_loss / len(val_loader)
         train_losses.append(avg_train_loss)
@@ -369,67 +628,48 @@ def train_model(model, train_loader, val_loader, config, model_save_path, resume
 
         print(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f}, Val Loss={avg_val_loss:.4f}")
 
-        # Save checkpoint every N epochs
         if (epoch + 1) % save_every_n_epochs == 0:
             save_training_checkpoint(model, optimizer, epoch, avg_train_loss, 
                                    avg_val_loss, best_val_loss, config, checkpoint_path)
 
-        # Save best model
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             torch.save(model.state_dict(), model_save_path)
             print(f"New best model saved! Val Loss: {avg_val_loss:.4f}")
 
-    # Final checkpoint save
     save_training_checkpoint(model, optimizer, epochs-1, avg_train_loss, 
                            avg_val_loss, best_val_loss, config, checkpoint_path)
     
     print(f"Training completed! Best validation loss: {best_val_loss:.4f}")
     print(f"Final model saved to {model_save_path}")
 
-# ----------------------------
-# Main
-# ----------------------------
 if __name__ == "__main__":
-    """
-    Main execution block for U-Net training.
-    
-    Handles complete training pipeline: config loading, dataset creation,
-    train/val split, model training, and saving. Auto-detects GPU/CPU.
-    """
-    # Load configuration
     config = load_config()
     training_config = get_training_config(config)
     
-    # Get paths from config
     data_dir = get_augment_tiles_output_folder(config)
     model_save_path = get_model_save_path(config)
     
-    # Get training parameters from config
     image_size = training_config.get('image_size', [256, 256])
     batch_size = training_config.get('batch_size', 8)
     train_split = training_config.get('train_split', 0.8)
+    model_type = training_config.get('model_type', 'attention_unet')
     
     print(f"Data directory: {data_dir}")
     print(f"Model save path: {model_save_path}")
-    print(f"Image size: {image_size}")
-    print(f"Batch size: {batch_size}")
-    print(f"Train split: {train_split}")
+    print(f"Model architecture type: {model_type}")
     
-    # Create transforms
     transform = transforms.Compose([
         transforms.Resize(image_size),
         transforms.ToTensor(),
     ])
 
-    # Create dataset
     dataset = SegmentationDataset(data_dir, transform=transform)
     
     if len(dataset) == 0:
         print("No image-mask pairs found! Please check your data directory and file naming.")
-        exit(1)
+        sys.exit(1)
 
-    # Split into train and validation sets
     total_size = len(dataset)
     train_size = int(train_split * total_size)
     val_size = total_size - train_size
@@ -437,10 +677,14 @@ if __name__ == "__main__":
     
     print(f"Dataset split: {train_size} training, {val_size} validation samples")
 
-    # Create data loaders
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=batch_size)
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=4, pin_memory=True)
 
-    # Create and train model
-    model = UNet(n_channels=3, n_classes=1)
+    if model_type == 'attention_unet':
+        model = AttentionUNet(n_channels=3, n_classes=1)
+    elif model_type == 'classic_unet':
+        model = ClassicUNet(n_channels=3, n_classes=1)
+    else:
+        model = UNet(n_channels=3, n_classes=1)
+        
     train_model(model, train_loader, val_loader, config, model_save_path)
