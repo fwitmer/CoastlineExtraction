@@ -17,6 +17,7 @@ Example:
     # Prints the first image and shapefile path from the config.
 """
 
+import glob
 import json
 import os
 
@@ -66,6 +67,31 @@ def get_create_mask_output_folder(config):
     """Get the full path to the create mask output folder."""
     return os.path.join(os.path.dirname(__file__), config.get('create_mask_output_folder', 'processed_data/results_create_mask'))
 
+def get_add_mask_band_output_folder(config):
+    """Get the full path to the add mask band output folder."""
+    return os.path.join(os.path.dirname(__file__), config.get('add_mask_band_output_folder', 'processed_data/results_add_mask_band'))
+
+def get_augment_tiles_output_folder(config):
+    """Get the full path to the augment tiles output folder."""
+    return os.path.join(os.path.dirname(__file__), config.get('augment_tiles_output_folder', 'processed_data/results_augment_tiles'))
+
+def get_georeference_files(config, count=None):
+    """Get the full paths to the georeferenced TIFF files, sorted by filename.
+
+    Pass count to take only the first N files (all of them by default).
+    """
+    files = sorted(glob.glob(os.path.join(get_georeference_output_folder(config), '*.tif')))
+    return files if count is None else files[:count]
+
+def get_training_config(config):
+    """Get the training parameters block (empty dict if the config has none)."""
+    return config.get('training', {})
+
+def get_model_save_path(config):
+    """Get the full path to the saved model file."""
+    model_path = get_training_config(config).get('model_save_path', 'training_pipeline/unet_model.pth')
+    return os.path.join(os.path.dirname(__file__), model_path)
+
 
 # Example:
 if __name__ == "__main__":
@@ -75,4 +101,9 @@ if __name__ == "__main__":
     print("First aligned data path:", get_aligned_data_path(config, 0))
     print("Aligned data folder:", get_aligned_data_folder(config))
     print("Georeference output folder:", get_georeference_output_folder(config))
-    print("Tile images output folder:", get_tile_images_output_folder(config)) 
+    print("Tile images output folder:", get_tile_images_output_folder(config))
+    print("Create mask output folder:", get_create_mask_output_folder(config))
+    print("Add mask band output folder:", get_add_mask_band_output_folder(config))
+    print("Augment tiles output folder:", get_augment_tiles_output_folder(config))
+    print("Georeferenced files found:", len(get_georeference_files(config)))
+    print("Model save path:", get_model_save_path(config)) 

@@ -98,5 +98,18 @@
         "797937_0369619_2017-09-29_0e3a_BGRN_SR_clip_aligned.tif"
     ],
     "georeference_output_folder": "processed_data/results_georeference",
-    "tile_images_output_folder": "processed_data/results_tile_images"
+    "tile_images_output_folder": "processed_data/results_tile_images",
+    "create_mask_output_folder": "processed_data/results_create_mask",
+    "add_mask_band_output_folder": "processed_data/results_add_mask_band",
+    "augment_tiles_output_folder": "processed_data/results_augment_tiles",
+    "training": {
+        "model_save_path": "training_pipeline/unet_model.pth",
+        "batch_size": 8,
+        "epochs": 30,
+        "learning_rate": 0.0001,
+        "image_size": [256, 256],
+        "train_split": 0.8,
+        "device": "auto",
+        "save_every_n_epochs": 5
+    }
 }
