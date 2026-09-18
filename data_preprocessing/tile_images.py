@@ -7,6 +7,7 @@ It is useful for handling large images that may be too memory-intensive to proce
 Main Features:
 - Splits images into configurable tile sizes (default: 512x512 pixels)
 - Uses overlapping tiles (50% overlap) to ensure complete coverage
+- Tiles overhanging the raster edge are zero-padded to the full tile size, never rescaled
 - Supports multiband images and single-band masks
 - Processes both original images and their corresponding masks
 - Ensures same tile variations for both images and masks
@@ -46,19 +47,23 @@ def make_tiles(image, output_folder, tile_height=512, tile_width=512, skip_no_da
         file_base, file_extension = os.path.splitext(filename)
         meta = src.meta.copy()
         num_cols, num_rows = src.meta['width'], src.meta['height']
-        overall_window = windows.Window(col_off=0, row_off=0, width=num_cols, height=num_rows)
-        offsets = product(range(0, num_cols, tile_height//2), range(0, num_rows, tile_width//2))
+        offsets = product(range(0, num_cols, tile_width//2), range(0, num_rows, tile_height//2))
         tiles = []
         for col_off, row_off in offsets:
             curr_window = windows.Window(col_off=col_off, row_off=row_off, width=tile_width, height=tile_height)
             curr_transform = windows.transform(curr_window, src.transform)
-            tiles.append((curr_window.intersection(overall_window), curr_transform))
+            # keep the full-size window: edge tiles are padded on read, not clipped, so the
+            # written raster really is tile_width x tile_height and matches meta/transform
+            tiles.append((curr_window, curr_transform))
         for i in range(len(tiles)):
             window, transform = tiles[i]
             meta['transform'] = transform
             meta['width'] = tile_width
             meta['height'] = tile_height
-            window_data = src.read(window=window)
+            # boundless read pads the part of the window falling outside the raster instead of
+            # returning a smaller array; writing a smaller array into a tile_width x tile_height
+            # dataset makes GDAL silently stretch it to fill the tile
+            window_data = src.read(window=window, boundless=True, fill_value=0)
             # optionally skip tiles with no data values
             if skip_no_data:
                 if 0 in window_data[..., :-1]:
@@ -66,7 +71,7 @@ def make_tiles(image, output_folder, tile_height=512, tile_width=512, skip_no_da
             out_name = file_base + "_" + str(i + 1).zfill(2) + "-of-" + str(len(tiles)) + file_extension
             out_path = os.path.join(output_folder, out_name)
             with rio.open(out_path, 'w', **meta) as dst:
-                dst.write(src.read(window=window))
+                dst.write(window_data)
 
 def make_tiles_tiff(image_path, output_folder, tile_height=512, tile_width=512, is_mask=False):
     """
@@ -77,15 +82,16 @@ def make_tiles_tiff(image_path, output_folder, tile_height=512, tile_width=512, 
         file_base, file_extension = os.path.splitext(filename)
         meta = src.meta.copy()
         num_cols, num_rows = src.meta['width'], src.meta['height']
-        overall_window = windows.Window(col_off=0, row_off=0, width=num_cols, height=num_rows)
         
         # Calculate tile positions with 50% overlap
-        offsets = product(range(0, num_cols, tile_height//2), range(0, num_rows, tile_width//2))
+        offsets = product(range(0, num_cols, tile_width//2), range(0, num_rows, tile_height//2))
         tiles = []
         for col_off, row_off in offsets:
             curr_window = windows.Window(col_off=col_off, row_off=row_off, width=tile_width, height=tile_height)
             curr_transform = windows.transform(curr_window, src.transform)
-            tiles.append((curr_window.intersection(overall_window), curr_transform))
+            # keep the full-size window: edge tiles are padded on read, not clipped, so the
+            # written raster really is tile_width x tile_height and matches meta/transform
+            tiles.append((curr_window, curr_transform))
         
         # Save tiles
         for i in range(len(tiles)):
@@ -99,7 +105,10 @@ def make_tiles_tiff(image_path, output_folder, tile_height=512, tile_width=512, 
                 meta['count'] = 1
                 meta['dtype'] = 'uint8'
             
-            window_data = src.read(window=window)
+            # boundless read pads the part of the window falling outside the raster instead of
+            # returning a smaller array; writing a smaller array into a tile_width x tile_height
+            # dataset makes GDAL silently stretch it to fill the tile
+            window_data = src.read(window=window, boundless=True, fill_value=0)
             
             # Create output filename
             if is_mask:
