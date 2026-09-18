@@ -265,10 +265,13 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="r
         save_concatenated_ndwi_with_shapefile(ndwi_concatenated, ndwi_profile, image_path, out_dir)
     except Exception as e:
         print(f"Warning: Could not generate shapefile: {e}")
-        # Still save the TIFF even if shapefile generation fails
+        # Still save the TIFF even if shapefile generation fails. ndwi_profile is float32
+        # from the NDWI masking above, so switch it to uint8 for the binary label.
         base_name = os.path.splitext(os.path.basename(image_path))[0]
         tiff_path = os.path.join(out_dir, f"{base_name}_concatenated_ndwi.tif")
-        with rio.open(tiff_path, 'w', **ndwi_profile) as dst:
+        label_profile = ndwi_profile.copy()
+        label_profile.update(count=1, dtype=rio.uint8, nodata=0)
+        with rio.open(tiff_path, 'w', **label_profile) as dst:
             dst.write(ndwi_concatenated.astype(rio.uint8), 1)
     
     save_ndwi_plots(ndwi, ndwi_classified, label, label_majority, ndwi_concatenated, out_dir)

@@ -13,9 +13,10 @@ import skimage
 from skimage.segmentation import morphological_chan_vese, checkerboard_level_set
 from skimage import measure
 import shapely
+import shapely.wkt  # shapely 2 no longer pulls this in via shapely.geometry
 from shapely.geometry import mapping, MultiLineString, LineString
 import fiona
-from fiona.crs import from_epsg
+from fiona.crs import CRS  # needs fiona >= 1.9; from_epsg() goes away in fiona 2.0
 import geopandas as gpd
 
 __all__ = [
@@ -113,7 +114,7 @@ def save_shapefile(multilinestring, filepath, crs_epsg=32603):
         crs_epsg: EPSG code for coordinate reference system
     """
     schema = {'geometry': 'MultiLineString', 'properties': {'id': 'int'}}
-    crs = from_epsg(crs_epsg)
+    crs = CRS.from_epsg(crs_epsg)
     
     with fiona.open(filepath, 'w', 'ESRI Shapefile', schema=schema, crs=crs) as c:
         c.write({'geometry': mapping(multilinestring), 'properties': {'id': 1}})
@@ -213,24 +214,24 @@ def save_and_process(array, profile, folder_path, image_name):
     coastline_shp_from_raster(f"{folder_path}/{image_name}.tif")
 
 
-def save_concatenated_ndwi_with_shapefile(ndwi_concatenated, profile, original_image_path):
+def save_concatenated_ndwi_with_shapefile(ndwi_concatenated, profile, original_image_path, out_dir="result_ndwi_labels"):
     """
     Save concatenated NDWI array as TIFF and generate shapefile from it.
-    
+
     Args:
         ndwi_concatenated: Concatenated NDWI array (binary water/land classification)
         profile: Rasterio profile from original image
         original_image_path: Path to original image for naming output files
+        out_dir: Directory to write the TIFF and shapefile into. Callers that
+            process a batch pass a per-image folder here.
     """
     # Get output directory and filename
     base_name = os.path.splitext(os.path.basename(original_image_path))[0]
-    
-    # Use existing result_ndwi_labels directory
-    output_dir = "result_ndwi_labels"
-    
+    os.makedirs(out_dir, exist_ok=True)
+
     # Create output filename for concatenated NDWI
     concatenated_filename = f"{base_name}_concatenated_ndwi"
-    concatenated_path = os.path.join(output_dir, f"{concatenated_filename}.tif")
+    concatenated_path = os.path.join(out_dir, f"{concatenated_filename}.tif")
     
     # Update profile for single band binary image
     profile_updated = profile.copy()
@@ -250,7 +251,7 @@ def save_concatenated_ndwi_with_shapefile(ndwi_concatenated, profile, original_i
     try:
         multi_line_contour = coastline_shp_from_raster(concatenated_path, plot=False)
         print(f"Shapefile generated successfully: {base_name}_concatenated_ndwi_Coast_Contour.shp")
-        print(f"Files saved in: {output_dir}/")
+        print(f"Files saved in: {out_dir}/")
         return multi_line_contour
     except Exception as e:
         print(f"Error generating shapefile: {e}")
