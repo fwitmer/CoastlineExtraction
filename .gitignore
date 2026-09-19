@@ -1,10 +1,14 @@
 # general ignores
 /venv/
+coastline_env/
 **/.idea/
 **/*.pyc
 **/*.env
+__pycache__/
+.pytest_cache/
 
 # specific directory/file ignores
 /data/
 **/*.code-workspace
+config.json
 

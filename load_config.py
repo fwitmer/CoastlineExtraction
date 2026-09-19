@@ -20,13 +20,14 @@ Example:
 import json
 import os
 
-# Try loading config.json first, fall back to config_template.json if not present
-template_path = os.path.join(os.path.dirname(__file__), 'config_template.json')
-config_path_default = os.path.join(os.path.dirname(__file__), 'config.json')
-CONFIG_PATH = config_path_default if os.path.exists(config_path_default) else template_path
+CONFIG_JSON = os.path.join(os.path.dirname(__file__), 'config.json')
+CONFIG_TEMPLATE = os.path.join(os.path.dirname(__file__), 'config_template.json')
+CONFIG_PATH = CONFIG_JSON if os.path.exists(CONFIG_JSON) else CONFIG_TEMPLATE
 
-def load_config(config_path=CONFIG_PATH):
+def load_config(config_path=None):
     """Load the configuration JSON file."""
+    if config_path is None:
+        config_path = CONFIG_JSON if os.path.exists(CONFIG_JSON) else CONFIG_TEMPLATE
     with open(config_path, 'r') as f:
         return json.load(f)
 
@@ -60,11 +61,40 @@ def get_georeference_output_folder(config):
 
 def get_tile_images_output_folder(config):
     """Get the full path to the tile images output folder."""
-    return os.path.join(os.path.dirname(__file__), config['tile_images_output_folder'])
+    return os.path.join(os.path.dirname(__file__), config.get('tile_images_output_folder', 'processed_data/results_tile_images'))
 
 def get_create_mask_output_folder(config):
     """Get the full path to the create mask output folder."""
     return os.path.join(os.path.dirname(__file__), config.get('create_mask_output_folder', 'processed_data/results_create_mask'))
+
+def get_add_mask_band_output_folder(config):
+    """Get the full path to the add mask band output folder."""
+    return os.path.join(os.path.dirname(__file__), config.get('add_mask_band_output_folder', 'processed_data/results_add_mask_band'))
+
+def get_georeference_files(config, limit=None):
+    """Get list of georeferenced TIFF file paths."""
+    georef_dir = get_georeference_output_folder(config)
+    if not os.path.exists(georef_dir):
+        return []
+    import glob
+    files = sorted(glob.glob(os.path.join(georef_dir, "*.tif")))
+    if limit is not None:
+        return files[:limit]
+    return files
+
+def get_augment_tiles_output_folder(config):
+    """Get the full path to the augmented tiles output folder."""
+    return os.path.join(os.path.dirname(__file__), config.get('augment_tiles_output_folder', 'processed_data/results_augment_tiles'))
+
+def get_training_config(config):
+    """Get the training configuration block."""
+    return config.get('training', {})
+
+def get_model_save_path(config):
+    """Get the full path to save/load trained model."""
+    training_cfg = get_training_config(config)
+    save_path = training_cfg.get('model_save_path', 'training_pipeline/unet_model.pth')
+    return os.path.join(os.path.dirname(__file__), save_path)
 
 
 # Example:
@@ -75,4 +105,4 @@ if __name__ == "__main__":
     print("First aligned data path:", get_aligned_data_path(config, 0))
     print("Aligned data folder:", get_aligned_data_folder(config))
     print("Georeference output folder:", get_georeference_output_folder(config))
-    print("Tile images output folder:", get_tile_images_output_folder(config)) 
+    print("Tile images output folder:", get_tile_images_output_folder(config))

@@ -33,6 +33,7 @@ import numpy as np
 import os
 import glob
 import sys
+import argparse
 import rasterio
 from rasterio.transform import from_bounds
 
@@ -289,56 +290,55 @@ def augment_tiles(tile_path, output_path, max_tiles=None):
     print(f"Total augmented tiles created: {successful * 14} (7 image + 7 mask per pair)")
     print(f"Total tiles after augmentation: {successful * 16} (including originals)")
 
-if __name__ == '__main__':
-    # Load configuration
+def main():
     try:
         config = load_config()
-    except FileNotFoundError:
-        print("Error: config.json not found!")
-        print("Please copy config_template.json to config.json and update the paths.")
-        exit()
+    except Exception:
+        config = {}
     
-    # Get input and output directories from config
-    tiles_dir = get_tile_images_output_folder(config)
-    output_dir = get_augment_tiles_output_folder(config)
-    
+    default_tiles_dir = get_tile_images_output_folder(config) if config else "processed_data/results_tile_images"
+    default_output_dir = get_augment_tiles_output_folder(config) if config else "processed_data/results_augment_tiles"
+
+    parser = argparse.ArgumentParser(description="Data augmentation for image and mask tiles (rotations and flips).")
+    parser.add_argument("--input-dir", "--tiles-dir", dest="input_dir", type=str, default=default_tiles_dir,
+                        help=f"Path to input tiles directory (default: {default_tiles_dir})")
+    parser.add_argument("--output-dir", dest="output_dir", type=str, default=default_output_dir,
+                        help=f"Path to output directory for augmented tiles (default: {default_output_dir})")
+    parser.add_argument("--max-tiles", type=int, default=None,
+                        help="Maximum number of tile pairs to process (default: all)")
+
+    args = parser.parse_args()
+
     # Check if tiles directory exists
-    if not os.path.exists(tiles_dir):
-        print(f"Error: {tiles_dir} directory not found!")
+    if not os.path.exists(args.input_dir):
+        print(f"Error: {args.input_dir} directory not found!")
         print("Please run tile_images.py first to generate tiles.")
-        exit()
+        sys.exit(1)
     
     # Check if there are any image tiles to process
-    image_files = glob.glob(os.path.join(tiles_dir, "*_*-of-*.tif"))
-    # Filter out mask files
+    image_files = glob.glob(os.path.join(args.input_dir, "*_*-of-*.tif"))
     image_files = [f for f in image_files if "mask" not in f]
     
     if not image_files:
-        print(f"No TIFF image tiles found in {tiles_dir}")
+        print(f"No TIFF image tiles found in {args.input_dir}")
         print("Please run tile_images.py first to generate tiles.")
-        exit()
+        sys.exit(1)
     
     print("=== Data Augmentation Workflow ===")
-    print(f"Input directory: {tiles_dir}")
-    print(f"Output directory: {output_dir}")
+    print(f"Input directory: {args.input_dir}")
+    print(f"Output directory: {args.output_dir}")
     print(f"Found {len(image_files)} image tiles")
-    print("Will process ALL image-mask pairs from results_tile_images (no limit)")
-    print("Each image-mask pair will generate 7 augmented versions:")
-    print("  - 90° rotation")
-    print("  - 180° rotation") 
-    print("  - 270° rotation")
-    print("  - Vertical flip")
-    print("  - Vertical flip + 90° rotation")
-    print("  - Vertical flip + 180° rotation")
-    print("  - Vertical flip + 270° rotation")
-    print("Both images and masks will receive the same transformations.")
-    print("Working with TIFF format for both images and masks.")
+    limit_str = f"first {args.max_tiles}" if args.max_tiles else "ALL"
+    print(f"Will process {limit_str} image-mask pairs")
+    print("Each image-mask pair will generate 7 augmented versions.")
     print()
     
-    # Run augmentation on ALL tiles
-    augment_tiles(tiles_dir, output_dir, max_tiles=None)
-    
+    augment_tiles(args.input_dir, args.output_dir, max_tiles=args.max_tiles)
     print("\nAugmentation complete!")
+
+if __name__ == '__main__':
+    main()
+
 
 
 

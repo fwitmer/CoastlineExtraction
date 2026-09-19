@@ -8,6 +8,7 @@ import shapely
 from shapely.geometry import Polygon, shape ,box
 import geopandas as gpd
 import os
+import argparse
 from matplotlib import pyplot as plt
 import numpy as np
 import cv2
@@ -33,7 +34,7 @@ SIGMA_Y = 6      # Standard deviation in Y direction
 MAJORITY_THRESHOLD = 0.55
 
 
-def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
+def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="result_ndwi_labels", majority_threshold=MAJORITY_THRESHOLD):
     """
     This function performs NDWI calculation and classification with optional Gaussian blurring.
 
@@ -180,7 +181,7 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
                 
     
     # Labelled images based on majority sliding windows
-    label_majority = np.where(water_count > (buffer_numbers * MAJORITY_THRESHOLD), 1, 0)
+    label_majority = np.where(water_count > (buffer_numbers * majority_threshold), 1, 0)
     
     # Labelled image based on mean threshold (one threshold)
     mean_threshold = np.mean(otsu_thresholds_clipped) + 10
@@ -189,7 +190,7 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
     
     # Concatenate the remaining sliding window images (unlabeled parts) from NDWI classified.
     sliding_windows = np.where(buffer_numbers > 0, 1, 0)
-    ndwi_concatenated = np.where(sliding_windows == 1, label, ndwi_classified)
+    ndwi_concatenated = np.where(sliding_windows == 1, label_majority, ndwi_classified)
 
     print(f"Green min: {green.min():.2f}, Green max: {green.max():.2f}")
     print(f"NIR min: {nir.min():.2f}, NIR max: {nir.max():.2f}")
@@ -206,10 +207,10 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True):
 
 
     # Save concatenated NDWI as TIFF and generate shapefile
-    save_concatenated_ndwi_with_shapefile(ndwi_concatenated, ndwi_profile, image_path)
+    save_concatenated_ndwi_with_shapefile(ndwi_concatenated, ndwi_profile, image_path, output_dir=out_dir)
 
     
-    save_ndwi_plots(ndwi, ndwi_classified, label, label_majority, ndwi_concatenated)
+    save_ndwi_plots(ndwi, ndwi_classified, label, label_majority, ndwi_concatenated, out_dir=out_dir)
 
 
 
@@ -288,13 +289,54 @@ boundary = {'type': 'Polygon',
 
 
 
-"""
-To run this script:
-Change the index number (the second argument in get_image_path and get_shapefile_path) 
-according to the file you want to process, as specified in your config_template.json.
-"""
-config = load_config()
-image_path = get_image_path(config, 0)  # 268898_0369619_2016-10-15_0e14_BGRN_SR_clip.tif
-points_path = get_shapefile_path(config, 0)  # Deering_transect_points_2016_fw.shp
+def main():
+    config = load_config()
+    
+    parser = argparse.ArgumentParser(description="Sliding window Otsu NDWI water masking & coastline extraction.")
+    parser.add_argument("--image-index", type=int, default=0,
+                        help="Index of the image from config.json (default: 0)")
+    parser.add_argument("--custom-image-path", "--image-path", "--image", dest="custom_image_path", type=str, default=None,
+                        help="Path to custom satellite image GeoTIFF (overrides --image-index)")
+    parser.add_argument("--shapefile-index", type=int, default=0,
+                        help="Index of shapefile points from config.json (default: 0)")
+    parser.add_argument("--custom-shapefile-path", "--points-path", dest="custom_shapefile_path", type=str, default=None,
+                        help="Path to custom transect points shapefile (overrides --shapefile-index)")
+    parser.add_argument("--ksize", type=int, default=100,
+                        help="Sliding window buffer size / radius (default: 100)")
+    parser.add_argument("--majority-threshold", type=float, default=MAJORITY_THRESHOLD,
+                        help=f"Majority vote threshold fraction (default: {MAJORITY_THRESHOLD})")
+    parser.add_argument("--out-dir", "--output-dir", dest="out_dir", type=str, default="result_ndwi_labels",
+                        help="Output directory for generated masks and shapefiles (default: result_ndwi_labels)")
+    parser.add_argument("--no-blur", dest="blurring", action="store_false", default=True,
+                        help="Disable Gaussian blur filter")
 
-get_ndwi_label(image_path, points_path)
+    args = parser.parse_args()
+
+    if args.custom_image_path:
+        image_path = args.custom_image_path
+    else:
+        image_path = get_image_path(config, args.image_index)
+
+    if args.custom_shapefile_path:
+        points_path = args.custom_shapefile_path
+    else:
+        points_path = get_shapefile_path(config, args.shapefile_index)
+
+    print(f"Running NDWI extraction:")
+    print(f"  Image: {image_path}")
+    print(f"  Points: {points_path}")
+    print(f"  Output directory: {args.out_dir}")
+    print(f"  Majority threshold: {args.majority_threshold}")
+    print(f"  Gaussian blur: {args.blurring}")
+
+    get_ndwi_label(
+        image_path=image_path,
+        points_path=points_path,
+        ksize=args.ksize,
+        blurring=args.blurring,
+        out_dir=args.out_dir,
+        majority_threshold=args.majority_threshold
+    )
+
+if __name__ == "__main__":
+    main()

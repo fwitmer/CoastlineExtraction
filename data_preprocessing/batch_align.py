@@ -28,57 +28,88 @@ Usage:
 import os
 import subprocess
 import sys
+import argparse
 
 # Add the parent directory to the path to import load_config
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from load_config import load_config, get_raw_data_path, get_ground_truth_path
 
-# Load configuration
-config = load_config()
+def batch_align(raw_data_dir, output_dir, target_srs="EPSG:32603", pixel_size=3.125, te=None, resampling="bilinear"):
+    """
+    Batch-align satellite images in raw_data_dir using gdalwarp.
+    
+    Args:
+        raw_data_dir (str): Directory containing input .tif files.
+        output_dir (str): Directory to save aligned .tif files.
+        target_srs (str): Target spatial reference system (e.g., 'EPSG:32603').
+        pixel_size (float): Output resolution / pixel size in meters.
+        te (list): Target extent [minX, minY, maxX, maxY].
+        resampling (str): Resampling method (e.g., 'bilinear', 'near', 'cubic').
+    """
+    if te is None:
+        te = [598355.000000, 7326619.000000, 605849.500000, 7334628.500000]
 
-# The raw data directory path
-raw_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), config['raw_data_folder'])
+    os.makedirs(output_dir, exist_ok=True)
 
-# The base image path (9-5-2016_Ortho_4Band_NDWI_3.125m.tif)
-base_img = get_ground_truth_path(config, 4) # Index 4 for 9-5-2016_Ortho_4Band_NDWI.tif
+    tif_files = [f for f in os.listdir(raw_data_dir) if f.lower().endswith('.tif')]
+    if not tif_files:
+        print(f"No .tif files found in {raw_data_dir}")
+        return
 
-# Output directory
-aligned_data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), config['processed_data_folder'], 'results_batch_align')
+    print(f"Aligning {len(tif_files)} images from '{raw_data_dir}' to '{output_dir}'")
+    print(f"Target SRS: {target_srs} | Pixel size: {pixel_size} | Extent: {te} | Resampling: {resampling}")
 
-
-
-# Create the output directory if it doesn't exist
-os.makedirs(aligned_data_dir, exist_ok=True)
-
-# Alignment parameters from your base image
-
-# target_srs = "EPSG:32603"
-# pixel_size = 5.532779396951528
-# pixel_size = 0.5  # Match base image resolution (0.5m)
-# te = [598472.146, 7327174.321, 605731.152, 7333144.190]  # [minX, minY, maxX, maxY]
-
-target_srs = "EPSG:32603"
-pixel_size = 3.125000
-te = [598355.000000, 7326619.000000, 605849.500000, 7334628.500000]  # [minX, minY, maxX, maxY]
-
-# Process all .tif files in the raw_data directory
-for fname in os.listdir(raw_data_dir):
-    if fname.lower().endswith('.tif'):
+    for fname in tif_files:
         input_path = os.path.join(raw_data_dir, fname)
         output_path = os.path.join(
-            aligned_data_dir, fname.replace('.tif', '_aligned.tif')
+            output_dir, fname.replace('.tif', '_aligned.tif')
         )
         cmd = [
             "gdalwarp",
             "-t_srs", target_srs,
             "-tr", str(pixel_size), str(pixel_size),
             "-te", str(te[0]), str(te[1]), str(te[2]), str(te[3]),
-            "-r", "bilinear",
+            "-r", resampling,
             input_path,
             output_path
         ]
         print("Running:", " ".join(cmd))
         subprocess.run(cmd, check=True)
 
-print("Batch alignment complete! Aligned files are in:", aligned_data_dir) 
+    print("Batch alignment complete! Aligned files are in:", output_dir)
+
+def main():
+    config = load_config()
+    default_raw_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), config.get('raw_data_folder', 'raw_data'))
+    default_output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), config.get('processed_data_folder', 'processed_data'), 'results_batch_align')
+
+    parser = argparse.ArgumentParser(description="Batch Alignment Script for Satellite Imagery using GDAL warp.")
+    parser.add_argument("--raw-dir", "--input-dir", dest="raw_dir", type=str, default=default_raw_dir,
+                        help=f"Path to input raw data directory (default: {default_raw_dir})")
+    parser.add_argument("--output-dir", dest="output_dir", type=str, default=default_output_dir,
+                        help=f"Path to output directory for aligned images (default: {default_output_dir})")
+    parser.add_argument("--target-srs", dest="target_srs", type=str, default="EPSG:32603",
+                        help="Target coordinate reference system (default: EPSG:32603)")
+    parser.add_argument("--pixel-size", dest="pixel_size", type=float, default=3.125000,
+                        help="Pixel size / spatial resolution in meters (default: 3.125)")
+    parser.add_argument("--extent", "--te", dest="extent", nargs=4, type=float,
+                        default=[598355.000000, 7326619.000000, 605849.500000, 7334628.500000],
+                        metavar=('MINX', 'MINY', 'MAXX', 'MAXY'),
+                        help="Target bounding box extent [minX minY maxX maxY] (default: 598355.0 7326619.0 605849.5 7334628.5)")
+    parser.add_argument("--resampling", "-r", dest="resampling", type=str, default="bilinear",
+                        help="GDAL resampling algorithm (default: bilinear)")
+
+    args = parser.parse_args()
+    batch_align(
+        raw_data_dir=args.raw_dir,
+        output_dir=args.output_dir,
+        target_srs=args.target_srs,
+        pixel_size=args.pixel_size,
+        te=args.extent,
+        resampling=args.resampling
+    )
+
+if __name__ == "__main__":
+    main()
+
 

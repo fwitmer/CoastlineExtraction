@@ -3,12 +3,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import glob
+import sys
+import argparse
 from pathlib import Path
 
 # Add import for config loading
-import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from load_config import load_config, get_georeference_files, get_create_mask_output_folder, get_add_mask_band_output_folder
+
 
 def add_mask_band(image_path, mask_path, output_dir):
     """
@@ -148,41 +150,49 @@ def create_individual_visualizations(processed_data, output_dir):
         visualize_bands(data['stacked'], data['basename'], output_dir)
 
 
-if __name__ == "__main__":
-    # Load configuration
+def main():
     config = load_config()
-    
-    # Get paths from config
-    image_files = get_georeference_files(config, 5)  # Get first 5 images
-    mask_dir = get_create_mask_output_folder(config)
-    output_dir = get_add_mask_band_output_folder(config)
-    
-    # Process the first 5 images
+    default_mask_dir = get_create_mask_output_folder(config)
+    default_output_dir = get_add_mask_band_output_folder(config)
+
+    parser = argparse.ArgumentParser(description="Add water mask band to georeferenced satellite images (5-band stack).")
+    parser.add_argument("--image-files", nargs="*", default=None,
+                        help="Specific image file paths to process")
+    parser.add_argument("--mask-dir", dest="mask_dir", type=str, default=default_mask_dir,
+                        help=f"Path to input masks directory (default: {default_mask_dir})")
+    parser.add_argument("--output-dir", dest="output_dir", type=str, default=default_output_dir,
+                        help=f"Path to output directory for stacked GeoTIFFs (default: {default_output_dir})")
+    parser.add_argument("--limit", type=int, default=5,
+                        help="Maximum number of images to process from georeference folder (default: 5)")
+    parser.add_argument("--no-viz", dest="visualize", action="store_false", default=True,
+                        help="Skip generating PNG visual inspection plots")
+
+    args = parser.parse_args()
+
+    if args.image_files:
+        image_files = args.image_files
+    else:
+        image_files = get_georeference_files(config, limit=args.limit)
+
+    os.makedirs(args.output_dir, exist_ok=True)
+
     print("Starting batch processing to add mask bands...")
-    print(f"Input images: {len(image_files)} files from georeference folder")
-    print(f"Mask files directory: {mask_dir}")
-    print(f"Output directory: {output_dir}")
+    print(f"Input images: {len(image_files)} files")
+    print(f"Mask files directory: {args.mask_dir}")
+    print(f"Output directory: {args.output_dir}")
     
-    # Process each image individually since we have the file list
     processed_data = []
-    
     for i, image_path in enumerate(image_files):
         print(f"\nProcessing image {i+1}/{len(image_files)}: {os.path.basename(image_path)}")
         
-        # Find corresponding mask
-        mask_path = find_corresponding_mask(image_path, mask_dir)
-        
+        mask_path = find_corresponding_mask(image_path, args.mask_dir)
         if mask_path is None:
             print(f"  Warning: No mask found for {os.path.basename(image_path)}")
             continue
         
         print(f"  Found mask: {os.path.basename(mask_path)}")
-        
         try:
-            # Add mask band and save files
-            stacked, mask, output_paths = add_mask_band(image_path, mask_path, output_dir)
-            
-            # Store data for visualization
+            stacked, mask, output_paths = add_mask_band(image_path, mask_path, args.output_dir)
             processed_data.append({
                 'image_path': image_path,
                 'mask_path': mask_path,
@@ -191,21 +201,22 @@ if __name__ == "__main__":
                 'output_paths': output_paths,
                 'basename': os.path.splitext(os.path.basename(image_path))[0]
             })
-            
             print(f"  Successfully processed: {os.path.basename(output_paths['stacked'])}")
-            
         except Exception as e:
             print(f"  Error processing {os.path.basename(image_path)}: {str(e)}")
             continue
     
     print(f"\nBatch processing complete. {len(processed_data)} files processed successfully.")
     
-    # Create visualizations for all processed images
-    if processed_data:
-        create_individual_visualizations(processed_data, output_dir)
+    if processed_data and args.visualize:
+        create_individual_visualizations(processed_data, args.output_dir)
         print(f"\nAll processing complete! Check the output directory for:")
         print(f"  - *_mask.tif files (separate mask files)")
         print(f"  - *_with_mask.tif files (stacked images with mask band)")
         print(f"  - *_bands_visualization.png files (band visualizations)")
-    else:
+    elif not processed_data:
         print("No files were processed successfully.")
+
+if __name__ == "__main__":
+    main()
+

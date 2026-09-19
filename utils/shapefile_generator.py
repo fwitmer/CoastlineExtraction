@@ -213,7 +213,7 @@ def save_and_process(array, profile, folder_path, image_name):
     coastline_shp_from_raster(f"{folder_path}/{image_name}.tif")
 
 
-def save_concatenated_ndwi_with_shapefile(ndwi_concatenated, profile, original_image_path):
+def save_concatenated_ndwi_with_shapefile(ndwi_concatenated, profile, original_image_path, output_dir="result_ndwi_labels"):
     """
     Save concatenated NDWI array as TIFF and generate shapefile from it.
     
@@ -221,12 +221,12 @@ def save_concatenated_ndwi_with_shapefile(ndwi_concatenated, profile, original_i
         ndwi_concatenated: Concatenated NDWI array (binary water/land classification)
         profile: Rasterio profile from original image
         original_image_path: Path to original image for naming output files
+        output_dir: Destination directory for output TIFF and Shapefile (default: 'result_ndwi_labels')
     """
     # Get output directory and filename
     base_name = os.path.splitext(os.path.basename(original_image_path))[0]
     
-    # Use existing result_ndwi_labels directory
-    output_dir = "result_ndwi_labels"
+    os.makedirs(output_dir, exist_ok=True)
     
     # Create output filename for concatenated NDWI
     concatenated_filename = f"{base_name}_concatenated_ndwi"
@@ -254,6 +254,6 @@ def save_concatenated_ndwi_with_shapefile(ndwi_concatenated, profile, original_i
         return multi_line_contour
     except Exception as e:
         print(f"Error generating shapefile: {e}")
-        return None 
+        return None
     
     

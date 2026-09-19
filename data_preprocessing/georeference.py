@@ -27,13 +27,15 @@ Outputs:
 
 import os
 import shutil
-# from arosics import COREG
+import glob
+import argparse
 import rasterio
 import sys
 
 # Add parent directory to path to import load_config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from load_config import load_config, get_ground_truth_path, get_aligned_data_folder, get_georeference_output_folder
+
 
 def check_image_extent(image_path):
     """
@@ -166,47 +168,53 @@ def georeference(base_image, target_image, outfile=None, force=False, output_dir
 
 
 
-if __name__ == "__main__":
-    # Load configuration
+def main():
     config = load_config()
-    
-    # Get base image from ground truth files (UTM3N.tif)
-    base_img = get_ground_truth_path(config, 2)  # Index 2 for 2016_HiRes_Final_Coastline_UTM3N.tif
-    
-    # Path to aligned data folder from config
-    aligned_data_dir = get_aligned_data_folder(config)
-    
-    # Path to georeference output folder from config
-    output_dir = get_georeference_output_folder(config)
-    
+    default_base_img = get_ground_truth_path(config, 2)
+    default_aligned_dir = get_aligned_data_folder(config)
+    default_output_dir = get_georeference_output_folder(config)
+
+    parser = argparse.ArgumentParser(description="Fine coregistration of pre-aligned satellite images using AROSICS.")
+    parser.add_argument("--base-image", dest="base_image", type=str, default=default_base_img,
+                        help=f"Path to reference base image (default: {default_base_img})")
+    parser.add_argument("--aligned-dir", "--input-dir", dest="aligned_dir", type=str, default=default_aligned_dir,
+                        help=f"Path to input aligned images directory (default: {default_aligned_dir})")
+    parser.add_argument("--output-dir", dest="output_dir", type=str, default=default_output_dir,
+                        help=f"Path to output directory for georeferenced images (default: {default_output_dir})")
+    parser.add_argument("--force", action="store_true", default=False,
+                        help="Force full coregistration warping")
+
+    args = parser.parse_args()
+
     print("=== Georeferencing Workflow ===")
     print("Note: This script performs fine coregistration on pre-aligned images.")
-    print("If images are already well-aligned from batch_align.py, minimal changes will be made.")
-    print(f"Output directory: {output_dir}")
+    print(f"Base image: {args.base_image}")
+    print(f"Aligned data directory: {args.aligned_dir}")
+    print(f"Output directory: {args.output_dir}")
     print()
     
     # Check if base image exists
-    if not os.path.exists(base_img):
-        print(f"Error: Base image not found: {base_img}")
+    if not os.path.exists(args.base_image):
+        print(f"Error: Base image not found: {args.base_image}")
         print("Please ensure the ground truth files are properly configured.")
         sys.exit(1)
     
     # Check if aligned data directory exists
-    if not os.path.exists(aligned_data_dir):
-        print(f"Error: Aligned data directory not found: {aligned_data_dir}")
+    if not os.path.exists(args.aligned_dir):
+        print(f"Error: Aligned data directory not found: {args.aligned_dir}")
         print("Please run batch_align.py first to create aligned images.")
         sys.exit(1)
     
     # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-    print(f"Output directory created/verified: {output_dir}")
+    os.makedirs(args.output_dir, exist_ok=True)
+    print(f"Output directory created/verified: {args.output_dir}")
     
     # Check base image extent
     print("=== Base Image Information ===")
-    check_image_extent(base_img)
+    check_image_extent(args.base_image)
     
     # Get all .tif files in the aligned data folder
-    target_images = glob.glob(os.path.join(aligned_data_dir, "*.tif"))
+    target_images = glob.glob(os.path.join(args.aligned_dir, "*.tif"))
     print(f"\nFound {len(target_images)} pre-aligned target images to process")
     
     if len(target_images) == 0:
@@ -216,7 +224,7 @@ if __name__ == "__main__":
     
     # Check first few target images for debugging
     print("\n=== Sample Target Images Information ===")
-    for target_img in target_images[:3]:  # Check first 3 images
+    for target_img in target_images[:3]:
         check_image_extent(target_img)
         print()
     
@@ -227,19 +235,23 @@ if __name__ == "__main__":
     for target_img in target_images:
         print(f"\nProcessing: {os.path.basename(target_img)}")
         try:
-            output = georeference(base_img, target_img, force=False, output_dir=output_dir)  # Use force=False for gentle approach
+            output = georeference(args.base_image, target_img, force=args.force, output_dir=args.output_dir)
             print("Processing complete. Output:", output)
             successful += 1
         except Exception as e:
             print("Error during processing:", e)
             failed += 1
-            continue  # Continue with next image instead of stopping
+            continue
     
     print(f"\n=== Summary ===")
     print(f"Successfully processed: {successful}")
     print(f"Failed: {failed}")
     print(f"Total images: {len(target_images)}")
-    print(f"Results saved to: {output_dir}")
+    print(f"Results saved to: {args.output_dir}")
+
+if __name__ == "__main__":
+    main()
+
 
 
 

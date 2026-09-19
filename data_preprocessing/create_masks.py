@@ -8,13 +8,13 @@ import shapely
 from shapely.geometry import Polygon, shape, box # added box
 import geopandas as gpd
 import os
+import sys
+import argparse
 from matplotlib import pyplot as plt
 import numpy as np
 import cv2
 
 # Add import for check_crs
-import sys
-import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.check_crs import check_crs, crs_match
 
@@ -37,7 +37,7 @@ SIGMA_Y = 6      # Standard deviation in Y direction
 MAJORITY_THRESHOLD = 0.05  # 5% of windows need to classify as water (lower threshold for better detection)
 
 
-def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="result_ndwi_labels"):
+def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="result_ndwi_labels", majority_threshold=MAJORITY_THRESHOLD):
     """
     This function performs NDWI calculation and classification with optional Gaussian blurring.
 
@@ -198,7 +198,7 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="r
                         continue
 
     # Labelled images based on majority sliding windows
-    label_majority = np.where(water_count > (buffer_numbers * MAJORITY_THRESHOLD), 1, 0)
+    label_majority = np.where(water_count > (buffer_numbers * majority_threshold), 1, 0)
     
     # Labelled image based on mean threshold (one threshold)
     if otsu_thresholds_clipped:
@@ -219,7 +219,7 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="r
     # For areas with sliding windows, use the sliding window result where it detects water
     # This preserves the global classification but enhances it with local precision
     sliding_windows = np.where(buffer_numbers > 0, 1, 0)
-    water_areas = np.where(label == 1, 1, 0)  # Areas where sliding window detected water
+    water_areas = np.where(label_majority == 1, 1, 0)  # Areas where sliding window majority detected water
     ndwi_concatenated = np.where((sliding_windows == 1) & (water_areas == 1), 1, ndwi_concatenated)
 
     print(f"Green min: {green.min():.2f}, Green max: {green.max():.2f}")
@@ -257,8 +257,9 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="r
     if np.nanmax(buffer_numbers) > 0:
         max_water_ratio = np.nanmax(water_count) / np.nanmax(buffer_numbers)
         print(f"Maximum water ratio: {max_water_ratio:.3f} (water_count/buffer_numbers)")
-        print(f"Majority threshold: {MAJORITY_THRESHOLD}")
-        print(f"Pixels that would pass majority: {np.sum(water_count > (buffer_numbers * MAJORITY_THRESHOLD))}")
+        print(f"Majority threshold: {majority_threshold}")
+        print(f"Pixels that would pass majority: {np.sum(water_count > (buffer_numbers * majority_threshold))}")
+
     
     # Save concatenated NDWI as TIFF and generate shapefile
     try:
@@ -346,33 +347,86 @@ boundary = {'type': 'Polygon',
                              [-162.8235626220703, 66.05622435812153]]]}
 
 
-#  To Run script , you need only to change image and points path to yours.
-config = load_config()
+def process_masks(image_paths, points_path, output_folder, ksize=100, blurring=True, majority_threshold=MAJORITY_THRESHOLD):
+    """
+    Process one or more images to generate NDWI binary masks and shapefiles.
+    """
+    if isinstance(image_paths, str):
+        image_paths = [image_paths]
 
-# Get the first 5 files from results_georeference
-image_paths = get_georeference_files(config, 5)
-points_path = get_ground_truth_path(config, 0)  # Deering_transect_points_2016_fw_UTM3N.shp
+    os.makedirs(output_folder, exist_ok=True)
+    print(f"Processing {len(image_paths)} images...")
+    print(f"Points path: {points_path}")
+    print(f"Output folder: {output_folder}")
+    print(f"Majority threshold: {majority_threshold} | Blurring: {blurring} | Window ksize: {ksize}")
 
-# Get output folder from config
-output_folder = get_create_mask_output_folder(config)
+    for i, image_path in enumerate(image_paths):
+        print(f"\nProcessing image {i+1}/{len(image_paths)}: {os.path.basename(image_path)}")
+        try:
+            base_name = os.path.splitext(os.path.basename(image_path))[0]
+            image_output_dir = os.path.join(output_folder, base_name)
+            os.makedirs(image_output_dir, exist_ok=True)
+            
+            get_ndwi_label(
+                image_path=image_path,
+                points_path=points_path,
+                ksize=ksize,
+                blurring=blurring,
+                out_dir=image_output_dir,
+                majority_threshold=majority_threshold
+            )
+            print(f"Successfully processed: {os.path.basename(image_path)}")
+        except Exception as e:
+            print(f"Error processing {os.path.basename(image_path)}: {str(e)}")
 
-print(f"Processing {len(image_paths)} images from results_georeference...")
-print(f"Points path: {points_path}")
-print(f"Output folder: {output_folder}")
+    print(f"\nAll processing complete. Results saved to: {output_folder}")
 
-# Process each image
-for i, image_path in enumerate(image_paths):
-    print(f"\nProcessing image {i+1}/{len(image_paths)}: {os.path.basename(image_path)}")
-    try:
-        # Create output directory for this specific image
-        base_name = os.path.splitext(os.path.basename(image_path))[0]
-        image_output_dir = os.path.join(output_folder, base_name)
-        os.makedirs(image_output_dir, exist_ok=True)
-        
-        # Process the image
-        get_ndwi_label(image_path, points_path, out_dir=image_output_dir)
-        print(f"Successfully processed: {os.path.basename(image_path)}")
-    except Exception as e:
-        print(f"Error processing {os.path.basename(image_path)}: {str(e)}")
+def main():
+    config = load_config()
+    default_output_folder = get_create_mask_output_folder(config)
+    default_points_path = get_ground_truth_path(config, 0)
 
-print(f"\nAll processing complete. Results saved to: {output_folder}")
+    parser = argparse.ArgumentParser(description="Create NDWI water masks and coastline shapefiles from satellite imagery.")
+    parser.add_argument("--image-index", type=int, default=None,
+                        help="Index of specific georeferenced image to process (0-indexed)")
+    parser.add_argument("--custom-image-path", "--image-path", "--image", dest="custom_image_path", type=str, default=None,
+                        help="Path to custom satellite image GeoTIFF (overrides --image-index)")
+    parser.add_argument("--points-path", "--shapefile-path", dest="points_path", type=str, default=default_points_path,
+                        help=f"Path to ground truth/transect shapefile (default: {default_points_path})")
+    parser.add_argument("--ksize", type=int, default=100,
+                        help="Sliding window buffer size / radius (default: 100)")
+    parser.add_argument("--majority-threshold", type=float, default=MAJORITY_THRESHOLD,
+                        help=f"Majority vote threshold fraction (default: {MAJORITY_THRESHOLD})")
+    parser.add_argument("--out-dir", "--output-dir", dest="out_dir", type=str, default=default_output_folder,
+                        help=f"Output directory for generated masks (default: {default_output_folder})")
+    parser.add_argument("--no-blur", dest="blurring", action="store_false", default=True,
+                        help="Disable Gaussian blur filter")
+    parser.add_argument("--limit", type=int, default=5,
+                        help="Maximum number of images to process in batch mode (default: 5)")
+
+    args = parser.parse_args()
+
+    if args.custom_image_path:
+        images_to_process = [args.custom_image_path]
+    elif args.image_index is not None:
+        all_georef = get_georeference_files(config)
+        if 0 <= args.image_index < len(all_georef):
+            images_to_process = [all_georef[args.image_index]]
+        else:
+            images_to_process = [get_image_path(config, args.image_index)]
+    else:
+        images_to_process = get_georeference_files(config, limit=args.limit)
+        if not images_to_process:
+            images_to_process = [get_image_path(config, i) for i in range(min(args.limit, 5))]
+
+    process_masks(
+        image_paths=images_to_process,
+        points_path=args.points_path,
+        output_folder=args.out_dir,
+        ksize=args.ksize,
+        blurring=args.blurring,
+        majority_threshold=args.majority_threshold
+    )
+
+if __name__ == "__main__":
+    main()
