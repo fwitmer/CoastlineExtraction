@@ -13,8 +13,9 @@ class ResizeBinaryMaskTests(unittest.TestCase):
         resized = resize_binary_mask(mask, (4, 4))
 
         self.assertEqual(resized.size, (4, 4))
-        self.assertEqual(set(resized.getdata()), {0, 255})
-        self.assertEqual(sum(value == 255 for value in resized.getdata()), 4)
+        pixels = resized.tobytes()
+        self.assertEqual(set(pixels), {0, 255})
+        self.assertEqual(sum(value == 255 for value in pixels), 4)
 
     def test_size_is_height_then_width(self):
         mask = Image.new("L", (2, 3), color=255)
