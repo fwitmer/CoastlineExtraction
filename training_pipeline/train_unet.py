@@ -37,6 +37,7 @@ if repo_root not in sys.path:
     sys.path.append(repo_root)
 
 from load_config import load_config, get_augment_tiles_output_folder, get_training_config, get_model_save_path
+from training_pipeline.mask_utils import resize_binary_mask
 
 # ----------------------------
 # Dataset Class
@@ -48,12 +49,13 @@ class SegmentationDataset(Dataset):
 
     Args:
         data_dir (str): Path to directory containing tiled images and masks.
-        transform (callable, optional): PyTorch transform to apply to images and masks.
+        transform (callable, optional): Image transform returning a tensor.
+            Masks are resized separately with nearest-neighbor interpolation.
     """
     
     def __init__(self, data_dir, transform=None):
         self.data_dir = data_dir
-        self.transform = transform
+        self.transform = transform or transforms.ToTensor()
         self.image_mask_pairs = self._find_image_mask_pairs()
 
     def _find_image_mask_pairs(self):
@@ -115,9 +117,11 @@ class SegmentationDataset(Dataset):
             mask_data = (mask_data > 0).astype(np.uint8) * 255
             mask = Image.fromarray(mask_data, mode="L")
 
-        if self.transform:
-            image = self.transform(image)
-            mask = self.transform(mask)
+        image = self.transform(image)
+        # Masks hold class labels, so interpolating them like RGB images
+        # would introduce positive pixels along the coastline boundary.
+        mask = resize_binary_mask(mask, image.shape[-2:])
+        mask = transforms.ToTensor()(mask)
 
         mask = (mask > 0).float()
         return image, mask
