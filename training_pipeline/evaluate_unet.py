@@ -19,7 +19,7 @@ import geopandas as gpd
 import rasterio as rio
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, Subset
 from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
@@ -36,6 +36,7 @@ if repo_root not in sys.path:
 
 from load_config import load_config, get_training_config, get_augment_tiles_output_folder, get_model_save_path
 from train_unet import UNet, AttentionUNet, ClassicUNet, SegmentationDataset
+from training_pipeline.data_splits import grouped_train_val_indices
 
 UTM_ZONE_3N = 'EPSG:32603'
 EPSILON = 2 ** -16
@@ -454,12 +455,10 @@ def main():
         val_dataset = SegmentationDataset(aug_data_dir, transform=transform)
         if len(val_dataset) > 0:
             train_split = training_config.get('train_split', 0.8)
-            total_sz = len(val_dataset)
-            train_sz = int(train_split * total_sz)
-            val_sz = total_sz - train_sz
-
-            generator = torch.Generator().manual_seed(42)
-            _, val_set = random_split(val_dataset, [train_sz, val_sz], generator=generator)
+            _train_indices, val_indices = grouped_train_val_indices(
+                val_dataset.image_mask_pairs, train_fraction=train_split
+            )
+            val_set = Subset(val_dataset, val_indices)
             val_loader = DataLoader(val_set, batch_size=16, num_workers=4, pin_memory=True)
 
             val_metrics = evaluate_validation_metrics(model, val_loader, device)

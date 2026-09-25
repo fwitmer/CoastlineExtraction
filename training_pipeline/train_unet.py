@@ -20,7 +20,7 @@ import sys
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader, Subset
 from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
@@ -37,6 +37,7 @@ if repo_root not in sys.path:
     sys.path.append(repo_root)
 
 from load_config import load_config, get_augment_tiles_output_folder, get_training_config, get_model_save_path
+from training_pipeline.data_splits import grouped_train_val_indices
 
 # ----------------------------
 # Dataset Class
@@ -64,7 +65,7 @@ class SegmentationDataset(Dataset):
             list of tuple: List of (image_path, mask_path) file pairs.
         """
         pairs = []
-        image_files = glob.glob(os.path.join(self.data_dir, "*.tif"))
+        image_files = sorted(glob.glob(os.path.join(self.data_dir, "*.tif")))
         image_files = [f for f in image_files if "_concatenated_ndwi_mask_" not in os.path.basename(f)]
         
         for img_path in image_files:
@@ -671,9 +672,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     total_size = len(dataset)
-    train_size = int(train_split * total_size)
-    val_size = total_size - train_size
-    train_set, val_set = random_split(dataset, [train_size, val_size])
+    train_indices, val_indices = grouped_train_val_indices(
+        dataset.image_mask_pairs, train_fraction=train_split
+    )
+    train_set = Subset(dataset, train_indices)
+    val_set = Subset(dataset, val_indices)
+    train_size, val_size = len(train_set), len(val_set)
     
     print(f"Dataset split: {train_size} training, {val_size} validation samples")
 

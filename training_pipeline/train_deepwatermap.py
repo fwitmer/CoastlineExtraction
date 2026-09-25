@@ -12,7 +12,7 @@ import sys
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 # Add parent directory to sys.path to import load_config
@@ -23,6 +23,7 @@ if repo_root not in sys.path:
 
 from load_config import load_config, get_augment_tiles_output_folder
 from deepwatermap_model import DeepWaterMap4Chan, SegmentationDataset4Chan, BCEDiceLoss
+from training_pipeline.data_splits import grouped_train_val_indices
 
 def train_deepwatermap():
     config = load_config()
@@ -55,15 +56,15 @@ def train_deepwatermap():
         return
 
     # 80/20 train/val split
-    train_size = int(0.8 * len(full_dataset))
-    val_size = len(full_dataset) - train_size
-    train_indices, val_indices = random_split(range(len(full_dataset)), [train_size, val_size])
+    train_indices, val_indices = grouped_train_val_indices(
+        full_dataset.image_mask_pairs, train_fraction=0.8
+    )
 
     train_set = SegmentationDataset4Chan(data_dir, image_size=(256, 256), is_train=True)
-    train_set.image_mask_pairs = [full_dataset.image_mask_pairs[i] for i in train_indices.indices]
+    train_set.image_mask_pairs = [full_dataset.image_mask_pairs[i] for i in train_indices]
     
     val_set = SegmentationDataset4Chan(data_dir, image_size=(256, 256), is_train=False)
-    val_set.image_mask_pairs = [full_dataset.image_mask_pairs[i] for i in val_indices.indices]
+    val_set.image_mask_pairs = [full_dataset.image_mask_pairs[i] for i in val_indices]
 
     print(f"Dataset split: {len(train_set)} training samples, {len(val_set)} validation samples")
 
