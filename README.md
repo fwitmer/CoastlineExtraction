@@ -31,8 +31,8 @@ Before installing this project, ensure you have the following requirements:
 Clone the project using the `dev` branch (this branch contains the latest development features):
 
 ```bash
-git clone -b dev https://github.com/your-username/coastline-extraction.git
-cd coastline-extraction
+git clone -b dev https://github.com/your-username/CoastlineExtraction.git
+cd CoastlineExtraction
 ```
 
 ---
@@ -133,8 +133,8 @@ This project uses the `dev` branch for active development. When contributing:
 2. **Clone your fork using the `dev` branch**:
 
 ```bash
-git clone -b dev https://github.com/your-username/coastline-extraction.git
-cd coastline-extraction
+git clone -b dev https://github.com/your-username/CoastlineExtraction.git
+cd CoastlineExtraction
 ```
 
 3. **Create a feature branch from `dev`**:
