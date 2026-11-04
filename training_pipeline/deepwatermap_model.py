@@ -7,13 +7,14 @@ Includes BCEDiceLoss and comprehensive online spatial & photometric data augment
 
 import os
 import glob
-import re
 import numpy as np
 import rasterio as rio
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset
+
+from training_pipeline.tile_pairing import mask_name_for_tile
 
 class BCEDiceLoss(nn.Module):
     """
@@ -169,30 +170,24 @@ class SegmentationDataset4Chan(Dataset):
             # Pattern 1: standard clip replace
             mask_name = img_name.replace("_clip_", "_concatenated_ndwi_mask_clip_")
             mask_path = os.path.join(self.data_dir, mask_name)
-            if os.path.exists(mask_path):
+            if mask_name != img_name and os.path.exists(mask_path):
                 pairs.append((img_path, mask_path))
                 continue
 
             # Pattern 2: clip replace without trailing clip
             mask_name_alt1 = img_name.replace("_clip_", "_concatenated_ndwi_mask_")
             mask_path_alt1 = os.path.join(self.data_dir, mask_name_alt1)
-            if os.path.exists(mask_path_alt1):
+            if mask_name_alt1 != img_name and os.path.exists(mask_path_alt1):
                 pairs.append((img_path, mask_path_alt1))
                 continue
-                
-            # Pattern 3: regex base match
-            base_match = re.match(r'(.+)_\d+-of-\d+(_[^_]+)?\.tif$', img_name)
-            if base_match:
-                base_name = base_match.group(1)
-                suffix = base_match.group(2) if base_match.group(2) else ""
-                parts = img_name.replace('.tif', '').split('_')
-                tile_str = [p for p in parts if "-of-" in p]
-                if tile_str:
-                    mask_name_alt2 = f"{base_name}_concatenated_ndwi_mask_{tile_str[0]}{suffix}.tif"
-                    mask_path_alt2 = os.path.join(self.data_dir, mask_name_alt2)
-                    if os.path.exists(mask_path_alt2):
-                        pairs.append((img_path, mask_path_alt2))
-                        continue
+
+            # Pattern 3: tile naming scheme, <base>_NN-of-M[_augmentation].tif
+            mask_name_alt2 = mask_name_for_tile(img_name)
+            if mask_name_alt2:
+                mask_path_alt2 = os.path.join(self.data_dir, mask_name_alt2)
+                if os.path.exists(mask_path_alt2):
+                    pairs.append((img_path, mask_path_alt2))
+                    continue
         print(f"Found {len(pairs)} 4-channel image-mask pairs in {self.data_dir}")
         return pairs
 
