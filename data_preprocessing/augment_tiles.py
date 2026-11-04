@@ -156,10 +156,10 @@ def augment_tiles(tile_path, output_path, max_tiles=None):
     # Get all image files (TIFF format: *_01-of-110.tif to *_110-of-110.tif)
     image_files = glob.glob(os.path.join(tile_path, "*_*-of-*.tif"))
     # Filter out mask files (containing "mask" in filename)
-    image_files = [f for f in image_files if "mask" not in f]
+    image_files = [f for f in image_files if "mask" not in os.path.basename(f)]
     
     # Filter out already augmented files
-    image_files = [f for f in image_files if not any(x in f for x in ["_rot", "_flip"])]
+    image_files = [f for f in image_files if not any(x in os.path.basename(f) for x in ["_rot", "_flip"])]
     
     # Sort all image files for consistent processing
     image_files = sorted(image_files)
@@ -311,7 +311,7 @@ if __name__ == '__main__':
     # Check if there are any image tiles to process
     image_files = glob.glob(os.path.join(tiles_dir, "*_*-of-*.tif"))
     # Filter out mask files
-    image_files = [f for f in image_files if "mask" not in f]
+    image_files = [f for f in image_files if "mask" not in os.path.basename(f)]
     
     if not image_files:
         print(f"No TIFF image tiles found in {tiles_dir}")
