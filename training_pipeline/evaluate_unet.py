@@ -331,14 +331,16 @@ def main():
 
     # Transects & USGS Coastlines
     transects_path = os.path.join(repo_root, "USGS_Coastlines", "WestChukchi_exposed_STepr_rates", "WestChukchi_exposed_STepr_rates.shp")
+    usgs_path = os.path.join(repo_root, "USGS_Coastlines", "Deering_shorelines_2016.shp")
 
     # Load Ground Truth shapefiles if available
     planet_ref_gdf = gpd.read_file(planet_ref_path) if os.path.exists(planet_ref_path) else None
     hires_gt_gdf = gpd.read_file(hires_gt_path) if os.path.exists(hires_gt_path) else None
-    usgs_gdf = gpd.read_file(transects_path) if os.path.exists(transects_path) else None
+    usgs_gdf = gpd.read_file(usgs_path) if os.path.exists(usgs_path) else None
+    all_transects_gdf = gpd.read_file(transects_path) if os.path.exists(transects_path) else None
 
-    if usgs_gdf is not None:
-        transects_gdf = usgs_gdf[usgs_gdf['BaselineID'] == 117]
+    if all_transects_gdf is not None:
+        transects_gdf = all_transects_gdf[all_transects_gdf['BaselineID'] == 117]
     else:
         transects_gdf = None
 
