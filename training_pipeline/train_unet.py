@@ -25,7 +25,6 @@ from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
 import glob
-import re
 import json
 import pickle
 from datetime import datetime
@@ -37,6 +36,7 @@ if repo_root not in sys.path:
     sys.path.append(repo_root)
 
 from load_config import load_config, get_augment_tiles_output_folder, get_training_config, get_model_save_path
+from training_pipeline.tile_pairing import mask_name_for_tile
 
 # ----------------------------
 # Dataset Class
@@ -72,14 +72,12 @@ class SegmentationDataset(Dataset):
             mask_name = img_name.replace("_clip_", "_concatenated_ndwi_mask_clip_")
             mask_path = os.path.join(self.data_dir, mask_name)
             
-            if os.path.exists(mask_path):
+            if mask_name != img_name and os.path.exists(mask_path):
                 pairs.append((img_path, mask_path))
                 continue
-                
-            base_match = re.match(r'(.+)_\d+-of-\d+(_[^_]+)?\.tif$', img_name)
-            if base_match:
-                base_name = base_match.group(1)
-                mask_name_alt = f"{base_name}_concatenated_ndwi_mask_{img_name.split('_')[-2]}_{img_name.split('_')[-1]}"
+
+            mask_name_alt = mask_name_for_tile(img_name)
+            if mask_name_alt:
                 mask_path_alt = os.path.join(self.data_dir, mask_name_alt)
                 if os.path.exists(mask_path_alt):
                     pairs.append((img_path, mask_path_alt))
