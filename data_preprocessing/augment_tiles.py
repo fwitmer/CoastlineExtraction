@@ -154,7 +154,7 @@ def augment_tiles(tile_path, output_path, max_tiles=None):
     os.makedirs(output_path, exist_ok=True)
     
     # Get all image files (TIFF format: *_01-of-110.tif to *_110-of-110.tif)
-    image_files = glob.glob(os.path.join(tile_path, "*_*-of-*.tif"))
+    image_files = glob.glob(os.path.join(glob.escape(tile_path), "*_*-of-*.tif"))
     # Filter out mask files (containing "mask" in filename)
     image_files = [f for f in image_files if "mask" not in f]
     
@@ -309,7 +309,7 @@ if __name__ == '__main__':
         exit()
     
     # Check if there are any image tiles to process
-    image_files = glob.glob(os.path.join(tiles_dir, "*_*-of-*.tif"))
+    image_files = glob.glob(os.path.join(glob.escape(tiles_dir), "*_*-of-*.tif"))
     # Filter out mask files
     image_files = [f for f in image_files if "mask" not in f]
     
