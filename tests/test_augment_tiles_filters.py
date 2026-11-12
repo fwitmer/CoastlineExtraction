@@ -73,8 +73,42 @@ class AugmentTilesFilterTests(unittest.TestCase):
             write_tile(os.path.join(tile_dir, "scene_concatenated_ndwi_mask_01-of-10_rot90.tif"), 1, "uint8")
             write_tile(os.path.join(tile_dir, "scene_01-of-10_flip.tif"), 2, "uint16")
             write_tile(os.path.join(tile_dir, "scene_concatenated_ndwi_mask_01-of-10_flip.tif"), 1, "uint8")
+            write_tile(os.path.join(tile_dir, "scene_01-of-10_rot90_flip.tif"), 2, "uint16")
+            write_tile(os.path.join(tile_dir, "scene_concatenated_ndwi_mask_01-of-10_rot90_flip.tif"), 1, "uint8")
 
             module.augment_tiles(tile_dir, out_dir)
 
             self.assertEqual(len(os.listdir(out_dir)), 14)
             self.assertNotIn("scene_01-of-10_rot90_rot90.tif", os.listdir(out_dir))
+
+    def test_original_tile_names_that_resemble_augmentation_suffixes_are_used(self):
+        module = load_augment_tiles_module()
+        # "scene_rotation" contains "_rot", "scene_flipbook" contains "_flip" and "mask_island" /
+        # "northmask" contain "mask", but none of them is an augmented tile or a mask tile.
+        for base in ("scene_rotation", "scene_flipbook", "mask_island", "northmask"):
+            with self.subTest(base=base), tempfile.TemporaryDirectory() as root:
+                tile_dir = os.path.join(root, "tiles")
+                out_dir = os.path.join(root, "out")
+                os.makedirs(tile_dir)
+                write_tile(os.path.join(tile_dir, f"{base}_01-of-10.tif"), 2, "uint16")
+                write_tile(os.path.join(tile_dir, f"{base}_concatenated_ndwi_mask_01-of-10.tif"), 1, "uint8")
+
+                module.augment_tiles(tile_dir, out_dir)
+
+                self.assertEqual(len(os.listdir(out_dir)), 14)
+
+    def test_other_mask_style_names_are_not_used_as_input_images(self):
+        module = load_augment_tiles_module()
+        with tempfile.TemporaryDirectory() as root:
+            tile_dir = os.path.join(root, "tiles")
+            out_dir = os.path.join(root, "out")
+            os.makedirs(tile_dir)
+            write_tile(os.path.join(tile_dir, "scene_01-of-10.tif"), 2, "uint16")
+            write_tile(os.path.join(tile_dir, "scene_concatenated_ndwi_mask_01-of-10.tif"), 1, "uint8")
+            # Mask-style tiles that sort before the real image must not use up max_tiles.
+            write_tile(os.path.join(tile_dir, "a_udm2_clip_mask_01-of-10.tif"), 1, "uint8")
+            write_tile(os.path.join(tile_dir, "a_mask_01-of-10.tif"), 1, "uint8")
+
+            module.augment_tiles(tile_dir, out_dir, max_tiles=1)
+
+            self.assertEqual(len(os.listdir(out_dir)), 14)

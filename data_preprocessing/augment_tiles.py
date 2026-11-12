@@ -31,6 +31,7 @@ Functions:
 import cv2
 import numpy as np
 import os
+import re
 import glob
 import sys
 import rasterio
@@ -39,6 +40,10 @@ from rasterio.transform import from_bounds
 # Add parent directory to path to import load_config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from load_config import load_config, get_tile_images_output_folder, get_augment_tiles_output_folder
+
+# Augmented tiles end in -of-N followed by one of the suffixes written below
+# (_rot90, _rot180, _rot270, _flip, _rot90_flip, _rot180_flip, _rot270_flip).
+AUGMENTED_TILE = re.compile(r"-of-\d+_(?:rot(?:90|180|270)(?:_flip)?|flip)\.tif$")
 
 def _augment_and_write_tiff(image_data, output_path, rotation_angle, flip=False, profile=None):
     """
@@ -156,10 +161,10 @@ def augment_tiles(tile_path, output_path, max_tiles=None):
     # Get all image files (TIFF format: *_01-of-110.tif to *_110-of-110.tif)
     image_files = glob.glob(os.path.join(tile_path, "*_*-of-*.tif"))
     # Filter out mask files (containing "mask" in filename)
-    image_files = [f for f in image_files if "mask" not in os.path.basename(f)]
+    image_files = [f for f in image_files if "_mask_" not in os.path.basename(f)]
     
     # Filter out already augmented files
-    image_files = [f for f in image_files if not any(x in os.path.basename(f) for x in ["_rot", "_flip"])]
+    image_files = [f for f in image_files if not AUGMENTED_TILE.search(os.path.basename(f))]
     
     # Sort all image files for consistent processing
     image_files = sorted(image_files)
@@ -311,7 +316,7 @@ if __name__ == '__main__':
     # Check if there are any image tiles to process
     image_files = glob.glob(os.path.join(tiles_dir, "*_*-of-*.tif"))
     # Filter out mask files
-    image_files = [f for f in image_files if "mask" not in os.path.basename(f)]
+    image_files = [f for f in image_files if "_mask_" not in os.path.basename(f)]
     
     if not image_files:
         print(f"No TIFF image tiles found in {tiles_dir}")
