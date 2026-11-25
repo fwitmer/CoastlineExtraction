@@ -88,11 +88,11 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="r
             ndwi = cv2.GaussianBlur(ndwi, KSIZE_BLUR, SIGMA_X, SIGMA_Y)
 
         # Blank label layer
-        label = np.zeros((src_raster.height, src_raster.width)).astype(np.uint8)
+        label = np.zeros((src_raster.height, src_raster.width), dtype=np.uint8)
         # Buffer matrix: each element represents the number of times a sliding window moves over a specific pixel.
-        buffer_numbers = np.zeros((src_raster.height, src_raster.width)).astype(np.uint8)
+        buffer_numbers = np.zeros((src_raster.height, src_raster.width), dtype=np.uint32)
         # Water count matrix: each pixel value represents the number of times pixels are labelled as water. 
-        water_count = np.zeros((src_raster.height, src_raster.width)).astype(np.uint8)
+        water_count = np.zeros((src_raster.height, src_raster.width), dtype=np.uint32)
         src_CRS = src_raster.crs
         
         # Getting pixel size for correct calculation of buffer.
@@ -152,6 +152,11 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="r
                     if buffer.intersects(raster_bounds_geom):
                         out_image, out_transform = mask(dataset, shapes=[buffer], nodata=-1, crop=False)
                         out_image = out_image[0]
+
+                        # Create mask array: 1 for pixels within the sliding window, 0 elsewhere (nodata is -1)
+                        # Must be extracted before uint8 cast, as uint8 values cannot equal -1
+                        mask_array = (out_image != -1).astype(np.uint8)
+
                         out_image = (out_image * 127) + 128
                         out_image = out_image.astype(np.uint8)
                         
@@ -159,10 +164,6 @@ def get_ndwi_label(image_path, points_path, ksize=100, blurring=True, out_dir="r
                         out_image_clipped = out_image_clipped[0]
                         out_image_clipped = (out_image_clipped * 127) + 128
                         out_image_clipped = out_image_clipped.astype(np.uint8)
-                        
-                        # Create mask array: 1 for pixels within the sliding window, 0 elsewhere
-                        mask_array = np.zeros_like(out_image, dtype=np.uint8)
-                        mask_array[out_image != -1] = 1  # Set to 1 where we have valid data (not nodata)
 
                         # Skip buffering windows that are partly or wholly out of the NDWI image
                         if out_image_clipped.shape[0] < 200 or out_image_clipped.shape[1] < 200:
